@@ -1,0 +1,17 @@
+[package]
+name = "increment"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+# "cdylib" produces the .wasm artifact for on-chain deployment.
+# "lib" is kept so the contract can also be imported by fuzz / property-test
+# targets (cargo-fuzz, proptest) later in the IDP.
+crate-type = ["lib", "cdylib"]
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }

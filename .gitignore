@@ -1,0 +1,18 @@
+# Rust build artifacts
+target/
+
+# Stellar CLI local state
+.stellar/
+
+# Compiled contracts
+*.wasm
+
+# Environment files
+.env
+.env.*
+*.env
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
