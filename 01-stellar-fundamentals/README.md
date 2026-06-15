@@ -220,3 +220,19 @@ Each `increment` invocation returns the next counter value (`1`, `2`, `3`, …).
 - Understanding invocations and state lifetime feeds directly into **Topic 3 (Solution
   Architecture)** and **Topic 4 (Prototype)**, where a real contract will be designed and
   hardened with AI-assisted fuzzing.
+
+## 8. References
+
+Fundamentals of the network and the contract platform:
+
+- **Stellar Developers Docs** (official portal): https://developers.stellar.org
+- **Smart Contracts Overview** — Soroban is a contract platform integrated into Stellar, with
+  contracts in Rust compiled to WASM:
+  https://developers.stellar.org/docs/build/smart-contracts/overview
+- **Getting Started — Hello World:**
+  https://developers.stellar.org/docs/build/smart-contracts/getting-started/hello-world
+- **Storing Data (increment example)** — the basis of this contract:
+  https://developers.stellar.org/docs/build/smart-contracts/getting-started/storing-data
+- **Stellar CLI** (reference for the current CLI):
+  https://developers.stellar.org/docs/tools/cli
+- **`soroban-sdk`** (docs.rs): https://docs.rs/soroban-sdk

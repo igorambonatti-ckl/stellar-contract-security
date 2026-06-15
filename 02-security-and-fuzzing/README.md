@@ -102,7 +102,32 @@ The harness boots a real Soroban host, registers the contract, and asserts an in
 (`increment` never panics and always returns `>= 1`). A coverage-guided fuzzer mutates `input` to
 explore execution paths trying to violate that assertion.
 
-## 6. Success indicators met
+## 6. Soroban security essentials (what fuzzing should defend)
+
+Fuzzing is most valuable when aimed at the properties that actually matter for security. Two
+Soroban-specific areas stand out:
+
+### Authorization — `require_auth`
+
+- Soroban exposes `Address::require_auth()` (and `require_auth_for_args`). When a contract calls
+  it, the **Soroban host** automatically verifies the **signature**, performs **authentication**,
+  and handles **replay prevention** (nonces) — the contract does not hand-roll cryptography.
+- Common invariant to fuzz: **privileged operations must fail unless the proper `Address` has
+  authorized them** (e.g. only the admin can mint; a transfer requires the sender's auth). Fuzz
+  targets can register an unauthorized address and assert the call panics/aborts.
+
+### State management vulnerabilities
+
+- The three storage tiers (temporary / persistent / instance) and **TTL / state archival**
+  introduce bugs that are unique to Soroban: relying on **temporary** data that can expire,
+  forgetting to **`extend_ttl`** on data that must survive, or reading archived state.
+- Classes of issues to keep in mind (per CertiK's Soroban state-management analysis): choosing the
+  wrong storage tier for the data's lifetime, missing TTL extension leading to unexpected archival,
+  and assuming persistence guarantees that a given tier does not provide.
+- These make good **invariants/properties** for property tests: e.g. "data the contract depends on
+  is never silently lost between expected invocations."
+
+## 7. Success indicators met
 
 - ✅ Clear technical explanation of fuzzing / automated testing concepts (coverage-guided vs
   black-box, property-based, stateless vs stateful).
@@ -110,7 +135,7 @@ explore execution paths trying to violate that assertion.
 - ✅ **Stellar adaptations identified**: `cargo-fuzz`, `proptest` / `SorobanArbitrary`,
   `arbitrary`, and `cargo-mutants`, plus the official `soroban-examples` fuzzing reference.
 
-## 7. Connection to the IDP title — "AI-Assisted Fuzzing"
+## 8. Connection to the IDP title — "AI-Assisted Fuzzing"
 
 The IDP's differentiator is using **AI to assist the fuzzing workflow**:
 
@@ -125,3 +150,27 @@ The IDP's differentiator is using **AI to assist the fuzzing workflow**:
 This is the **bridge to Topic 3 (Solution Architecture)** and **Topic 4 (Prototype)**, where these
 AI-assisted techniques will be designed into a concrete tool/workflow and demonstrated on a real
 Soroban contract.
+
+## 9. References
+
+**Ethereum / Solidity:**
+
+- **Echidna** (Trail of Bits fuzzer): https://github.com/crytic/echidna
+- **Foundry Book** (fuzz + invariant testing): https://book.getfoundry.sh
+
+**Stellar / Soroban (the adaptation):**
+
+- **Testing on Stellar** — tests run in the real Soroban environment and include fuzz and
+  property testing in Rust:
+  https://stellar.org/blog/developers/the-definitive-guide-to-testing-smart-contracts-on-stellar
+- **Fuzzing (Stellar Docs)** — `cargo-fuzz` with `libfuzzer-sys`, requires the nightly toolchain:
+  https://developers.stellar.org/docs/build/guides/testing/fuzzing
+- **`soroban-examples`**: https://github.com/stellar/soroban-examples
+
+**Security:**
+
+- **Authorization / `require_auth`** — the Soroban host handles signatures, authentication, and
+  replay prevention automatically:
+  https://developers.stellar.org/docs/build/smart-contracts/example-contracts/auth
+- **CertiK — Soroban State Management** (storage vulnerabilities):
+  https://www.certik.com/blog/soroban-contract-state-management
