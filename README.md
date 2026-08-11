@@ -22,9 +22,16 @@ demonstrates AI-assisted fuzzing applied to a Soroban contract.
 |---|-------|--------|-----|-------------|
 | 1 | Stellar & Soroban Fundamentals | ✅ Done | 2026-05-31 | [Doc](01-stellar-fundamentals/README.md) + increment contract |
 | 2 | Security & Fuzzing Fundamentals | ✅ Done | 2026-06-30 | [Doc](02-security-and-fuzzing/README.md) |
-| 3 | Solution Architecture | 🚧 In progress | 2026-07-31 | — |
-| 4 | Prototype Development | ⬜ Not started | 2026-08-31 | — |
+| 3 | Solution Architecture | ✅ Done | 2026-07-31 | [Doc](03-solution-architecture/README.md) |
+| 4 | Prototype Development | 🚧 In progress | 2026-08-31 | [Plan](docs/execution-plan.md) |
 | 5 | Consolidation & Presentation | ⬜ Not started | 2026-09-30 | — |
+
+Supporting documents:
+
+- **[Execution & verification plan](docs/execution-plan.md)** — day-by-day plan for Topics 4–5,
+  with a verification gate per phase and a final acceptance checklist.
+- **[Prior art — ChainGuard AI](docs/prior-art-chainguard.md)** — inventory of an earlier personal
+  prototype whose findings ground the Topic 3 architecture.
 
 ## Repository layout
 
