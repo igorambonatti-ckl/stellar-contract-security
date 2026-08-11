@@ -189,7 +189,7 @@ stellar keys generate --global alice --network testnet --fund
 
 # Deploy to testnet
 stellar contract deploy \
-  --wasm target/wasm32-unknown-unknown/release/increment.wasm \
+  --wasm target/wasm32v1-none/release/increment.wasm \
   --source alice \
   --network testnet
 
