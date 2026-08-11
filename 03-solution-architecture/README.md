@@ -174,12 +174,28 @@ curated set the AI proposals in Topic 4 will be measured against.
 | I7 | `amount <= 0` / `shares <= 0` is always rejected, never silently accepted | Input validation | S18 |
 | I8 | `transfer_shares(a, a, n)` does not change any balance | Self-transfer | S17 |
 | I9 | `initialize` is idempotent-guarded — a second call always aborts | Re-init | S13, S19 |
-| I10 | A balance written in one invocation is readable in the next (persistent + `extend_ttl`) | **Soroban TTL** | SOR-009, S07 |
+| I10′ | After the expected access pattern, a persistent entry's TTL is the extended value — never the post-restoration minimum | **Soroban TTL** | SOR-009, S07 |
 | I11 | Auth/nonce state is never read from a tier that can silently expire | **Soroban storage tier** | SOR-007, S14 |
 | I12 | While `paused`, no state-mutating entry point succeeds | State machine | — |
 
-I10 and I11 are the ones with no EVM analogue — they are the reason this work is Soroban research
+I10′ and I11 are the ones with no EVM analogue — they are the reason this work is Soroban research
 and not a Rust port of Echidna, and they get the most attention in the write-up.
+
+> **Revised after the P1 spikes** ([results](../04-prototype-development/results/spikes.md)).
+> I10 was originally *"a balance written in one invocation is readable in the next"*. Protocol 23
+> introduced **automatic restoration of archived persistent entries**, emulated in the test host, so
+> that statement is now **always true** and cannot fail — a useless fuzzing target. The real,
+> falsifiable property is that a correct contract never *silently relies* on restoration, which is
+> detectable because a restored entry's TTL resets to `min_persistent_entry_ttl - 1`. The hazard
+> moves from data loss to unexpected rent cost.
+>
+> Temporary entries are **not** restored and do vanish, which is why **I11 is now the primary
+> Soroban-specific invariant** rather than a secondary one.
+>
+> Note also that `extend_ttl(threshold, extend_to)` only extends when the remaining TTL is already
+> below `threshold` — with the host default floor of 4096 it is a no-op for thousands of ledgers.
+> Any TTL invariant must be written against those semantics, and harnesses must pin the ledger TTL
+> floors rather than inherit host defaults.
 
 ### 5.3 Seeded bugs
 
@@ -193,7 +209,7 @@ known-answer cases:
 | `bug_missing_auth` | `require_auth` dropped from `transfer_shares` | I5 |
 | `bug_zero_amount` | `amount > 0` check removed from `deposit` | I7, I3 |
 | `bug_self_transfer` | `from == to` not handled — balance duplicated | I8, I1 |
-| `bug_no_ttl` | `extend_ttl` omitted on persistent balances | I10 |
+| `bug_no_ttl` | `extend_ttl` omitted on persistent balances — entry survives via restoration, but at rent cost, detectable via TTL | I10′ |
 | `bug_temp_nonce` | Nonce moved to temporary storage and trusted | I11 |
 | `bug_reinit` | `initialize` idempotency guard removed | I9 |
 
@@ -291,16 +307,22 @@ write-up than an unfalsifiable claim of success.
 
 ## 10. Open questions carried into Topic 4
 
-1. Does `SorobanArbitrary` generate `Address` values that produce *meaningful* auth scenarios, or do
-   generated addresses always fail `require_auth` uniformly (making I4/I5 trivially satisfied)?
-2. Can TTL/state archival (I10, I11) actually be exercised in `Env`, or does testing archival need
-   ledger-sequence manipulation the test host does not expose? **This is the highest-uncertainty
-   item** — the Soroban-specific invariants are the differentiator, and if `Env` cannot advance
-   ledgers far enough to trigger archival, they must be tested another way.
+1. ~~Does `SorobanArbitrary` generate `Address` values that produce *meaningful* auth scenarios?~~
+   **Answered (P1, Spike B):** no — generated addresses cannot be authorized via `MockAuth`, so
+   access-control properties would collapse to "unknown address is rejected". Resolved by fuzzing an
+   **index into a fixed pool** of registered principals instead. Raw generated addresses remain
+   useful where an address is *data* rather than a principal.
+2. ~~Can TTL/state archival be exercised in `Env`?~~ **Answered (P1, Spike A):** yes — the host
+   exposes full ledger control and `get_ttl()`. But protocol 23 auto-restores persistent entries,
+   which forced I10 → I10′ and promoted I11. See
+   [`results/spikes.md`](../04-prototype-development/results/spikes.md).
 3. Does `cargo-mutants` cope with `#![no_std]` + `soroban-sdk` macro expansion, or does it produce
    unbuildable mutants?
 4. Is coverage-guided fuzzing over the linked crate meaningfully better than random `proptest` here,
    or is the contract small enough that `proptest` saturates it?
+5. *(New, from Spike A)* Does auto-restoration make the `cost_estimate()` resource counts a better
+   fuzzing oracle than storage reads for TTL invariants? The SDK exposes `write_entries` and
+   `persistent_entry_rent_bumps`, which jump when a restoration occurs.
 
 ## 11. Success indicators met
 

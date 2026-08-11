@@ -1,0 +1,23 @@
+[package]
+name = "spike"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Throwaway crate for the P1 de-risking spikes (see docs/execution-plan.md §P1).
+# Not part of the prototype proper — it exists to answer two questions before
+# soroban-vault is written:
+#   Spike A — is TTL / state archival observable in the test Env?
+#   Spike B — does SorobanArbitrary produce usable Address values?
+
+[lib]
+crate-type = ["lib"]
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+proptest = "1"
+proptest-arbitrary-interop = "0.1.0"
+arbitrary = { version = "1.3", features = ["derive"] }

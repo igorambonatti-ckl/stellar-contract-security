@@ -16,3 +16,6 @@ target/
 .DS_Store
 .idea/
 .vscode/
+
+# Spike crate test snapshots (proptest emits one per generated case)
+04-prototype-development/contracts/spike/test_snapshots/
