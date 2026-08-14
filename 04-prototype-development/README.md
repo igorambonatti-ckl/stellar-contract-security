@@ -22,8 +22,8 @@ Day-by-day phases, exit gates, and the acceptance checklist:
 |---|---|---|
 | P0 — Environment | 08-11 | ✅ [results](results/p0-environment.md) |
 | P1 — Spikes (TTL in `Env`, `SorobanArbitrary` addresses) | 08-11 (early) | ✅ [results](results/spikes.md) — 11/11 tests |
-| P2 — `soroban-vault` contract | 08-14 → 08-16 | ⬜ |
-| P3 — Seeded bugs | 08-17 → 08-18 | ⬜ |
+| P2 — `soroban-vault` contract | 08-14 | ✅ 22/22 tests, WASM builds |
+| P3 — Seeded bugs | 08-14 | ✅ [results](results/seeds.md) — 7/7 seeds verified |
 | P4 — Baseline arm | 08-19 → 08-20 | ⬜ |
 | P5 — AI arm | 08-21 → 08-24 | ⬜ |
 | P6 — `cargo-fuzz` | 08-25 → 08-26 | ⬜ |

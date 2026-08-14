@@ -1,0 +1,29 @@
+[package]
+name = "soroban-vault"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+# "cdylib" produces the .wasm artifact; "lib" lets the fuzz targets and
+# proptest harnesses link the crate directly (needed for coverage-guided
+# fuzzing — see Topic 3 §4.2).
+crate-type = ["lib", "cdylib"]
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+
+[features]
+# Seeded bugs (P3). Each violates exactly one invariant and is toggled
+# independently, so the benchmark can measure per-bug detection.
+# The clean build enables none of them.
+bug_overflow = []
+bug_missing_auth = []
+bug_zero_amount = []
+bug_self_transfer = []
+bug_no_ttl = []
+bug_temp_nonce = []
+bug_reinit = []

@@ -19,3 +19,6 @@ target/
 
 # Spike crate test snapshots (proptest emits one per generated case)
 04-prototype-development/contracts/spike/test_snapshots/
+
+# Vault test snapshots
+04-prototype-development/contracts/soroban-vault/test_snapshots/
