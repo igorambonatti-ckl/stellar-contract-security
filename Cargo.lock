@@ -1700,6 +1700,9 @@ dependencies = [
 name = "soroban-vault"
 version = "0.1.0"
 dependencies = [
+ "arbitrary",
+ "proptest",
+ "proptest-arbitrary-interop",
  "soroban-sdk",
 ]
 
