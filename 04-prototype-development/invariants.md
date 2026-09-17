@@ -18,10 +18,19 @@ revert" is accepted only if its test distinguishes the *right* failure, not mere
 | Measure | Count |
 |---|---|
 | Proposals received | 16 |
-| **Accepted as proposed** | 8 |
+| **Accepted as proposed** | 9 |
 | **Accepted after rewrite** | 4 |
-| **Rejected** | 4 |
-| **Yield (kept / proposed)** | **12 / 16 = 75 %** |
+| **Rejected** | 3 |
+| **Yield (kept / proposed)** | **13 / 16 = 81 %** |
+
+> **Corrected 2026-09-17.** The first version of this table accounted for only 15
+> of the 16 proposals and reported 12/16 = 75 %. Proposal 15 (*"withdrawal payout
+> is the exact pro-rata floor"*) was **implemented** — it is the `expected_amount`
+> oracle in `prop_exact_share_accounting` — but never recorded here, so it was
+> counted as neither accepted nor rejected. The omission was found while tracing
+> which assertion caught `bug_overflow` in the P6 fuzzing round. A curation ledger
+> that does not reconcile against the proposal count is not an audit trail, and
+> this one did not reconcile for the better part of a day.
 
 Against the pre-existing Topic 3 §5.2 catalogue, which the model never saw:
 
@@ -29,10 +38,10 @@ Against the pre-existing Topic 3 §5.2 catalogue, which the model never saw:
 |---|---|
 | Catalogue invariants independently re-derived | **10 / 12** (I1, I3, I4, I5, I6, I8, I9, I10′, I11, I12) |
 | Catalogue invariants **missed** | **2** — I2, I7 |
-| **Genuinely new** invariants not in the catalogue | **3** — N1, N2, N3 |
+| **Genuinely new** invariants not in the catalogue | **4** — N1, N2, N3, N4 |
 
 Both numbers matter and they say different things. 10/12 recall on a catalogue derived from a
-different process is a strong result for proposal quality. The 4 rejections, and in particular
+different process is a strong result for proposal quality. The 3 rejections, and in particular
 [R2](#r2--withdraw-truncation-to-zero--the-high-confidence-false-positive), are why the human
 checkpoint is not ceremonial.
 
@@ -52,6 +61,7 @@ These map one-to-one onto the catalogue and needed no change.
 | A6 | 6. Nothing load-bearing is read from the temporary tier | **I11** | The primary Soroban-specific invariant, re-derived from the source with the right two-run differential test design (run the sequence twice, expire the temporary entries in the second run, assert every observable *except* `last_activity` matches). |
 | A7 | 9. `set_balance` leaves the persistent TTL at the bumped level | **I10′** | Re-derived including the reasoning that `BUMP_THRESHOLD < BUMP_AMOUNT` is what makes the extension fire, and the correct warning not to assert on a *repeated* write, where the second `extend_ttl` is legitimately a no-op. |
 | A8 | 16. Views are pure and mutually consistent | *(new, low value)* | Kept because it is nearly free to assert and would catch a view that acquired a TTL side effect. Ranked last. |
+| A9 | 15. Withdrawal payout is the exact pro-rata floor | **N4 (new)** | `withdraw(shares)` returns exactly `⌊shares · A₀ / T₀⌋`. Kept because it is an *exact* oracle where I3 is only an inequality: it pins the operand order, the rounding direction, and the multiply-before-divide, any of which could be wrong while I3 still passed. It also correctly warns that burning shares for a zero payout is legitimate under the formula and must not be flagged as loss. |
 
 **On A6 and A7 specifically.** These are the two invariants Topic 3 identified as the Soroban
 differentiator with no EVM analogue, and the model produced both from the contract source alone,
@@ -138,7 +148,7 @@ makes `deposit` take the `total == 0` branch and mint 1:1 against a vault that a
 silently diluting every existing holder. Carried to Topic 5 as a hazard that is real on-chain but
 not reachable in the test host — i.e. a **limitation of the substrate**, not a non-issue.
 
-### R4 — "Asset movement matches the reported amount exactly" (proposal 4)
+### R3b — "Asset movement matches the reported amount exactly" (proposal 4)
 
 **Rejected as an invariant; kept as a harness assertion.** The statement is true and worth checking,
 but it is not a property of `Vault` — it is a property of the *token contract*, restated. With the
@@ -196,6 +206,7 @@ new from this phase.
 | **N1** | every bumping mutator leaves instance TTL ≥ `BUMP_THRESHOLD` | Soroban TTL | silent | W4 |
 | **N2** | `vault_assets() ≥ total_shares()` | value conservation | silent | R2 |
 | **N3** | views are pure | state machine | silent | A8 |
+| **N4** | `withdraw` pays exactly `⌊shares·A₀/T₀⌋` | value conservation | silent | A9 |
 
 **I2** and **I7** are not in the AI harness. They remain covered by the hand-written unit tests in
 `src/test_invariants.rs`, and their absence here is a measured result, not an oversight — see §5.

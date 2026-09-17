@@ -177,15 +177,45 @@ impl Pool {
         self.table[byte as usize]
     }
 
-    /// Map one fuzzer byte onto a slot, restricted to slots that can authorize.
-    /// Use where the point of the step is *not* to test authorization, so that
-    /// those steps are not silently wasted on the unauthorized principal.
-    pub fn index_authorized(&self, byte: u8) -> usize {
+    /// Map one fuzzer byte onto a slot that can genuinely act as a **caller**.
+    ///
+    /// Use this for any argument the contract passes to `require_auth` — the
+    /// `from` of a transfer, the subject of a withdrawal. Use [`Pool::index`] for
+    /// counterparty positions, where any address is legitimate.
+    ///
+    /// Three roles are excluded, for two different reasons:
+    ///
+    /// - [`Role::Unauthorized`] by construction — it exists to fail auth, so
+    ///   using it as an ordinary caller would waste the step.
+    /// - [`Role::SelfContract`] and [`Role::Callee`] because **they cannot sign**.
+    ///   A contract address can only authorize inside its own invocation, so no
+    ///   external caller can present it as `from`. Under blanket auth mocking
+    ///   this restriction disappears and the harness will happily drive calls
+    ///   that are unreachable in production.
+    ///
+    /// That last case is not hypothetical. Fuzzing this contract with the
+    /// contract's own address as a depositor produced a genuine-looking value
+    /// conservation failure — shares minted against a token transfer from the
+    /// vault to itself, which leaves its balance unchanged. It is a real
+    /// accounting asymmetry and it is **not reachable on-chain**, because
+    /// nobody can forge the vault's authorization. Reporting it as a finding
+    /// would have been a false positive produced entirely by the harness's own
+    /// auth mocking.
+    ///
+    /// Contract addresses remain valuable in *counterparty* position, where no
+    /// signature is needed and value really can be stranded.
+    pub fn index_caller(&self, byte: u8) -> usize {
         let i = self.index(byte);
-        if self.roles[i] == Role::Unauthorized {
-            self.slot_of(Role::Actor).unwrap_or(0)
-        } else {
-            i
+        match self.roles[i] {
+            Role::Admin | Role::Actor => i,
+            _ => {
+                // Redistribute deterministically across the callable slots, so
+                // the excluded draws are not all funnelled onto one principal.
+                let callable: Vec<usize> = (0..self.len())
+                    .filter(|s| matches!(self.roles[*s], Role::Admin | Role::Actor))
+                    .collect();
+                callable[byte as usize % callable.len().max(1)]
+            }
         }
     }
 
@@ -289,13 +319,49 @@ mod tests {
     }
 
     #[test]
-    fn index_authorized_never_returns_the_unauthorized_slot() {
+    fn index_caller_only_returns_slots_that_can_actually_sign() {
         let e = env();
-        let p = PoolSpec::new(3).build(&e);
-        let u = p.slot_of(Role::Unauthorized).unwrap();
+        let p = PoolSpec::new(3)
+            .with_contract(Address::generate(&e))
+            .with_callee(Address::generate(&e))
+            .build(&e);
+
         for b in 0..=255u8 {
-            assert_ne!(p.index_authorized(b), u);
+            let role = p.role(p.index_caller(b));
+            assert!(
+                matches!(role, Role::Admin | Role::Actor),
+                "index_caller returned {role:?}, which cannot authorize"
+            );
         }
+    }
+
+    #[test]
+    fn contract_slots_remain_reachable_as_counterparties() {
+        // Excluding them as callers must not make them unreachable entirely —
+        // value stranded in a contract address is a real hazard.
+        let e = env();
+        let p = PoolSpec::new(3)
+            .with_contract(Address::generate(&e))
+            .with_callee(Address::generate(&e))
+            .build(&e);
+
+        let c = p.slot_of(Role::SelfContract).unwrap();
+        assert!((0..=255u8).any(|b| p.index(b) == c));
+    }
+
+    #[test]
+    fn excluded_draws_spread_across_the_callable_slots() {
+        let e = env();
+        let p = PoolSpec::new(3)
+            .with_contract(Address::generate(&e))
+            .build(&e);
+
+        let mut seen = std::collections::BTreeSet::new();
+        for b in 0..=255u8 {
+            seen.insert(p.index_caller(b));
+        }
+        // Admin plus three actors.
+        assert_eq!(seen.len(), 4, "callable slots reached: {seen:?}");
     }
 
     #[test]

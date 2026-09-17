@@ -91,12 +91,12 @@ principled or convenient.
 
 ## 5. What the AI got right
 
-**Invariant yield: 12 kept of 16 proposed (75 %).** Against the Topic 3 §5.2 catalogue, which the
+**Invariant yield: 13 kept of 16 proposed (81 %).** Against the Topic 3 §5.2 catalogue, which the
 model never saw:
 
 - **10 of 12 catalogue invariants independently re-derived** from the contract source alone.
 - **2 missed** — I2 and I7.
-- **3 genuinely new** invariants the catalogue did not contain (N1–N3).
+- **4 genuinely new** invariants the catalogue did not contain (N1–N4).
 
 The two Soroban-specific invariants are the ones worth dwelling on. I10′ (a persistent entry's TTL
 must be the *extended* value, never the post-restoration minimum) and I11 (auth-critical state must
@@ -266,7 +266,7 @@ Carried into [Topic 5](../05-consolidation-and-presentation/README.md) rather th
    apparent insight and is inherent to any purpose-built benchmark target.
 2. **Same model family authored the contract and the invariants.** What it finds natural to write,
    it finds natural to check.
-3. **One contract, one model, one run.** No variance estimate. The 75 % yield and the 7/7 detection
+3. **One contract, one model, one run.** No variance estimate. The 81 % yield and the 7/7 detection
    are single observations, not distributions.
 4. **I4 and I5 are asserted weaker than stated** — "only the incumbent authorized" is tested as
    "nobody authorized", so a contract that accepted *any* signer would pass. Flagged by the model

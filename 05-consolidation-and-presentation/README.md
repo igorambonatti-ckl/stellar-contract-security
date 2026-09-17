@@ -41,7 +41,7 @@ Harness boilerplate is mechanical, and the model got the mechanical parts wrong:
 compile errors came from one incorrect assumption about the SDK's generated `try_*` signature. That
 class of error is caught by `rustc` in seconds and costs nothing.
 
-What it contributed instead was **job 2 from Topic 2 §5** — knowing what to assert. Twelve usable
+What it contributed instead was **job 2 from Topic 2 §5** — knowing what to assert. Thirteen usable
 invariants from sixteen proposals, including ten of the twelve in a catalogue it had never seen, and
 both of the Soroban-specific ones (I10′ TTL management, I11 temporary-tier authority) derived from
 source alone.
@@ -217,7 +217,7 @@ These bound what the 1/7 → 7/7 result is allowed to mean.
 |---|---|---|
 | L1 | **The contract was purpose-built around the invariant catalogue** (Topic 3 §5) | A model reading `soroban-vault` reads a contract whose shape already implies most of the properties. This inflates apparent insight and is inherent to any purpose-built target. |
 | L2 | **Same model family authored the contract and proposed the invariants** | What it finds natural to write, it finds natural to check. |
-| L3 | **One contract, one model, one run** | 75 % yield and 7/7 detection are *single observations*, not distributions. No variance estimate, no significance claim. |
+| L3 | **One contract, one model, one run** | 81 % yield and 7/7 detection are *single observations*, not distributions. No variance estimate, no significance claim. |
 | L4 | **The seeds were designed by someone who knew the invariants** | They are not one-line typos (P3 Finding 3), but they are not field-collected bugs either. |
 | L5 | **Both arms are AI-authored**, so "authoring time" could not be collected as specified | Replaced by proxy metrics — harness size, compile iterations, invariant yield. The productivity claim this IDP *cannot* make is "AI makes a developer faster". |
 | L6 | **I4 and I5 are asserted weaker than stated** | "Only the incumbent authorized" is tested as "nobody authorized", so a contract accepting *any* signer would pass. Flagged by the model in its own harness. |

@@ -1,2 +1,0 @@
-# vault_ai / bug_zero_amount — first crash after 1s, 353 runs
-thread '<unnamed>' (2786526) panicked at fuzz_targets/vault_ai.rs:219:21:

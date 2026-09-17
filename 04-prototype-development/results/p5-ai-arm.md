@@ -72,7 +72,7 @@ argument in this phase for exact-error oracles over property enumeration.
 ### `bug_no_ttl` — caught by a *new* invariant as well as its target
 
 It fails `prop_i10_balance_ttl_on_first_write` (I10′, its target) **and** `prop_n1_instance_ttl` —
-N1, one of the three invariants that came out of the AI round and were not in the Topic 3 catalogue.
+N1, one of the four invariants that came out of the AI round and were not in the Topic 3 catalogue.
 N1 exists because the model noticed that `transfer_shares` reaches no `bump_instance` path; that
 observation led to asserting the instance TTL floor, which independently catches the seed.
 
@@ -144,7 +144,7 @@ Two lessons, both recorded in the Topic 5 limitations:
 
 - ✅ All three prompts committed, with raw outputs preserved unedited.
 - ✅ `invariants.md` carries an accept / reject / rewrite decision and rationale for all 16 proposals.
-- ✅ Invariant yield computed: **12 / 16 = 75 %**; catalogue recall **10 / 12**; 3 new invariants.
+- ✅ Invariant yield computed: **13 / 16 = 81 %**; catalogue recall **10 / 12**; 4 new invariants.
 - ✅ Harness compiles and passes on the clean build (11/11).
 - ✅ Detection rate recorded per seed: **7 / 7**, each attributable to its target invariant.
 - ✅ Effort metrics recorded (proxy metrics, per the decision in `benchmark.md`).

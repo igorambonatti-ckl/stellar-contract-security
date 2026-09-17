@@ -294,7 +294,7 @@ fuzz_target!(|program: Program| {
         match step {
             Step::Deposit { who, amount } => {
                 label = "deposit";
-                let slot = r.pool.index_authorized(*who);
+                let slot = r.pool.index_caller(*who);
                 let addr = r.pool.address(slot).clone();
                 let amount = r.ops.resolve(amount, vault.balance_of(&addr));
                 let (t0, a0) = (vault.total_shares(), r.assets());
@@ -308,14 +308,32 @@ fuzz_target!(|program: Program| {
 
             Step::Withdraw { who, shares } => {
                 label = "withdraw";
-                let slot = r.pool.index_authorized(*who);
+                let slot = r.pool.index_caller(*who);
                 let addr = r.pool.address(slot).clone();
                 let shares = r.ops.resolve(shares, vault.balance_of(&addr));
                 let (t0, a0) = (vault.total_shares(), r.assets());
 
                 if let Ok(Ok(paid)) = vault.try_withdraw(&addr, &shares) {
-                    // The refuted §R2 claim, asserted directly: a successful
-                    // withdraw of a positive share count must pay something.
+                    // N4 — the payout is exactly the pro-rata floor. An exact
+                    // oracle rather than an inequality, so a wrong payout is
+                    // attributable to *what* was wrong about it.
+                    if let Some(expected) = shares.checked_mul(a0).map(|n| if t0 == 0 { 0 } else { n / t0 }) {
+                        assert_eq!(
+                            paid, expected,
+                            "N4 violated: withdraw of {shares} paid {paid}, expected \
+                             floor({shares}*{a0}/{t0}) = {expected}"
+                        );
+                    }
+                    // I7 — a successful withdraw implies the positivity guard
+                    // held. Separated from the payout check so the two failures
+                    // are not reported as each other.
+                    assert!(
+                        shares > 0,
+                        "I7 violated: withdraw of {shares} shares succeeded and paid {paid}; \
+                         non-positive amounts must be rejected"
+                    );
+                    // The refuted §R2 claim, asserted directly: a withdraw of a
+                    // positive share count must pay something.
                     assert!(
                         paid > 0,
                         "withdraw burned {shares} shares and paid 0 (T0={t0} A0={a0}) — \
@@ -329,7 +347,7 @@ fuzz_target!(|program: Program| {
 
             Step::Transfer { from, to, shares } => {
                 label = "transfer_shares";
-                let (fs, ts) = (r.pool.index_authorized(*from), r.pool.index(*to));
+                let (fs, ts) = (r.pool.index_caller(*from), r.pool.index(*to));
                 let (f, t) = (r.pool.address(fs).clone(), r.pool.address(ts).clone());
                 let shares = r.ops.resolve2(shares, vault.balance_of(&f), vault.balance_of(&t));
                 let (bf0, bt0, t0) =
@@ -366,7 +384,7 @@ fuzz_target!(|program: Program| {
 
             Step::SelfTransfer { who, shares } => {
                 label = "self_transfer";
-                let slot = r.pool.index_authorized(*who);
+                let slot = r.pool.index_caller(*who);
                 let addr = r.pool.address(slot).clone();
                 let shares = r.ops.resolve(shares, vault.balance_of(&addr));
                 let (b0, t0) = (vault.balance_of(&addr), vault.total_shares());
@@ -387,7 +405,7 @@ fuzz_target!(|program: Program| {
 
             Step::Donate { who, amount } => {
                 label = "donate";
-                let addr = r.pool.address(r.pool.index_authorized(*who)).clone();
+                let addr = r.pool.address(r.pool.index_caller(*who)).clone();
                 let amount = r.ops.resolve(amount, r.token().balance(&addr));
                 let (t0, b0) = (vault.total_shares(), r.held());
 

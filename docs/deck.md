@@ -108,8 +108,8 @@ contract whose shape already implies the properties.
 
 ## 7 · What the AI got right
 
-**Yield: 12 kept of 16 proposed (75 %).**
-Against the pre-existing catalogue it never saw: **10 of 12 re-derived**, 2 missed, **3 new**.
+**Yield: 13 kept of 16 proposed (81 %).**
+Against the pre-existing catalogue it never saw: **10 of 12 re-derived**, 2 missed, **4 new**.
 
 The two it mattered most to get:
 
@@ -223,7 +223,7 @@ expected results.
 1. The contract was **purpose-built** around the invariant catalogue. Inflates the AI's apparent
    insight.
 2. **Same model family** wrote the contract and proposed the invariants.
-3. **One contract, one model, one run.** No variance estimate. 75 % and 7/7 are single observations.
+3. **One contract, one model, one run.** No variance estimate. 81 % and 7/7 are single observations.
 4. **I4/I5 are asserted weaker than stated** — "only the incumbent authorized" is tested as "nobody
    authorized". *The model flagged this hole in its own harness.*
 5. **The deployed WASM is not what gets fuzzed** — both arms link the crate directly, for coverage.
