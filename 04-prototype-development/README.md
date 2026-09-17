@@ -14,13 +14,18 @@ Phase plan and exit gates: [`docs/execution-plan.md`](../docs/execution-plan.md)
 
 ## 2. The headline result
 
-| Arm | Oracle | Seeded bugs detected |
-|---|---|---|
-| **Baseline** — a harness written from the Stellar docs in an hour | "the call does not abort" | **1 / 7** |
-| **AI-assisted** — invariants proposed by Claude Opus 5, curated by hand | "read the state back and compare it against an independent computation" | **7 / 7** |
+| Arm | Oracle | Seeded bugs | Mutation score |
+|---|---|---|---|
+| **Baseline** — a harness written from the Stellar docs in an hour | "the call does not abort" | **1 / 7** | **34 %** |
+| **AI-assisted** — invariants proposed by Claude Opus 5, curated by hand | "read the state back and compare it against an independent computation" | **7 / 7** | **98 %** |
 
 The gap is **not** more inputs, and not a better fuzzing engine — both arms run the same `proptest`
 machinery over the same contract with the same case budget. The gap is entirely the **oracle**.
+
+The two columns are independent instruments. `cargo-mutants` knows nothing about the seven planted
+bugs; it mutilates the contract on its own and asks whether the suite notices. Their agreement is
+the one thing that answers the objection a purpose-built seeded-bug benchmark cannot answer for
+itself — that the result might be an artifact of how the seeds were chosen.
 
 That is a useful result precisely because it is unflattering to the framing "AI writes your fuzzer
 for you". What the AI contributed was not automation of the harness boilerplate — that part is
@@ -40,6 +45,7 @@ die.
 │       ├── proptest_baseline.rs #   control arm (P4)
 │       └── proptest_ai.rs       #   AI arm (P5)
 ├── fuzz/                        # cargo-fuzz targets for both arms (P6)
+├── fuzzkit/                     # soroban-fuzzkit — the contract-agnostic half, reusable
 ├── prompts/
 │   ├── propose-invariants.md    #   P1 — contract source → candidate invariants
 │   ├── generate-harness.md      #   P2 — source + curated invariants → harness code
@@ -146,7 +152,7 @@ second round and would be labelled as one.
 ## 7. Negative and surprising results
 
 The execution plan requires at least one clearly-labelled negative or surprising result. There are
-four.
+six.
 
 ### 7.1 The AI's highest-confidence finding was wrong
 
@@ -198,6 +204,32 @@ it had walked out of the genuine failure and into the unrelated latent false pos
 
 Minimal reproducers must be re-checked against the clean build before they are believed. This is not
 documented anywhere in the `proptest` or `cargo-fuzz` material consulted for Topic 2.
+
+### 7.5 The assisted arm was briefly *worse* than the control
+
+The first coverage-guided AI target detected 2 of 7 and **lost** `bug_temp_nonce`, which the cruder
+baseline caught. Two causes, neither about the oracle's content: operands came straight from the
+fuzzer's bytes, so the validity funnel stopped it from ever building multi-call state; and every
+call went through `try_*` inspected only on success, so an operation that *wrongly aborted* was
+tolerated.
+
+Both were fixed by implementing the third AI prompt — `prioritise-inputs`, which had been written,
+run by a clean-context subagent, committed verbatim in P5, and then **never opened**. The generic
+half of it is now [`soroban-fuzzkit`](fuzzkit/); the arm goes 2/7 → 7/7. Round 1 is kept and
+reported rather than overwritten, so the delta measures what that prompt contributes.
+
+The lesson is not about fuzzing. A prompt that is authored, executed and committed but never
+integrated produces no value and leaves no trace of its absence.
+
+### 7.6 The AI arm covers a gap in the hand-written ground truth
+
+`bump_instance` can be deleted from the contract entirely and all 22 hand-written tests still pass —
+including the one written specifically about TTL, which checks the persistent entry while nobody
+checked the instance entry. Only the AI arm catches it, via **N1**, an invariant the model proposed
+unprompted and the Topic 3 catalogue did not contain.
+
+The hand-written suite was built as the reference the fuzzing arms are *measured against*. On this
+axis it is the weaker of the two, and only mutation testing could have shown that.
 
 ## 8. Tooling findings
 
