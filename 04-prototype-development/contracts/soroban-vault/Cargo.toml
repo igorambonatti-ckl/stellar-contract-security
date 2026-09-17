@@ -5,10 +5,21 @@ edition = "2021"
 publish = false
 
 [lib]
-# "cdylib" produces the .wasm artifact; "lib" lets the fuzz targets and
-# proptest harnesses link the crate directly (needed for coverage-guided
-# fuzzing — see Topic 3 §4.2).
-crate-type = ["lib", "cdylib"]
+# **`lib` only, deliberately — `cdylib` is requested per-build instead.**
+#
+# `crate-type = ["lib", "cdylib"]` is one Cargo target emitting two artifacts,
+# so every build produces both. Under `cargo-fuzz`'s SanitizerCoverage flags the
+# cdylib link fails on macOS/arm64 — the contract's `__*__invoke_raw` shims are
+# dropped by `-dead_strip` while the exported-symbols list still demands them —
+# and that failure blocks the whole fuzz build even though the fuzz target only
+# ever needs the rlib.
+#
+# The `.wasm` artifact is therefore produced on demand:
+#
+#   cargo rustc -p soroban-vault --target wasm32v1-none --release --crate-type cdylib
+#
+# See `results/p6-fuzzing.md` § "The cdylib/sancov collision".
+crate-type = ["lib"]
 
 [dependencies]
 soroban-sdk = { workspace = true }

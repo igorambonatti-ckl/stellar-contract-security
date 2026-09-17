@@ -1,0 +1,41 @@
+[package]
+name = "soroban-vault-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+# Its own workspace: `cargo-fuzz` builds under nightly with sanitizer flags that
+# must not leak into the main workspace's `cargo test`.
+[workspace]
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = { version = "1.3", features = ["derive"] }
+soroban-sdk = { version = "26.1.0", features = ["testutils"] }
+
+[dependencies.soroban-vault]
+path = "../contracts/soroban-vault"
+
+[[bin]]
+name = "vault_baseline"
+path = "fuzz_targets/vault_baseline.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "vault_ai"
+path = "fuzz_targets/vault_ai.rs"
+test = false
+doc = false
+bench = false
+
+[profile.release]
+# `soroban-sdk`'s host aborts on overflow rather than wrapping; keep that true
+# under the fuzzer so arithmetic faults are represented the same way as in
+# `cargo test`.
+overflow-checks = true
+debug = 1

@@ -22,3 +22,10 @@ target/
 
 # Vault test snapshots
 04-prototype-development/contracts/soroban-vault/test_snapshots/
+
+# cargo-fuzz working state (corpus/artifacts are regenerated per run;
+# reproducers that matter are minimised into results/crashes/ instead)
+04-prototype-development/fuzz/target/
+04-prototype-development/fuzz/corpus/
+04-prototype-development/fuzz/artifacts/
+04-prototype-development/fuzz/coverage/
