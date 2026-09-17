@@ -20,7 +20,7 @@ end to end. It was **"the claim can be checked by someone else."**
 | [1 — Fundamentals](../01-stellar-fundamentals/README.md) | Doc + `increment` contract | SCP, the ledger, the three storage tiers, and how a contract is written, deployed and tested |
 | [2 — Security & fuzzing](../02-security-and-fuzzing/README.md) | Doc | Echidna and Foundry are EVM-only; Soroban's stack is `cargo-fuzz` / `proptest` / `SorobanArbitrary` / `cargo-mutants`, and the hard part is **knowing what to assert** |
 | [3 — Architecture](../03-solution-architecture/README.md) | Design + 12 invariants + 7 seeded bugs | A two-arm benchmark that *can* produce a negative result, and a scope small enough to finish |
-| [4 — Prototype](../04-prototype-development/README.md) | Rust workspace, prompt library, benchmark | **Baseline 1/7 → AI-assisted 7/7**, with the gap attributable entirely to the oracle |
+| [4 — Prototype](../04-prototype-development/README.md) | Rust workspace, prompt library, benchmark, reusable fuzzing kit | **Baseline 1/7 → AI-assisted 7/7** on seeds, **34 % → 98 %** on mutants, with the gap attributable entirely to the oracle |
 | 5 — This | Deck, demo, consolidation | Every claim traces to a committed artifact, and the demo runs from a clean clone |
 
 Every number in this document is produced by a command in the repository. The commands are in
@@ -96,6 +96,28 @@ That is a usable rule for placing the human checkpoint:
 
 Note the last row. The refuted claim was stated with *more* confidence than anything else in either
 output. Confidence is not a usable signal for triage.
+
+### 2.4b Two instruments, one answer
+
+The seeded-bug benchmark and mutation testing are independent: `cargo-mutants` knows nothing about
+the seven planted bugs, mutilates the contract on its own, and asks whether the suite notices.
+
+| | Seeds | Mutants (adjusted) |
+|---|---|---|
+| Baseline arm | 1 / 7 | 34 % |
+| AI arm | 7 / 7 | 98 % |
+
+Two instruments built on different principles agreeing this closely is the strongest available
+evidence that **neither number is an artifact of how the benchmark was designed** — which is the one
+objection a purpose-built seeded-bug benchmark can never answer on its own.
+
+It also produced the phase's most unexpected result: **the AI arm covers a gap in the hand-written
+ground truth.** `bump_instance` can be deleted from the contract entirely and all 22 hand-written
+tests still pass — including `i10_persistent_entries_are_ttl_managed_not_restored`, written
+specifically about TTL, which checks the persistent entry while nobody checked the instance entry.
+The AI arm catches it through N1, an invariant the model proposed unprompted and the Topic 3
+catalogue did not contain. The reference the arms were supposed to be measured *against* turned out
+to be the weaker of the two on that axis.
 
 ### 2.5 EVM bug taxonomies do not port to Soroban
 
@@ -183,11 +205,36 @@ and promoted I11 to the primary Soroban invariant. See §2.6.
 
 ### Q3 — Does `cargo-mutants` cope with `#![no_std]` + `soroban-sdk` macro expansion?
 
-**Answered in P7** — [`results/mutants.md`](../04-prototype-development/results/mutants.md).
+**Answered: yes.** (P7 — [`results/mutants.md`](../04-prototype-development/results/mutants.md).)
+68 mutants generated from a `#![no_std]` contract behind `#[contract]`, `#[contractimpl]`,
+`#[contracttype]` and `#[contracterror]`; 65 build. The 3 that do not are a legitimate `Default`
+bound failure, not macro breakage, and the tool classifies them as unviable itself.
+
+Two operational caveats came out of it. **Run it per test target** — a single whole-workspace score
+would have averaged a 34 % suite with a 98 % one into a meaningless number, and the whole point of
+the phase is the comparison. And **a timeout is not a miss**: a property suite that fails *and
+shrinks* can blow through a sane per-mutant timeout, so six AI-arm mutants had to be re-measured
+with shrinking capped before they could be scored. All six were detections.
 
 ### Q4 — Is coverage-guided fuzzing meaningfully better than `proptest` here, or is the contract small enough that `proptest` saturates it?
 
-**Answered in P6** — [`results/p6-fuzzing.md`](../04-prototype-development/results/p6-fuzzing.md).
+**Answered: neither, as posed.** (P6 — [`results/p6-fuzzing.md`](../04-prototype-development/results/p6-fuzzing.md) §7.)
+
+The `proptest` arm reaches 7/7 in about 11 seconds of `cargo test`. The coverage-guided arm reaches
+the same set only after its generator is given the input prior — and up to ~2 minutes for the
+arithmetic seeds. Coverage guidance is not adding depth here; it is **recovering ground that
+hand-written `proptest` strategies get for free**, because those strategies already encode the
+valid-input structure that byte-level mutation has to rediscover.
+
+The question assumed the alternative to saturation was depth. The real answer is that on a contract
+with a narrow validity funnel, **the binding constraint is input structure, not search strategy** —
+and a coverage-guided fuzzer pays for its structural blindness long before its feedback loop can
+help. Round 1 of the fuzz arm, with unshaped `i128` operands, found 2 of 7 despite running 180 000
+executions per seed; the `proptest` arm found 7 of 7 in a few hundred cases.
+
+This **inverts the emphasis Topic 3 §4.2 gave them.** `proptest` is the primary layer for a contract
+of this shape; `cargo-fuzz` is the overnight one, earning its keep by running unattended for hours
+where `proptest`'s fixed case budget stops.
 
 ### Q5 — Does `cost_estimate()` make a better TTL oracle than storage reads?
 
