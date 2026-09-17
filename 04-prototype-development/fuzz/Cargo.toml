@@ -19,6 +19,30 @@ soroban-sdk = { version = "26.1.0", features = ["testutils"] }
 [dependencies.soroban-vault]
 path = "../contracts/soroban-vault"
 
+# Seed passthroughs.
+#
+# ⚠️ **`cargo fuzz --features` is ignored by cargo-fuzz 0.13.2.** It is accepted
+# on the command line, never forwarded to the underlying `cargo build`, and
+# reports no error — `cargo fuzz build -v --features bug_x` shows every crate
+# "Fresh". The first P6 run was invalidated by this: it looked like the AI arm
+# had missed `bug_self_transfer`, when the seed had simply never been compiled
+# in. Plain `cargo build --features bug_x` in this same directory honours it
+# correctly, which is how the fault was localised.
+#
+# The seed is therefore selected by rewriting `default` below, which
+# `scripts/p6-fuzz-matrix.sh` does per run and asserts took effect by requiring
+# `soroban-vault` to recompile. See `results/p6-fuzzing.md`.
+[features]
+default = ["bug_overflow"]
+
+bug_overflow = ["soroban-vault/bug_overflow"]
+bug_missing_auth = ["soroban-vault/bug_missing_auth"]
+bug_zero_amount = ["soroban-vault/bug_zero_amount"]
+bug_self_transfer = ["soroban-vault/bug_self_transfer"]
+bug_no_ttl = ["soroban-vault/bug_no_ttl"]
+bug_temp_nonce = ["soroban-vault/bug_temp_nonce"]
+bug_reinit = ["soroban-vault/bug_reinit"]
+
 [[bin]]
 name = "vault_baseline"
 path = "fuzz_targets/vault_baseline.rs"
