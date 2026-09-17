@@ -8,14 +8,20 @@
 
 ---
 
-## 1 · The question
+## 1 · The thesis
 
-Does AI assistance actually make fuzzing a Soroban contract better?
+**AI proposes, the human curates, the fuzzer disposes.**
 
-Not *"can an LLM write a fuzz harness"* — it obviously can.
-**Does it find bugs a competent developer's harness would miss?**
+A model reads an expression and enumerates how it can go wrong. It cannot tell you whether that
+state is *reachable* — and it will state the unreachable case with more confidence than the real
+one.
 
-That question has an answer only if you can be wrong. So: two arms, one benchmark, known answers.
+The fuzzer settles reachability by execution. It is the only authority in the loop that cannot be
+argued into a false positive.
+
+This is a method for **auditing Soroban contracts**. The rest of this deck is the evidence that the
+combination works, and the list of things that had to be got right for the evidence to mean
+anything.
 
 ---
 
@@ -262,6 +268,31 @@ Its generic half is now a reusable crate, `soroban-fuzzkit`.
 - **More targets, more models, repeated runs** — turn single observations into distributions.
 - **Formal methods where fuzzing saturates** (Kani) — a small contract like this may simply be
   exhaustible.
+
+---
+
+## 15b · What makes it Soroban, not just Rust
+
+Fuzzing the linked crate is fuzzing something that never deploys. The **WASM arm** registers the
+compiled module into the `Env` — and that is not pedantry, it is load-bearing:
+
+> "if a test contract is used instead of a Wasm contract, all the costs related to VM instantiation
+> and execution, as well as **Wasm reads/rent bumps will be missed**." — the SDK
+
+So Soroban's own oracles only exist over the deployed artifact:
+
+| | Question it answers |
+|---|---|
+| **R1** resource ceilings | can this call actually be submitted on-chain? |
+| **R2** rent on write | did a persistent write pay to keep its entry alive? |
+
+**R2 is the one an auditor wants**, because it needs no knowledge of the storage layout. Reading a
+TTL means knowing which key to read, which means having read the contract. The rent counter is
+measured from the invocation itself.
+
+And a negative result to inherit: `disk_read_entries` is **not** an archival detector — it also
+counts classic account balances, so any contract calling a token "reads from disk" while perfectly
+healthy. Written as an assertion, it failed on the clean build in 90 seconds.
 
 ---
 

@@ -7,6 +7,20 @@ this document.
 
 ---
 
+## 0. What this project is, in one paragraph
+
+A **method for auditing Soroban contracts** that combines AI-proposed invariants with
+execution-based fuzzing, and the evidence that the combination works. The method is written up in
+[`04-prototype-development/AUDITING.md`](../04-prototype-development/AUDITING.md); its reusable half
+is the [`soroban-fuzzkit`](../04-prototype-development/fuzzkit/) crate; the evidence is a two-arm
+benchmark over seven seeded bugs, cross-checked by mutation testing.
+
+The organising principle, and the reason the fuzzer is not optional: **AI proposes, the human
+curates, the fuzzer disposes.** A model reads an expression and enumerates how it can go wrong, but
+cannot tell you whether that state is reachable — and it will state the unreachable case with more
+confidence than the real one (§2.4). Execution is the only authority in the loop that cannot be
+argued into a false positive.
+
 ## 1. What the IDP set out to do, and what it produced
 
 > **Developing Smart Contract Skills on Stellar with a Focus on Security and AI-Assisted Fuzzing**
@@ -118,6 +132,34 @@ specifically about TTL, which checks the persistent entry while nobody checked t
 The AI arm catches it through N1, an invariant the model proposed unprompted and the Topic 3
 catalogue did not contain. The reference the arms were supposed to be measured *against* turned out
 to be the weaker of the two on that axis.
+
+### 2.4c Fuzzing the linked crate is fuzzing something that never deploys
+
+Both original arms linked the contract natively. That is convenient, it gives coverage
+instrumentation, and it quietly disables every Soroban-specific oracle — because, in the SDK's own
+words, against a native test contract *"all the costs related to VM instantiation and execution, as
+well as Wasm reads/rent bumps will be missed."*
+
+So the resource footprint of an invocation — instructions, memory, rent bumps — is only readable
+over the **deployed WASM**. Two oracles live there and nowhere else:
+
+- **R1, resource ceilings.** A call that passes every test but exceeds the network's per-transaction
+  limit cannot be submitted. The contract is correct and the function is dead. No application-logic
+  oracle can see this.
+- **R2, rent on write.** An invocation that wrote persistent state and bumped no rent left an entry
+  it is not paying to keep alive. Under protocol 23 the data survives via auto-restoration, so
+  *nothing observable breaks* — the only symptom is a cost somebody else pays later.
+
+**R2 is the one that matters for auditing**, because it is contract-agnostic. Detecting a missing
+`extend_ttl` by reading the entry's TTL requires knowing which storage key to read, which requires
+having read the contract. The rent counter is measured from the invocation itself, so it applies to
+a contract you have not read — which is the situation an auditor is actually in.
+
+The counterpart is a negative result, and it cost 90 seconds to discover: **`disk_read_entries` is
+not an archival detector.** The obvious reasoning — live state is in memory, so a disk read means
+something was restored — ignores that the counter also includes non-Soroban entries such as classic
+account balances. Any contract calling a Stellar Asset Contract reads from disk on a perfectly
+healthy invocation. Written as an assertion, it failed on the clean build immediately.
 
 ### 2.5 EVM bug taxonomies do not port to Soroban
 
