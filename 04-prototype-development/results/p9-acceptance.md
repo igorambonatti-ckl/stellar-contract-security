@@ -25,10 +25,23 @@ it felt done.
 > [`p6-fuzzing.md`](p6-fuzzing.md) §6.1 — a cdylib emitted alongside the rlib fails to link under
 > SanitizerCoverage on macOS/arm64 and takes the whole fuzz build with it.
 
-**The clean-clone gate earned its place.** `cargo test` passed from a fresh clone, and
-`scripts/demo.sh` came back *permission denied* — the executable bit had never been recorded in the
-git index. The Topic 5 demo ran only on the author's machine. That is precisely the failure the
-requirement was written to catch, and it would not have been caught any other way.
+**The clean-clone gate earned its place — twice, on the same file.** `cargo test` passed from a
+fresh clone and `scripts/demo.sh` came back *permission denied*: the executable bit had never been
+recorded in the git index, so the Topic 5 demo ran only on the author's machine.
+
+The first fix set the bit with `git update-index --chmod=+x` but never on the file itself, so the
+next `git add -A` read the working-tree mode back and reverted it. It looked fixed because it was
+verified by re-running the demo in a clone created *before* the mode was reverted.
+
+**Verifying a fix against stale state is how a fix gets to look like it worked.** The second clean
+clone caught it; the fix is now `chmod +x` on disk, and the final verification is a clone taken
+after the commit:
+
+```
+demo executável: SIM
+testes: 85 passed, 0 failed
+demo: runs end to end
+```
 
 ## Seeded-bug benchmark
 
