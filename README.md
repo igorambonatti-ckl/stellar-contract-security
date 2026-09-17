@@ -23,11 +23,28 @@ demonstrates AI-assisted fuzzing applied to a Soroban contract.
 | 1 | Stellar & Soroban Fundamentals | ✅ Done | 2026-05-31 | [Doc](01-stellar-fundamentals/README.md) + increment contract |
 | 2 | Security & Fuzzing Fundamentals | ✅ Done | 2026-06-30 | [Doc](02-security-and-fuzzing/README.md) |
 | 3 | Solution Architecture | ✅ Done | 2026-07-31 | [Doc](03-solution-architecture/README.md) |
-| 4 | Prototype Development | 🚧 In progress | 2026-08-31 | [Plan](docs/execution-plan.md) |
-| 5 | Consolidation & Presentation | ⬜ Not started | 2026-09-30 | — |
+| 4 | Prototype Development | ✅ Done | 2026-08-31 | [Doc](04-prototype-development/README.md) + [benchmark](04-prototype-development/results/benchmark.md) |
+| 5 | Consolidation & Presentation | ✅ Done | 2026-09-30 | [Doc](05-consolidation-and-presentation/README.md) + [deck](docs/deck.md) |
+
+## The result
+
+Two fuzzing arms over the same Soroban contract and the same 7 seeded bugs, differing **only** in
+the oracle:
+
+| Arm | Oracle | Seeded bugs detected |
+|---|---|---|
+| Baseline — a harness written from the Stellar docs in an hour | "the call does not abort" | **1 / 7** |
+| AI-assisted — invariants proposed by Claude Opus 5, curated by hand | reads state back and compares it against an independent computation | **7 / 7** |
+
+See it for yourself in about two minutes:
+
+```bash
+./04-prototype-development/scripts/demo.sh
+```
 
 Supporting documents:
 
+- **[Presentation deck](docs/deck.md)** — the 20-minute version.
 - **[Execution & verification plan](docs/execution-plan.md)** — day-by-day plan for Topics 4–5,
   with a verification gate per phase and a final acceptance checklist.
 - **[Prior art — ChainGuard AI](docs/prior-art-chainguard.md)** — inventory of an earlier personal
@@ -49,9 +66,30 @@ stellar-studies/
 ## Build & test
 
 ```bash
-cargo test          # run all contract unit tests
-cargo build         # build the workspace
+cargo test                       # whole workspace, clean contract — everything green
+cargo build                      # build the workspace
+
+# the WASM artifact. `cargo rustc --crate-type cdylib` rather than `cargo build`,
+# because carrying "cdylib" in [lib] crate-type permanently breaks the cargo-fuzz
+# build on macOS/arm64 — see 04-prototype-development/results/p6-fuzzing.md
+cargo rustc -p soroban-vault --target wasm32v1-none --release --crate-type cdylib
 ```
+
+Prototype-specific (Topic 4):
+
+```bash
+cd 04-prototype-development
+
+cargo test -p soroban-vault --test proptest_baseline   # control arm
+cargo test -p soroban-vault --test proptest_ai         # AI arm
+cargo test -p soroban-vault --features bug_self_transfer   # with a seeded bug
+
+scripts/demo.sh                  # end-to-end: bug → both arms → minimised repro → fix
+scripts/p6-fuzz-matrix.sh 300    # the coverage-guided matrix (~80 min)
+```
+
+Requires stable Rust, the `wasm32v1-none` target, and — for the `cargo-fuzz` layer only —
+a nightly toolchain plus `cargo install --locked cargo-fuzz cargo-mutants`.
 
 ## References
 
