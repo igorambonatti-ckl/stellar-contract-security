@@ -19,6 +19,9 @@ soroban-sdk = { version = "26.1.0", features = ["testutils"] }
 [dependencies.soroban-vault]
 path = "../contracts/soroban-vault"
 
+[dependencies.soroban-fuzzkit]
+path = "../fuzzkit"
+
 # Seed passthroughs.
 #
 # ⚠️ **`cargo fuzz --features` is ignored by cargo-fuzz 0.13.2.** It is accepted
@@ -33,7 +36,7 @@ path = "../contracts/soroban-vault"
 # `scripts/p6-fuzz-matrix.sh` does per run and asserts took effect by requiring
 # `soroban-vault` to recompile. See `results/p6-fuzzing.md`.
 [features]
-default = ["bug_overflow"]
+default = []
 
 bug_overflow = ["soroban-vault/bug_overflow"]
 bug_missing_auth = ["soroban-vault/bug_missing_auth"]

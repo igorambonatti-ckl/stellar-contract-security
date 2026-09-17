@@ -14,4 +14,3 @@ vault_ai	bug_no_ttl	missed		181065
 vault_baseline	bug_temp_nonce	detected	1	427	artifacts/vault_baseline/crash-78db3693373e49eb3e4c11983ee57779478de0de
 vault_ai	bug_temp_nonce	missed		182133	
 vault_baseline	bug_reinit	missed		465619	
-vault_ai	bug_reinit	detected	2	339	artifacts/vault_ai/crash-4be0d5c1526addd2949e47f2ac017c52e5e8760e

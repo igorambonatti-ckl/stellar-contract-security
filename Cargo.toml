@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["*/contracts/*"]
+members = ["*/contracts/*", "04-prototype-development/fuzzkit"]
 
 [workspace.dependencies]
 soroban-sdk = "26.1.0"

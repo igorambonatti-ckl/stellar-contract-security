@@ -1640,6 +1640,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "soroban-fuzzkit"
+version = "0.1.0"
+dependencies = [
+ "arbitrary",
+ "soroban-sdk",
+]
+
+[[package]]
 name = "soroban-ledger-snapshot"
 version = "26.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1739,6 +1747,7 @@ version = "0.0.0"
 dependencies = [
  "arbitrary",
  "libfuzzer-sys",
+ "soroban-fuzzkit",
  "soroban-sdk",
  "soroban-vault",
 ]

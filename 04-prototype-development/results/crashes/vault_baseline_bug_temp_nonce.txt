@@ -1,0 +1,7 @@
+# vault_baseline / bug_temp_nonce — first crash after 1s, 427 runs
+thread '<unnamed>' (2813916) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.4/src/host.rs:907:9:
+HostError: Error(Contract, #2)
+   0: [Diagnostic Event] topics:[error, Error(Contract, #2)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #2)], data:["contract call failed", pause, []]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #2)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #2)], data:"escalating error to panic"

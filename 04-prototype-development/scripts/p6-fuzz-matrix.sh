@@ -15,22 +15,34 @@
 # `cargo build --features X` in the same directory honours it. So the seed goes
 # through the `default` feature instead.
 #
-# That substitution is *verified*, not assumed: the first cell of each seed
-# group must show `soroban-vault` recompiling. A run that silently fuzzed the
+# That substitution is *verified*, not assumed — a run that silently fuzzed the
 # clean contract while claiming to fuzz a seed would report a false "missed",
 # which is exactly the failure this script exists to avoid.
+#
+# Verification is `cargo tree -e features -i soroban-vault`, which prints the
+# feature set cargo actually resolved. Two weaker checks were tried first and
+# both produced false alarms:
+#
+#   * "the contract must recompile" — cargo caches artifacts per feature set, so
+#     a seed built in an earlier session legitimately does not rebuild;
+#   * "the second arm must recompile too" — it correctly reuses the first arm's
+#     build.
+#
+# Only the resolved feature set is authoritative.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FUZZ_DIR="04-prototype-development/fuzz"
 MANIFEST="$ROOT/$FUZZ_DIR/Cargo.toml"
-OUT="$ROOT/04-prototype-development/results/p6-raw.tsv"
+# Overridable so a second round can be measured into its own file without
+# discarding the first, and so a single arm can be re-run in isolation.
+OUT="${P6_OUT:-$ROOT/04-prototype-development/results/p6-raw.tsv}"
 CRASHES="$ROOT/04-prototype-development/results/crashes"
 BUDGET="${1:-300}"
 
 SEEDS=(clean bug_overflow bug_missing_auth bug_zero_amount bug_self_transfer \
        bug_no_ttl bug_temp_nonce bug_reinit)
-ARMS=(vault_baseline vault_ai)
+read -r -a ARMS <<< "${P6_ARMS:-vault_baseline vault_ai}"
 
 mkdir -p "$CRASHES"
 [[ -s "$OUT" ]] || printf 'arm\tseed\tverdict\tttfc_seconds\truns\tartifact\n' > "$OUT"
@@ -49,21 +61,26 @@ trap 'set_seed clean' EXIT
 for seed in "${SEEDS[@]}"; do
   set_seed "$seed"
 
-  # Guard: the manifest must actually say what we think it says.
+  # Guard: cargo must have *resolved* the feature we think we set. This is the
+  # check that would have caught the silently-dropped `--features` flag.
+  resolved="$(cd "$ROOT/$FUZZ_DIR" && cargo tree -e features -i soroban-vault 2>/dev/null \
+              | grep -oE 'soroban-vault feature "bug_[a-z_]+"' | sed 's/.*"\(.*\)"/\1/' | sort -u)"
   if [[ "$seed" == clean ]]; then
-    grep -qx 'default = \[\]' "$MANIFEST" || { echo "manifest not clean"; exit 1; }
-  else
-    grep -qx "default = \[\"$seed\"\]" "$MANIFEST" || { echo "manifest not set to $seed"; exit 1; }
+    if [[ -n "$resolved" ]]; then
+      echo "ABORT: expected no seed feature, cargo resolved: $resolved"; exit 1
+    fi
+  elif [[ "$resolved" != "$seed" ]]; then
+    echo "ABORT: expected seed '$seed', cargo resolved: '${resolved:-<none>}'."
+    echo "The seed did not take effect and the result would be a false 'missed'."
+    exit 1
   fi
-
-  first_arm_of_group=1
+  echo "--- seed verified: ${resolved:-clean}"
 
   for arm in "${ARMS[@]}"; do
     # (`grep -P` is unavailable on macOS and fails silently, which on the first
     # attempt made every cell re-run instead of resuming — hence awk.)
     if awk -F'\t' -v a="$arm" -v s="$seed" '$1==a && $2==s {f=1} END{exit !f}' "$OUT"; then
       echo "=== $arm / $seed — already recorded, skipping ==="
-      first_arm_of_group=0
       continue
     fi
 
@@ -74,16 +91,6 @@ for seed in "${SEEDS[@]}"; do
     if [[ $? -ne 0 ]]; then
       echo "BUILD FAILED for $arm/$seed"; echo "$build_log" | tail -20; exit 1
     fi
-
-    # Only the first arm of a seed group is expected to recompile the contract;
-    # the second arm legitimately reuses that build.
-    if (( first_arm_of_group )) && [[ "$seed" != clean ]] \
-       && ! grep -q "Compiling soroban-vault v" <<<"$build_log"; then
-      echo "ABORT: '$seed' did not recompile soroban-vault — the feature did not"
-      echo "take effect, and the result would be a false 'missed'."
-      exit 1
-    fi
-    first_arm_of_group=0
 
     # Fresh corpus per cell, so one arm's accumulated corpus cannot flatter the
     # other and TTFC is measured from a cold start.
