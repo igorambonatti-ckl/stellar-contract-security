@@ -1,0 +1,3 @@
+# vault_ai / bug_zero_amount — first crash after 2s, 677 runs
+thread '<unnamed>' (2885851) panicked at fuzz_targets/vault_ai.rs:347:21:
+I7 violated: withdraw of 0 shares succeeded and paid 0; non-positive amounts must be rejected

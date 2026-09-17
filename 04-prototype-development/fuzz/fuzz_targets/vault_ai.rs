@@ -317,12 +317,29 @@ fuzz_target!(|program: Program| {
                     // N4 — the payout is exactly the pro-rata floor. An exact
                     // oracle rather than an inequality, so a wrong payout is
                     // attributable to *what* was wrong about it.
-                    if let Some(expected) = shares.checked_mul(a0).map(|n| if t0 == 0 { 0 } else { n / t0 }) {
-                        assert_eq!(
-                            paid, expected,
-                            "N4 violated: withdraw of {shares} paid {paid}, expected \
-                             floor({shares}*{a0}/{t0}) = {expected}"
-                        );
+                    //
+                    // Note the `None` arm. Where the harness's own `checked_mul`
+                    // overflows, the *contract's* multiplication overflows too —
+                    // so a correct contract must abort, and a call that returned
+                    // a value instead returned a wrapped one. Treating that as a
+                    // skip, which is the obvious way to write this, silently
+                    // converts the sharpest arithmetic detection available into
+                    // no detection at all.
+                    match shares.checked_mul(a0) {
+                        Some(n) => {
+                            let expected = if t0 == 0 { 0 } else { n / t0 };
+                            assert_eq!(
+                                paid, expected,
+                                "N4 violated: withdraw of {shares} paid {paid}, expected \
+                                 floor({shares}*{a0}/{t0}) = {expected}"
+                            );
+                        }
+                        None => panic!(
+                            "I6/N4 violated: withdraw of {shares} succeeded and paid {paid}, \
+                             but the exact payout {shares}*{a0} overflows i128 (T0={t0}) — \
+                             a correct contract aborts with Overflow rather than returning \
+                             a wrapped value"
+                        ),
                     }
                     // I7 — a successful withdraw implies the positivity guard
                     // held. Separated from the payout check so the two failures

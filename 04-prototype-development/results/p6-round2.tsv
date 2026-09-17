@@ -1,1 +1,9 @@
 arm	seed	verdict	ttfc_seconds	runs	artifact
+vault_ai	clean	missed		145564	
+vault_ai	bug_overflow	detected	113	65982	artifacts/vault_ai/crash-9683a23a3238409e88e1cdd1e03cda326b2d1136
+vault_ai	bug_missing_auth	detected	2	578	artifacts/vault_ai/crash-b9f6439081e41188a0ac71878e86f58871b51324
+vault_ai	bug_zero_amount	detected	2	677	artifacts/vault_ai/crash-0c278baf0afc2cc8bb1cb85fdfb795f4d0b7a850
+vault_ai	bug_self_transfer	detected	124	74891	artifacts/vault_ai/crash-97fb3c1f7fc34e63a229770d4aaddfdd2a217102
+vault_ai	bug_no_ttl	detected	2	398	artifacts/vault_ai/crash-955e1f021ea1206c007c9b3609e2908191478d30
+vault_ai	bug_temp_nonce	detected	2	538	artifacts/vault_ai/crash-5ed06bdc723ad605399d49ca40ccf1d0399fcf6f
+vault_ai	bug_reinit	detected	2	613	artifacts/vault_ai/crash-c90022392522d753a4315386b00565142091fb3a
