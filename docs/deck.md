@@ -59,6 +59,7 @@ Same engine. Same contract. Same budget. **Only the oracle differs.**
 | | Baseline | **AI-assisted** |
 |---|---|---|
 | Seeded bugs detected | **1 / 7** | **7 / 7** |
+| Mutation score | **34 %** | **98 %** |
 
 <br>
 
@@ -67,6 +68,10 @@ The other six are **silent accounting faults**: the call returns normally and th
 wrong.
 
 **The difference is not more inputs. It is an oracle that inspects state.**
+
+The second row is an independent instrument — `cargo-mutants` knows nothing about the planted bugs.
+Two measurements built on different principles agreeing is what answers the objection a
+purpose-built benchmark cannot answer for itself.
 
 ---
 
@@ -227,6 +232,24 @@ expected results.
 4. **I4/I5 are asserted weaker than stated** — "only the incumbent authorized" is tested as "nobody
    authorized". *The model flagged this hole in its own harness.*
 5. **The deployed WASM is not what gets fuzzed** — both arms link the crate directly, for coverage.
+
+---
+
+## 14b · The assisted arm was briefly worse than the control
+
+The first coverage-guided AI target found **2 of 7** — and *lost* one the crude baseline caught.
+
+Not an oracle problem. Operands came straight from the fuzzer's bytes, so it could never build
+multi-call state; and every call was wrapped in `try_*` and checked only on success, so an operation
+that **wrongly aborted** was tolerated.
+
+The fix was implementing the third prompt — `prioritise-inputs` — which had been written, run,
+committed verbatim in P5, and **never opened**. 2/7 → 7/7.
+
+> A prompt that is authored, executed and committed but never integrated produces no value
+> and leaves no trace of its absence.
+
+Its generic half is now a reusable crate, `soroban-fuzzkit`.
 
 ---
 
