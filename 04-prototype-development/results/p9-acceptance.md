@@ -96,7 +96,7 @@ Integrity enforcement, and the three contamination channels it does **not** clos
 |---|---|
 | `spikes.md`, `seeds.md`, `benchmark.md`, `mutants.md` all present | ✅ plus `p0-environment.md`, `p5-ai-arm.md`, `p6-fuzzing.md`, `ai-arm-provenance.md`, this file |
 | Topic 4 README complete, with success indicators | ✅ [`../README.md`](../README.md) |
-| At least one negative/surprising result documented | ✅ **four** — README §7 |
+| At least one negative/surprising result documented | ✅ **six** — README §7 |
 | Root README status table updated | ✅ |
 | All work committed; no uncommitted tree | ✅ `git status --porcelain` → 0 lines |
 
