@@ -30,6 +30,10 @@
 //! 4. **Ledger position is an input.** TTL cliffs are step functions; a uniform
 //!    advance lands on one essentially never. → [`ttl`]
 //!
+//! And one whole family of oracles that has no analogue outside Soroban — resource
+//! ceilings, rent bumps and archival detection, all read from the invocation's
+//! own metered footprint rather than from contract state. → [`resources`]
+//!
 //! Plus one lesson that is about oracles rather than inputs, and is the easiest
 //! to get subtly wrong: in Soroban *"a contract error"* is ambiguous, because it
 //! may come from the contract under test or from any contract it calls. An
@@ -63,9 +67,11 @@ pub mod env;
 pub mod operand;
 pub mod oracle;
 pub mod pool;
+pub mod resources;
 pub mod ttl;
 
 pub use env::{pinned_env, LedgerPins};
 pub use operand::{Operand, OperandPolicy};
 pub use pool::{Pool, PoolSpec, Role};
+pub use resources::{footprint, Ceilings, Footprint};
 pub use ttl::TtlCliffs;

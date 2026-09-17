@@ -60,6 +60,13 @@ test = false
 doc = false
 bench = false
 
+[[bin]]
+name = "vault_wasm"
+path = "fuzz_targets/vault_wasm.rs"
+test = false
+doc = false
+bench = false
+
 [profile.release]
 # `soroban-sdk`'s host aborts on overflow rather than wrapping; keep that true
 # under the fuzzer so arithmetic faults are represented the same way as in

@@ -26,15 +26,40 @@ demonstrates AI-assisted fuzzing applied to a Soroban contract.
 | 4 | Prototype Development | ✅ Done | 2026-08-31 | [Doc](04-prototype-development/README.md) + [benchmark](04-prototype-development/results/benchmark.md) |
 | 5 | Consolidation & Presentation | ✅ Done | 2026-09-30 | [Doc](05-consolidation-and-presentation/README.md) + [deck](docs/deck.md) |
 
-## The result
+## What this is
 
-Two fuzzing arms over the same Soroban contract and the same 7 seeded bugs, differing **only** in
-the oracle:
+A **method for auditing Soroban contracts** by combining AI-proposed invariants with execution-based
+fuzzing, plus the evidence that the combination works.
 
-| Arm | Oracle | Seeded bugs detected |
+> **AI proposes, the human curates, the fuzzer disposes.** A model reads an expression and
+> enumerates how it can go wrong; it cannot tell you whether that state is reachable. The fuzzer
+> settles reachability by execution — the only authority in the loop that cannot be argued into a
+> false positive.
+
+**[→ The method](04-prototype-development/AUDITING.md)** — how to point it at a contract.
+**[→ `soroban-fuzzkit`](04-prototype-development/fuzzkit/)** — the reusable, contract-agnostic half.
+
+## The evidence
+
+Two fuzzing arms over the same contract and the same 7 seeded bugs, differing **only** in the
+oracle:
+
+| Arm | Oracle | Seeded bugs | Mutation score |
+|---|---|---|---|
+| Baseline — a harness written from the Stellar docs in an hour | "the call does not abort" | **1 / 7** | **34 %** |
+| AI-assisted — invariants proposed by Claude Opus 5, curated by hand | reads state back, compares against an independent computation | **7 / 7** | **98 %** |
+
+The two right-hand columns are independent instruments: `cargo-mutants` knows nothing about the
+planted bugs. Their agreement is what answers the objection a purpose-built benchmark cannot answer
+for itself.
+
+Three layers, because they catch different things:
+
+| Layer | Runs in | Catches |
 |---|---|---|
-| Baseline — a harness written from the Stellar docs in an hour | "the call does not abort" | **1 / 7** |
-| AI-assisted — invariants proposed by Claude Opus 5, curated by hand | reads state back and compares it against an independent computation | **7 / 7** |
+| `proptest` | seconds, plain `cargo test` | application-logic invariants; the CI gate |
+| `cargo-fuzz` over the **deployed WASM** | unattended | Soroban's own failure modes — resource ceilings, unpaid rent |
+| `cargo-mutants` | minutes | whether the suite is worth anything, independent of the seeds |
 
 See it for yourself in about two minutes:
 

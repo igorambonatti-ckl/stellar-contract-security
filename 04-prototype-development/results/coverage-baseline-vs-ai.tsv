@@ -1,0 +1,5 @@
+arm	regions	missed	region_cov	lines	missed_lines	line_cov
+fuzz_vault_baseline	368	71	80.71%	188	36	80.85%
+fuzz_vault_ai	368	22	94.02%	188	10	94.68%
+proptest_baseline	367	52	85.83%	187	23	87.70%
+proptest_ai	367	14	96.19%	187	5	97.33%
