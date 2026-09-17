@@ -1,90 +1,180 @@
-# Benchmark — baseline arm (P4)
+# Benchmark — the two-arm comparison
 
-**Run:** 2026-08-17 · **Gate:** [execution-plan.md §P4](../../docs/execution-plan.md) · **Status:** baseline complete; AI arm pending (P5)
+**Assembled:** 2026-09-17 · **Gate:** [execution-plan.md §P8](../../docs/execution-plan.md)
 
-Harness: [`tests/proptest_baseline.rs`](../contracts/soroban-vault/tests/proptest_baseline.rs)
+Two fuzzing arms over the same contract, the same seven seeded bugs and the same case budget,
+differing **only in the oracle**.
+
+| Arm | Oracle | Written |
+|---|---|---|
+| **Baseline** | "the call does not abort" | first, before any prompt was run |
+| **AI-assisted** | reads state back and compares it against an independently computed expectation | after, from curated AI proposals |
+
+Reproduce:
 
 ```bash
-cargo test -p soroban-vault --test proptest_baseline                      # clean: 8/8
-cargo test -p soroban-vault --test proptest_baseline --features <seed>    # per seed
+cargo test -p soroban-vault --test proptest_baseline                     # clean: 8/8
+cargo test -p soroban-vault --test proptest_ai                           # clean: 11/11
+cargo test -p soroban-vault --test proptest_<arm> --features <seed>      # per seed
+scripts/p6-fuzz-matrix.sh 300                                            # coverage-guided layer
 ```
 
-## Detection — baseline arm
+---
 
-| Seed | Target invariant | Baseline | Failing test |
-|---|---|---|---|
-| `bug_overflow` | I6 | ❌ missed | — |
-| `bug_missing_auth` | I5 | ❌ missed | — |
-| `bug_zero_amount` | I7 | ❌ missed | — |
-| `bug_self_transfer` | I8 | ❌ missed | — |
-| `bug_no_ttl` | I10′ | ❌ missed | — |
-| `bug_temp_nonce` | I11 | ✅ **detected** | `fuzz_pause`, `fuzz_set_admin` |
-| `bug_reinit` | I9 | ❌ missed | — |
+## 1. Detection, per seed
 
-**Baseline detection rate: 1 / 7.**
+Per seed, never as an aggregate — `bug_temp_nonce` trips four distinct tests and an aggregate would
+be inflated by it alone (P3 Finding 2).
 
-Clean contract: 8/8 passing, ~24 s at 256 cases per test.
+| Seed | Target | `proptest` baseline | **`proptest` AI** | fuzz baseline | fuzz AI r1 | **fuzz AI r2** |
+|---|---|---|---|---|---|---|
+| `bug_overflow` | I6 | ❌ | ✅ | ❌ | ❌ | ✅ 113 s |
+| `bug_missing_auth` | I5 | ❌ | ✅ | ❌ | ❌ | ✅ 2 s |
+| `bug_zero_amount` | I7 | ❌ | ✅ | ❌ | ✅ | ✅ 2 s |
+| `bug_self_transfer` | I8 | ❌ | ✅ | ❌ | ❌ | ✅ 124 s |
+| `bug_no_ttl` | I10′ | ❌ | ✅ | ❌ | ❌ | ✅ 2 s |
+| `bug_temp_nonce` | I11 | ✅ | ✅ | ✅ | ❌ | ✅ 2 s |
+| `bug_reinit` | I9 | ❌ | ✅ | ❌ | ✅ | ✅ 2 s |
+| **Total** | | **1 / 7** | **7 / 7** | **1 / 7** | **2 / 7** | **7 / 7** |
 
-### Validity check — the misses are not a budget artifact
+**Clean-contract control:** every arm passes on the unmodified contract — `proptest` 8/8 and 11/11;
+fuzzing 470 749 and 145 564 executions with no crash. Without that, no detection above would be
+attributable.
 
-The first matrix ran at `PROPTEST_CASES=64` (bounded, because shrinking on a failing property is
-expensive). "Missed at 64 cases" is not the same claim as "cannot detect", so all six misses were
-re-run at **256 cases**. Every one still missed. The limitation is structural, not statistical.
+Every detection was verified by reading the assertion message, not the red/green column, against the
+P3 criterion: *does the test distinguish the right failure, or merely a failure?* Per-seed
+attribution in [`p5-ai-arm.md`](p5-ai-arm.md) §1 and [`p6-fuzzing.md`](p6-fuzzing.md) §2.
 
 ### Why the baseline finds exactly one
 
-The baseline's only oracle is *"the call does not abort"*. That partitions the seeds cleanly:
+Its only oracle is *"the call does not abort"*. That partitions the seeds cleanly:
 
 - `bug_temp_nonce` makes admin authority depend on temporary-storage state, so `pause` and
   `set_admin` **abort** on a fresh vault. An abort is the one thing this oracle can see.
-- The other six are **silent accounting faults**. The contract accepts the call, returns normally,
-  and is simply *wrong*: shares duplicated on self-transfer, supply inflated by a wrapped
-  multiplication, a zero-value deposit accepted, an entry left to be auto-restored, admin
+- The other six are **silent accounting faults**: the contract accepts the call, returns normally,
+  and is simply wrong — shares duplicated on self-transfer, supply inflated by a wrapped
+  multiplication, a zero-value deposit accepted, an entry left to be auto-restored, the admin
   overwritten by a second `initialize`. Nothing aborts, so nothing is observed.
-
-This is the control result the comparison needs: it leaves six of seven bugs available for the AI
-arm to find, and it isolates *what* the AI arm has to contribute — not more inputs, but **an
-oracle that inspects state** rather than only liveness.
 
 ### The trap the baseline documents
 
-To keep the correct contract passing, the generators had to be narrowed to valid ranges (positive
-amounts, affordable balances). That is the realistic failure mode of unassisted fuzzing: the
-developer narrows the generators to silence false alarms, and in doing so walks the fuzzer away
-from the edge cases where the bugs live. `bug_overflow` is the sharpest example — it needs operands
-near `2^100`, which the "plausible amount" generator (`1..=100_000`) can never reach.
+To keep the correct contract passing, its generators had to be narrowed to valid ranges. That is the
+realistic failure mode of unassisted fuzzing: the developer narrows the generators to silence false
+alarms and walks the fuzzer away from the edge cases where the bugs live. `bug_overflow` is the
+sharpest example — it needs operands near `2^100`, which a "plausible amount" generator of `1..=100_000`
+can never reach.
 
-## Proxy effort metrics — baseline arm
+---
 
-| Metric | Value |
+## 2. Invariant yield
+
+| Measure | Value |
 |---|---|
-| Harness size | 8 properties, ~180 lines incl. rig + comments |
-| Compile iterations to green | 1 (compiled and passed on first run) |
-| Runtime, clean, 256 cases | ~24 s |
+| Proposals received | 16 |
+| Accepted as proposed | 9 |
+| Accepted after rewrite | 4 |
+| Rejected | 3 |
+| **Yield** | **13 / 16 = 81 %** |
+| Catalogue invariants independently re-derived | **10 / 12** |
+| Catalogue invariants missed | 2 — I2, I7 |
+| Genuinely new invariants | 4 — N1–N4 |
 
-## ⚠️ Open: the authoring-time metric is not collectable as specified
+Full accept/reject/rewrite decisions with rationale: [`../invariants.md`](../invariants.md).
 
-Topic 3 §7 and the execution plan both list **"authoring time — human minutes to a working harness,
-both arms"**. It cannot be collected as written, because **both arms are authored by the AI
-assistant**. Measuring wall-clock here compares LLM speed to LLM speed, which does not answer the
-IDP's question (does AI assistance help *a developer*?). Reporting it as though it were human effort
-would be misleading.
+The two Soroban-specific invariants — I10′ (TTL management) and I11 (temporary-tier authority) — were
+both re-derived from the contract source alone, including the non-obvious conditional-extension
+semantics of `extend_ttl`.
 
-Three options, pending a decision before the write-up (P8):
+---
 
-1. **Replace it with the proxy metrics above** — harness size, compile iterations, invariant yield.
-   Loses the time axis, keeps the benchmark defensible. *(recommended)*
-2. **Human-authored baseline** — Igor writes the baseline arm under a timer; only the AI arm is
-   assistant-authored. The only option that genuinely measures a productivity delta, at the cost of
-   his time.
-3. **Keep it, marked "not collected"**, and state the gap explicitly in Topic 5.
+## 3. Mutation score
 
-Until this is resolved, no authoring-time figure appears in this file. The proxy metrics are
-recorded regardless, since they are valid under all three options.
+Independent of the seeds: it measures whether each suite would catch changes *nobody planted*.
 
-## Next — P5 (AI arm)
+| Suite | Raw | Adjusted | Genuine gaps |
+|---|---|---|---|
+| Hand-written unit + invariant tests | 89 % | **95 %** | 3 |
+| Baseline arm alone | 32 % | **34 %** | 41 |
+| AI arm alone | 92 % | **98 %** | **1** |
 
-The AI arm is measured on the same seven seeds with the same case budget. Integrity rule from the
-plan stands: **the prompts see the contract source, never the seed list.** A concrete curation
-criterion was already derived in P3 — an invariant of the form "this must revert" is only accepted
-if its test distinguishes the *right* failure, not merely *a* failure.
+*Adjusted* removes 3 mutants that live in `#[cfg(feature = "bug_*")]` code and so are unreachable in
+the clean build, plus 1 provably equivalent mutant. Full classification of every survivor:
+[`mutants.md`](mutants.md).
+
+Two results worth carrying forward:
+
+- **The AI arm covers a gap in the hand-written ground truth.** `bump_instance` can be deleted
+  entirely and all 22 hand-written tests still pass — including the one written specifically about
+  TTL, which checks the persistent entry and not the instance entry. The AI arm catches it via N1,
+  an invariant the model proposed and the Topic 3 catalogue did not contain.
+- **One genuine gap survives both arms**, and each misses it for the opposite reason: the `proptest`
+  arm has the right oracle and a generator that never reaches the boundary; the fuzz arm has the
+  right generator and an oracle that tolerates a call which wrongly aborted. Deliberately not
+  patched — killing a mutant you have just been shown is overfitting to the measurement.
+
+---
+
+## 4. Effort metrics
+
+The execution plan and Topic 3 §7 both list **"authoring time — human minutes to a working harness,
+both arms"**. It was **not collected**, and could not be as specified: *both arms are authored by the
+AI assistant*, so wall-clock here compares LLM speed to LLM speed, which does not answer the IDP's
+question. Reporting it as though it were human effort would be misleading.
+
+**Decision (2026-09-17): replaced by the proxy metrics below.** The productivity claim this IDP
+therefore *cannot* make is "AI assistance makes a developer faster". A human-authored control arm
+under a timer is recorded as future work.
+
+| Metric | Baseline | AI arm |
+|---|---|---|
+| Properties | 8 | 11 |
+| Harness size | ~180 lines incl. rig and comments | 1 828 lines as generated |
+| Compile iterations to green | 1 | 3 |
+| Manual fixes after generation | — | 4 (see below) |
+| Runtime, clean, default budget | ~24 s | ~11 s |
+
+### The four fixes, which are the interesting number
+
+| # | Fix | Cost | Model flagged it? |
+|---|---|---|---|
+| 1 | Wrong type for the `try_*` failure channel | 16 of 17 compile errors, one root cause | ❌ |
+| 2 | Predicates to re-express the typed error patterns | consequential to #1 | — |
+| 3 | Revoked-auth failure arrives as a host error, not `InvokeError::Abort` | 2 tests red on the clean build | ✅ **including the wrong way to fix it** |
+| 4 | The token contract's own error read as a vault violation | latent false positive | ❌ |
+
+Fix 3 is the transferable one: an *"Assumptions I could not verify"* section cost one paragraph of
+prompt and pre-marked the exact line, the symptom, and the trap in fixing it.
+
+---
+
+## 5. What this benchmark does not show
+
+- **Not a productivity measurement.** See §4.
+- **Not a statistical result.** One contract, one model, one run per arm. 81 % and 7/7 are single
+  observations with no variance estimate.
+- **Not evidence that AI writes good harness code.** It got the SDK details wrong four times. The
+  gap comes from *what to assert*, not from code generation.
+- **Not free of benchmark bias.** `soroban-vault` was purpose-built around the invariant catalogue,
+  so a model reading it reads a contract whose shape already implies most of the properties.
+
+Full limitations: [Topic 5 §4.1](../../05-consolidation-and-presentation/README.md).
+
+---
+
+## 6. The measurement errors found along the way
+
+Recorded because each produced a plausible wrong number that survived until something contradicted
+it, and a benchmark's credibility is the sum of the checks that caught them.
+
+| What was wrong | How it surfaced | What it would have claimed |
+|---|---|---|
+| `cargo fuzz --features` silently dropped by cargo-fuzz 0.13.2 | The fuzz result contradicted the `proptest` result | "the AI arm missed `bug_self_transfer`" — with the seed never compiled in |
+| Round-2 fuzz target crashed on the **clean** contract | The clean-contract control | 8/8 detections, all unattributable |
+| Two seeds failing on an assertion that named the wrong property | Reading the failure messages, not the counts | `bug_overflow` attributed to truncation, a hypothesis already refuted in P5 |
+| Exact-payout oracle skipping on its own overflow | Tracing which assertion caught `bug_overflow` | a missed detection presented as a passing skip |
+| Curation ledger accounting for 15 of 16 proposals | The same trace | yield 75 % instead of 81 % |
+| `scripts/demo.sh` not executable in git | The clean-clone gate | a demo that ran only on the author's machine |
+
+Five of the six were caught by a gate the plan specified in advance. The sixth — the assertion
+naming the wrong property — was caught by reading output that had already been marked green, which
+no gate required.

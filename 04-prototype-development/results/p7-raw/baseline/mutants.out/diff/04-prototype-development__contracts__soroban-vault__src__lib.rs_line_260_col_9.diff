@@ -1,0 +1,24 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::admin_address -> Address with Default::default()
+@@ -252,20 +252,17 @@
+         env.storage().temporary().get(&DataKey::LastActivity(who))
+     }
+ }
+ 
+ // ── Internal helpers ─────────────────────────────────────────────────────────
+ 
+ impl Vault {
+     fn admin_address(env: &Env) -> Address {
+-        env.storage()
+-            .instance()
+-            .get(&DataKey::Admin)
+-            .unwrap_or_else(|| panic_with_error!(env, VaultError::NotInitialized))
++        Default::default() /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     fn token_address(env: &Env) -> Address {
+         env.storage()
+             .instance()
+             .get(&DataKey::Token)
+             .unwrap_or_else(|| panic_with_error!(env, VaultError::NotInitialized))
+     }

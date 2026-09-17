@@ -1,0 +1,22 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::set_total_shares with ()
+@@ -319,18 +319,17 @@
+     fn total_shares_internal(env: &Env) -> i128 {
+         env.storage()
+             .instance()
+             .get(&DataKey::TotalShares)
+             .unwrap_or(0)
+     }
+ 
+     fn set_total_shares(env: &Env, value: i128) {
+-        env.storage().instance().set(&DataKey::TotalShares, &value);
+-        Self::bump_instance(env);
++        () /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     fn balance_internal(env: &Env, who: &Address) -> i128 {
+         env.storage()
+             .persistent()
+             .get(&DataKey::Balance(who.clone()))
+             .unwrap_or(0)
+     }

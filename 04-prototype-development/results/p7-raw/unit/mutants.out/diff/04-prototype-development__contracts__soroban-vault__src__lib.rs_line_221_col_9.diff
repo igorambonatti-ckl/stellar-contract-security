@@ -1,0 +1,23 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::pause with ()
+@@ -213,19 +213,17 @@
+     pub fn set_admin(env: Env, new_admin: Address) {
+         Self::require_admin(&env);
+         env.storage().instance().set(&DataKey::Admin, &new_admin);
+         Self::bump_instance(&env);
+     }
+ 
+     /// Halt all state-mutating entry points (I12). Only the admin may do this (I4).
+     pub fn pause(env: Env) {
+-        Self::require_admin(&env);
+-        env.storage().instance().set(&DataKey::Paused, &true);
+-        Self::bump_instance(&env);
++        () /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     // ── Views ────────────────────────────────────────────────────────────────
+ 
+     pub fn total_shares(env: Env) -> i128 {
+         Self::total_shares_internal(&env)
+     }
+ 

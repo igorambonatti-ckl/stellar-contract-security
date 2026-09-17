@@ -1,0 +1,21 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace > with < in Vault::withdraw
+@@ -164,17 +164,17 @@
+             Self::checked_mul(&env, shares, assets) / total
+         };
+ 
+         // Effects before interaction (CEI) — the reentrancy discipline from
+         // scenario S02.
+         Self::set_balance(&env, &from, Self::checked_sub(&env, balance, shares));
+         Self::set_total_shares(&env, Self::checked_sub(&env, total, shares));
+ 
+-        if amount > 0 {
++        if amount < /* ~ changed by cargo-mutants ~ */ 0 {
+             client.transfer(&vault, &from, &amount);
+         }
+         Self::touch(&env, &from);
+ 
+         amount
+     }
+ 
+     /// Move `shares` between two holders.

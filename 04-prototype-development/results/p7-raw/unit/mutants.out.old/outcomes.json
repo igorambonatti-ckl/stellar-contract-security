@@ -1,0 +1,771 @@
+{
+  "outcomes": [
+    {
+      "scenario": "Baseline",
+      "summary": "Success",
+      "log_path": "log/baseline.log",
+      "diff_path": null,
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 29.178028084,
+          "process_status": "Success",
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=soroban-vault@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.97598325,
+          "process_status": "Success",
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=soroban-vault@0.1.0",
+            "--lib"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:85:9: replace Vault::initialize with ()",
+          "package": "soroban-vault",
+          "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+          "function": {
+            "function_name": "Vault::initialize",
+            "return_type": "",
+            "span": {
+              "start": {
+                "line": 80,
+                "column": 5
+              },
+              "end": {
+                "line": 95,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 85,
+              "column": 9
+            },
+            "end": {
+              "line": 94,
+              "column": 35
+            }
+          },
+          "replacement": "()",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/04-prototype-development__contracts__soroban-vault__src__lib.rs_line_85_col_9.log",
+      "diff_path": "diff/04-prototype-development__contracts__soroban-vault__src__lib.rs_line_85_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.977156917,
+          "process_status": "Success",
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=soroban-vault@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.805060875,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=soroban-vault@0.1.0",
+            "--lib"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:101:9: replace Vault::deposit -> i128 with 0",
+          "package": "soroban-vault",
+          "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+          "function": {
+            "function_name": "Vault::deposit",
+            "return_type": "-> i128",
+            "span": {
+              "start": {
+                "line": 99,
+                "column": 5
+              },
+              "end": {
+                "line": 140,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 101,
+              "column": 9
+            },
+            "end": {
+              "line": 139,
+              "column": 15
+            }
+          },
+          "replacement": "0",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/04-prototype-development__contracts__soroban-vault__src__lib.rs_line_101_col_9.log",
+      "diff_path": "diff/04-prototype-development__contracts__soroban-vault__src__lib.rs_line_101_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.037689083,
+          "process_status": "Success",
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=soroban-vault@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.804982292,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=soroban-vault@0.1.0",
+            "--lib"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:119:30: replace <= with > in Vault::deposit",
+          "package": "soroban-vault",
+          "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+          "function": {
+            "function_name": "Vault::deposit",
+            "return_type": "-> i128",
+            "span": {
+              "start": {
+                "line": 99,
+                "column": 5
+              },
+              "end": {
+                "line": 140,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 119,
+              "column": 30
+            },
+            "end": {
+              "line": 119,
+              "column": 32
+            }
+          },
+          "replacement": ">",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/04-prototype-development__contracts__soroban-vault__src__lib.rs_line_119_col_30.log",
+      "diff_path": "diff/04-prototype-development__contracts__soroban-vault__src__lib.rs_line_119_col_30.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.6943687920000001,
+          "process_status": "Success",
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=soroban-vault@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.934388625,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=soroban-vault@0.1.0",
+            "--lib"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:122:23: replace / with % in Vault::deposit",
+          "package": "soroban-vault",
+          "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+          "function": {
+            "function_name": "Vault::deposit",
+            "return_type": "-> i128",
+            "span": {
+              "start": {
+                "line": 99,
+                "column": 5
+              },
+              "end": {
+                "line": 140,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 122,
+              "column": 23
+            },
+            "end": {
+              "line": 122,
+              "column": 24
+            }
+          },
+          "replacement": "%",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/04-prototype-development__contracts__soroban-vault__src__lib.rs_line_122_col_23.log",
+      "diff_path": "diff/04-prototype-development__contracts__soroban-vault__src__lib.rs_line_122_col_23.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.232467416,
+          "process_status": "Success",
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=soroban-vault@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 2.479114875,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=soroban-vault@0.1.0",
+            "--lib"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:122:23: replace / with * in Vault::deposit",
+          "package": "soroban-vault",
+          "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+          "function": {
+            "function_name": "Vault::deposit",
+            "return_type": "-> i128",
+            "span": {
+              "start": {
+                "line": 99,
+                "column": 5
+              },
+              "end": {
+                "line": 140,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 122,
+              "column": 23
+            },
+            "end": {
+              "line": 122,
+              "column": 24
+            }
+          },
+          "replacement": "*",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/04-prototype-development__contracts__soroban-vault__src__lib.rs_line_122_col_23_001.log",
+      "diff_path": "diff/04-prototype-development__contracts__soroban-vault__src__lib.rs_line_122_col_23_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.353155417,
+          "process_status": "Success",
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=soroban-vault@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 3.37666775,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=soroban-vault@0.1.0",
+            "--lib"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:128:19: replace <= with > in Vault::deposit",
+          "package": "soroban-vault",
+          "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+          "function": {
+            "function_name": "Vault::deposit",
+            "return_type": "-> i128",
+            "span": {
+              "start": {
+                "line": 99,
+                "column": 5
+              },
+              "end": {
+                "line": 140,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 128,
+              "column": 19
+            },
+            "end": {
+              "line": 128,
+              "column": 21
+            }
+          },
+          "replacement": ">",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/04-prototype-development__contracts__soroban-vault__src__lib.rs_line_128_col_19.log",
+      "diff_path": "diff/04-prototype-development__contracts__soroban-vault__src__lib.rs_line_128_col_19.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.5232736249999999,
+          "process_status": "Success",
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=soroban-vault@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 3.338456708,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=soroban-vault@0.1.0",
+            "--lib"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:144:9: replace Vault::withdraw -> i128 with 0",
+          "package": "soroban-vault",
+          "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+          "function": {
+            "function_name": "Vault::withdraw",
+            "return_type": "-> i128",
+            "span": {
+              "start": {
+                "line": 142,
+                "column": 5
+              },
+              "end": {
+                "line": 178,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 144,
+              "column": 9
+            },
+            "end": {
+              "line": 177,
+              "column": 15
+            }
+          },
+          "replacement": "0",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/04-prototype-development__contracts__soroban-vault__src__lib.rs_line_144_col_9.log",
+      "diff_path": "diff/04-prototype-development__contracts__soroban-vault__src__lib.rs_line_144_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.853336375,
+          "process_status": "Success",
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=soroban-vault@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 3.058700542,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=soroban-vault@0.1.0",
+            "--lib"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:144:9: replace Vault::withdraw -> i128 with 1",
+          "package": "soroban-vault",
+          "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+          "function": {
+            "function_name": "Vault::withdraw",
+            "return_type": "-> i128",
+            "span": {
+              "start": {
+                "line": 142,
+                "column": 5
+              },
+              "end": {
+                "line": 178,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 144,
+              "column": 9
+            },
+            "end": {
+              "line": 177,
+              "column": 15
+            }
+          },
+          "replacement": "1",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/04-prototype-development__contracts__soroban-vault__src__lib.rs_line_144_col_9_001.log",
+      "diff_path": "diff/04-prototype-development__contracts__soroban-vault__src__lib.rs_line_144_col_9_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.038288125,
+          "process_status": "Success",
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=soroban-vault@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 2.743518667,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=soroban-vault@0.1.0",
+            "--lib"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:144:9: replace Vault::withdraw -> i128 with -1",
+          "package": "soroban-vault",
+          "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+          "function": {
+            "function_name": "Vault::withdraw",
+            "return_type": "-> i128",
+            "span": {
+              "start": {
+                "line": 142,
+                "column": 5
+              },
+              "end": {
+                "line": 178,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 144,
+              "column": 9
+            },
+            "end": {
+              "line": 177,
+              "column": 15
+            }
+          },
+          "replacement": "-1",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/04-prototype-development__contracts__soroban-vault__src__lib.rs_line_144_col_9_002.log",
+      "diff_path": "diff/04-prototype-development__contracts__soroban-vault__src__lib.rs_line_144_col_9_002.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 3.261098959,
+          "process_status": "Success",
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=soroban-vault@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.93919325,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=soroban-vault@0.1.0",
+            "--lib"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:149:20: replace < with == in Vault::withdraw",
+          "package": "soroban-vault",
+          "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+          "function": {
+            "function_name": "Vault::withdraw",
+            "return_type": "-> i128",
+            "span": {
+              "start": {
+                "line": 142,
+                "column": 5
+              },
+              "end": {
+                "line": 178,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 149,
+              "column": 20
+            },
+            "end": {
+              "line": 149,
+              "column": 21
+            }
+          },
+          "replacement": "==",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/04-prototype-development__contracts__soroban-vault__src__lib.rs_line_149_col_20.log",
+      "diff_path": "diff/04-prototype-development__contracts__soroban-vault__src__lib.rs_line_149_col_20.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.030825708,
+          "process_status": "Success",
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=soroban-vault@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.051478708,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=soroban-vault@0.1.0",
+            "--lib"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:149:20: replace < with > in Vault::withdraw",
+          "package": "soroban-vault",
+          "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+          "function": {
+            "function_name": "Vault::withdraw",
+            "return_type": "-> i128",
+            "span": {
+              "start": {
+                "line": 142,
+                "column": 5
+              },
+              "end": {
+                "line": 178,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 149,
+              "column": 20
+            },
+            "end": {
+              "line": 149,
+              "column": 21
+            }
+          },
+          "replacement": ">",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/04-prototype-development__contracts__soroban-vault__src__lib.rs_line_149_col_20_001.log",
+      "diff_path": "diff/04-prototype-development__contracts__soroban-vault__src__lib.rs_line_149_col_20_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.6030691670000001,
+          "process_status": "Success",
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=soroban-vault@0.1.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.603984667,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo",
+            "test",
+            "--verbose",
+            "--package=soroban-vault@0.1.0",
+            "--lib"
+          ]
+        }
+      ]
+    }
+  ],
+  "total_mutants": 11,
+  "missed": 0,
+  "caught": 11,
+  "timeout": 0,
+  "unviable": 0,
+  "success": 0,
+  "start_time": "2026-09-17T19:58:03.418541Z",
+  "end_time": null,
+  "cargo_mutants_version": "27.1.0"
+}

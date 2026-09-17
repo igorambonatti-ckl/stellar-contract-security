@@ -1,0 +1,24 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::balance_internal -> i128 with -1
+@@ -324,20 +324,17 @@
+     }
+ 
+     fn set_total_shares(env: &Env, value: i128) {
+         env.storage().instance().set(&DataKey::TotalShares, &value);
+         Self::bump_instance(env);
+     }
+ 
+     fn balance_internal(env: &Env, who: &Address) -> i128 {
+-        env.storage()
+-            .persistent()
+-            .get(&DataKey::Balance(who.clone()))
+-            .unwrap_or(0)
++        -1 /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     fn set_balance(env: &Env, who: &Address, value: i128) {
+         let key = DataKey::Balance(who.clone());
+         env.storage().persistent().set(&key, &value);
+ 
+         // I10′ — a correct contract keeps its own entries alive rather than
+         // silently relying on protocol-23 auto-restoration, which costs rent.

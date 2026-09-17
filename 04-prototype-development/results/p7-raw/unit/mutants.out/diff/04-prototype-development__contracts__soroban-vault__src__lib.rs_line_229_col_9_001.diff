@@ -1,0 +1,21 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::total_shares -> i128 with 1
+@@ -221,17 +221,17 @@
+         Self::require_admin(&env);
+         env.storage().instance().set(&DataKey::Paused, &true);
+         Self::bump_instance(&env);
+     }
+ 
+     // ── Views ────────────────────────────────────────────────────────────────
+ 
+     pub fn total_shares(env: Env) -> i128 {
+-        Self::total_shares_internal(&env)
++        1 /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     pub fn balance_of(env: Env, who: Address) -> i128 {
+         Self::balance_internal(&env, &who)
+     }
+ 
+     pub fn admin(env: Env) -> Address {
+         Self::admin_address(&env)

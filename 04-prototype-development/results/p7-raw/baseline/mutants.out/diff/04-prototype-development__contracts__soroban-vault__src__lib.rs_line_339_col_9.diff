@@ -1,0 +1,30 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::set_balance with ()
+@@ -331,26 +331,17 @@
+     fn balance_internal(env: &Env, who: &Address) -> i128 {
+         env.storage()
+             .persistent()
+             .get(&DataKey::Balance(who.clone()))
+             .unwrap_or(0)
+     }
+ 
+     fn set_balance(env: &Env, who: &Address, value: i128) {
+-        let key = DataKey::Balance(who.clone());
+-        env.storage().persistent().set(&key, &value);
+-
+-        // I10′ — a correct contract keeps its own entries alive rather than
+-        // silently relying on protocol-23 auto-restoration, which costs rent.
+-        // Omitting this bump is the `bug_no_ttl` seed.
+-        #[cfg(not(feature = "bug_no_ttl"))]
+-        env.storage()
+-            .persistent()
+-            .extend_ttl(&key, BUMP_THRESHOLD, BUMP_AMOUNT);
++        () /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     /// Record non-authoritative activity telemetry in the temporary tier.
+     fn touch(env: &Env, who: &Address) {
+         let key = DataKey::LastActivity(who.clone());
+         env.storage()
+             .temporary()
+             .set(&key, &env.ledger().sequence());

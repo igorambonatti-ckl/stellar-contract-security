@@ -1,0 +1,1110 @@
+
+*** 04-prototype-development/contracts/soroban-vault/src/lib.rs:377:9: replace Vault::checked_add -> i128 with 0
+
+*** mutation diff:
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::checked_add -> i128 with 0
+@@ -369,24 +369,17 @@
+     fn checked_add(env: &Env, a: i128, b: i128) -> i128 {
+         // I6 — all arithmetic is checked. `bug_overflow` swaps this for wrapping
+         // arithmetic, the BeautyChain / SOR-005 bug class.
+         //
+         // Note it uses `wrapping_add`, not a bare `+`. A bare `+` panics on
+         // overflow in debug builds *and* in this workspace's release profile
+         // (`overflow-checks = true`, the Soroban template default), so it would
+         // not actually be a bug — see `results/seeds.md`.
+-        #[cfg(feature = "bug_overflow")]
+-        {
+-            let _ = env;
+-            return a.wrapping_add(b);
+-        }
+-        #[cfg(not(feature = "bug_overflow"))]
+-        a.checked_add(b)
+-            .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))
++        0 /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     fn checked_sub(env: &Env, a: i128, b: i128) -> i128 {
+         a.checked_sub(b)
+             .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))
+     }
+ 
+     fn checked_mul(env: &Env, a: i128, b: i128) -> i128 {
+
+
+*** /Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo test --no-run --verbose --package=soroban-vault@0.1.0
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+       Fresh unicode-ident v1.0.24
+       Fresh proc-macro2 v1.0.106
+       Fresh version_check v0.9.5
+       Fresh quote v1.0.45
+       Fresh cfg-if v1.0.4
+       Fresh syn v2.0.117
+       Fresh typenum v1.20.1
+       Fresh memchr v2.8.2
+       Fresh serde_derive v1.0.228
+       Fresh zeroize_derive v1.5.0
+       Fresh itoa v1.0.18
+       Fresh subtle v2.6.1
+       Fresh serde_core v1.0.228
+       Fresh zmij v1.0.21
+       Fresh zeroize v1.9.0
+       Fresh autocfg v1.5.1
+       Fresh const-oid v0.9.6
+       Fresh getrandom v0.2.17
+       Fresh ident_case v1.0.1
+       Fresh strsim v0.11.1
+       Fresh serde v1.0.228
+       Fresh serde_json v1.0.150
+       Fresh rand_core v0.6.4
+       Fresh darling_core v0.23.0
+       Fresh semver v1.0.28
+       Fresh crate-git-revision v0.0.6
+       Fresh zerocopy v0.8.52
+       Fresh darling_macro v0.23.0
+       Fresh dyn-clone v1.0.20
+       Fresh data-encoding v2.11.0
+       Fresh ppv-lite86 v0.2.21
+       Fresh darling v0.23.0
+       Fresh num-traits v0.2.19
+       Fresh generic-array v0.14.9
+       Fresh schemars v0.8.22
+       Fresh libc v0.2.186
+       Fresh hex v0.4.3
+       Fresh once_cell v1.21.4
+       Fresh serde_with_macros v3.21.0
+       Fresh block-buffer v0.10.4
+       Fresh crypto-common v0.1.6
+       Fresh paste v1.0.15
+       Fresh rand_chacha v0.3.1
+       Fresh cpufeatures v0.2.17
+       Fresh cfg_eval v0.1.2
+       Fresh escape-bytes v0.1.1
+       Fresh ethnum v1.5.3
+       Fresh stellar-strkey v0.0.13
+       Fresh digest v0.10.7
+       Fresh rand v0.8.6
+       Fresh num-integer v0.1.46
+       Fresh enum-ordinalize-derive v4.3.2
+       Fresh rustc_version v0.4.1
+       Fresh ff v0.13.1
+       Fresh der v0.7.10
+       Fresh ark-serialize-derive v0.5.0
+       Fresh equivalent v1.0.2
+       Fresh num-bigint v0.4.6
+       Fresh ark-std v0.5.0
+       Fresh enum-ordinalize v4.3.2
+       Fresh base16ct v0.2.0
+       Fresh arrayvec v0.7.6
+       Fresh hashbrown v0.17.1
+       Fresh either v1.16.0
+       Fresh group v0.13.0
+       Fresh ark-ff-macros v0.5.0
+       Fresh sha2 v0.10.9
+       Fresh indexmap v2.14.0
+       Fresh educe v0.6.0
+       Fresh ark-serialize v0.5.0
+       Fresh sec1 v0.7.3
+       Fresh itertools v0.13.0
+       Fresh signature v2.2.0
+       Fresh crypto-bigint v0.5.5
+       Fresh ark-ff-asm v0.5.0
+       Fresh base64 v0.22.1
+       Fresh allocator-api2 v0.2.21
+       Fresh fnv v1.0.7
+       Fresh hashbrown v0.15.5
+       Fresh wasmparser v0.116.1
+       Fresh elliptic-curve v0.13.8
+       Fresh ark-ff v0.5.0
+       Fresh ahash v0.8.12
+       Fresh hmac v0.12.1
+       Fresh derive_arbitrary v1.3.2
+       Fresh soroban-env-macros v26.1.3
+       Fresh rfc6979 v0.4.0
+       Fresh ark-poly v0.5.0
+       Fresh libm v0.2.16
+       Fresh arbitrary v1.3.2
+       Fresh thiserror-impl v1.0.69
+       Fresh num-derive v0.4.2
+       Fresh downcast-rs v1.2.1
+       Fresh static_assertions v1.1.0
+       Fresh indexmap-nostd v0.4.0
+       Fresh wasmi_core v0.13.0
+       Fresh wasmparser-nostd v0.100.2
+       Fresh ark-ec v0.5.0
+       Fresh thiserror v1.0.69
+       Fresh getrandom v0.3.4
+       Fresh ecdsa v0.16.9
+       Fresh serde_with v3.21.0
+       Fresh wasmi_arena v0.4.1
+       Fresh smallvec v1.15.2
+       Fresh spin v0.9.8
+       Fresh rand_core v0.9.5
+       Fresh stellar-xdr v26.0.1
+       Fresh curve25519-dalek v4.1.3
+       Fresh primeorder v0.13.6
+       Fresh darling_core v0.20.11
+       Fresh ed25519 v2.2.3
+       Fresh keccak v0.1.6
+       Fresh soroban-wasmi v0.31.1-soroban.20.0.1
+       Fresh errno v0.3.14
+       Fresh bitflags v2.13.1
+       Fresh byteorder v1.5.0
+       Fresh ed25519-dalek v2.2.0
+       Fresh prettyplease v0.2.37
+       Fresh sha3 v0.10.9
+       Fresh getrandom v0.4.3
+       Fresh darling_macro v0.20.11
+       Fresh p256 v0.13.2
+       Fresh rustix v1.1.4
+       Fresh hash32 v0.3.1
+       Fresh soroban-spec v26.1.0
+       Fresh ark-bn254 v0.5.0
+       Fresh k256 v0.13.4
+       Fresh ark-bls12-381 v0.5.0
+       Fresh soroban-builtin-sdk-macros v26.1.3
+       Fresh hex-literal v0.4.1
+       Fresh stable_deref_trait v1.2.1
+       Fresh dtor-proc-macro v0.0.6
+       Fresh fastrand v2.5.0
+       Fresh soroban-spec-rust v26.1.0
+       Fresh soroban-env-host v26.1.3
+       Fresh soroban-env-common v26.1.3
+       Fresh darling v0.20.11
+       Fresh wait-timeout v0.2.1
+       Fresh macro-string v0.1.4
+       Fresh quick-error v1.2.3
+       Fresh ctor-proc-macro v0.0.6
+       Fresh tempfile v3.27.0
+       Fresh dtor v0.1.1
+       Fresh heapless v0.8.0
+       Fresh heck v0.5.0
+       Fresh bit-vec v0.8.0
+       Fresh soroban-ledger-snapshot v26.1.0
+       Fresh rand_xorshift v0.4.0
+       Fresh rand v0.9.5
+       Fresh rand_chacha v0.9.0
+       Fresh bytes-lit v0.0.5
+       Fresh visibility v0.1.1
+       Fresh regex-syntax v0.8.11
+       Fresh bit-set v0.8.0
+       Fresh rusty-fork v0.3.1
+       Fresh stellar-strkey v0.0.16
+       Fresh ctor v0.5.0
+       Fresh soroban-sdk-macros v26.1.0
+       Fresh unarray v0.1.4
+       Fresh proptest v1.11.0
+       Fresh soroban-sdk v26.1.0
+       Fresh proptest-arbitrary-interop v0.1.0
+       Dirty soroban-vault v0.1.0 (/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/04-prototype-development/contracts/soroban-vault): the file `04-prototype-development/contracts/soroban-vault/src/lib.rs` has changed (1789675776.356108665s, 23s after last build at 1789675753.685928368s)
+   Compiling soroban-vault v0.1.0 (/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/04-prototype-development/contracts/soroban-vault)
+     Running `/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc --crate-name soroban_vault --edition=2021 04-prototype-development/contracts/soroban-vault/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("bug_missing_auth", "bug_no_ttl", "bug_overflow", "bug_reinit", "bug_self_transfer", "bug_temp_nonce", "bug_zero_amount"))' -C metadata=1d80e85bbbdf9027 -C extra-filename=-bce8593a16df1a94 --out-dir /private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps -C incremental=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/incremental -L dependency=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps --extern arbitrary=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps/libarbitrary-b15fe09805a10503.rlib --extern proptest=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps/libproptest-ebc82c2f62035854.rlib --extern proptest_arbitrary_interop=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps/libproptest_arbitrary_interop-8fcd0e348bdb6c2d.rlib --extern soroban_sdk=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps/libsoroban_sdk-e62747f56c1fb4bb.rlib`
+     Running `/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc --crate-name soroban_vault --edition=2021 04-prototype-development/contracts/soroban-vault/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("bug_missing_auth", "bug_no_ttl", "bug_overflow", "bug_reinit", "bug_self_transfer", "bug_temp_nonce", "bug_zero_amount"))' -C metadata=3876bb9ecdd8693e -C extra-filename=-89a10c6dc4b3cd63 --out-dir /private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps -C incremental=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/incremental -L dependency=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps --extern soroban_sdk=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps/libsoroban_sdk-e62747f56c1fb4bb.rmeta`
+warning: unused variable: `env`
+   --> 04-prototype-development/contracts/soroban-vault/src/lib.rs:369:20
+    |
+369 |     fn checked_add(env: &Env, a: i128, b: i128) -> i128 {
+    |                    ^^^ help: if this is intentional, prefix it with an underscore: `_env`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `a`
+   --> 04-prototype-development/contracts/soroban-vault/src/lib.rs:369:31
+    |
+369 |     fn checked_add(env: &Env, a: i128, b: i128) -> i128 {
+    |                               ^ help: if this is intentional, prefix it with an underscore: `_a`
+
+warning: unused variable: `b`
+   --> 04-prototype-development/contracts/soroban-vault/src/lib.rs:369:40
+    |
+369 |     fn checked_add(env: &Env, a: i128, b: i128) -> i128 {
+    |                                        ^ help: if this is intentional, prefix it with an underscore: `_b`
+
+warning: `soroban-vault` (lib) generated 3 warnings (run `cargo fix --lib -p soroban-vault` to apply 3 suggestions)
+     Running `/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc --crate-name proptest_baseline --edition=2021 04-prototype-development/contracts/soroban-vault/tests/proptest_baseline.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("bug_missing_auth", "bug_no_ttl", "bug_overflow", "bug_reinit", "bug_self_transfer", "bug_temp_nonce", "bug_zero_amount"))' -C metadata=8c7067f738ca187b -C extra-filename=-3e562011cbd3d845 --out-dir /private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps -C incremental=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/incremental -L dependency=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps --extern arbitrary=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps/libarbitrary-b15fe09805a10503.rlib --extern proptest=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps/libproptest-ebc82c2f62035854.rlib --extern proptest_arbitrary_interop=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps/libproptest_arbitrary_interop-8fcd0e348bdb6c2d.rlib --extern soroban_sdk=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps/libsoroban_sdk-e62747f56c1fb4bb.rlib --extern soroban_vault=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps/libsoroban_vault-89a10c6dc4b3cd63.rlib`
+     Running `/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc --crate-name proptest_ai --edition=2021 04-prototype-development/contracts/soroban-vault/tests/proptest_ai.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("bug_missing_auth", "bug_no_ttl", "bug_overflow", "bug_reinit", "bug_self_transfer", "bug_temp_nonce", "bug_zero_amount"))' -C metadata=5763f149b77c10de -C extra-filename=-f790cf1d5da483ca --out-dir /private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps -C incremental=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/incremental -L dependency=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps --extern arbitrary=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps/libarbitrary-b15fe09805a10503.rlib --extern proptest=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps/libproptest-ebc82c2f62035854.rlib --extern proptest_arbitrary_interop=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps/libproptest_arbitrary_interop-8fcd0e348bdb6c2d.rlib --extern soroban_sdk=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps/libsoroban_sdk-e62747f56c1fb4bb.rlib --extern soroban_vault=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps/libsoroban_vault-89a10c6dc4b3cd63.rlib`
+warning: `soroban-vault` (lib test) generated 3 warnings (3 duplicates)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.58s
+  Executable `/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps/soroban_vault-bce8593a16df1a94`
+  Executable `/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps/proptest_ai-f790cf1d5da483ca`
+  Executable `/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps/proptest_baseline-3e562011cbd3d845`
+
+*** result: Success
+
+*** /Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo test --verbose --package=soroban-vault@0.1.0 --test proptest_baseline
+       Fresh unicode-ident v1.0.24
+       Fresh proc-macro2 v1.0.106
+       Fresh quote v1.0.45
+       Fresh syn v2.0.117
+       Fresh version_check v0.9.5
+       Fresh cfg-if v1.0.4
+       Fresh typenum v1.20.1
+       Fresh serde_core v1.0.228
+       Fresh serde_derive v1.0.228
+       Fresh zeroize_derive v1.5.0
+       Fresh memchr v2.8.2
+       Fresh itoa v1.0.18
+       Fresh subtle v2.6.1
+       Fresh autocfg v1.5.1
+       Fresh const-oid v0.9.6
+       Fresh getrandom v0.2.17
+       Fresh ident_case v1.0.1
+       Fresh strsim v0.11.1
+       Fresh zmij v1.0.21
+       Fresh serde v1.0.228
+       Fresh zeroize v1.9.0
+       Fresh rand_core v0.6.4
+       Fresh darling_core v0.23.0
+       Fresh semver v1.0.28
+       Fresh dyn-clone v1.0.20
+       Fresh serde_json v1.0.150
+       Fresh zerocopy v0.8.52
+       Fresh darling_macro v0.23.0
+       Fresh data-encoding v2.11.0
+       Fresh hex v0.4.3
+       Fresh once_cell v1.21.4
+       Fresh cfg_eval v0.1.2
+       Fresh crate-git-revision v0.0.6
+       Fresh ppv-lite86 v0.2.21
+       Fresh darling v0.23.0
+       Fresh generic-array v0.14.9
+       Fresh num-traits v0.2.19
+       Fresh schemars v0.8.22
+       Fresh libc v0.2.186
+       Fresh escape-bytes v0.1.1
+       Fresh ethnum v1.5.3
+       Fresh enum-ordinalize-derive v4.3.2
+       Fresh der v0.7.10
+       Fresh serde_with_macros v3.21.0
+       Fresh crypto-common v0.1.6
+       Fresh block-buffer v0.10.4
+       Fresh cpufeatures v0.2.17
+       Fresh paste v1.0.15
+       Fresh rand_chacha v0.3.1
+       Fresh num-integer v0.1.46
+       Fresh enum-ordinalize v4.3.2
+       Fresh ff v0.13.1
+       Fresh rustc_version v0.4.1
+       Fresh digest v0.10.7
+       Fresh rand v0.8.6
+       Fresh num-bigint v0.4.6
+       Fresh ark-serialize-derive v0.5.0
+       Fresh equivalent v1.0.2
+       Fresh either v1.16.0
+       Fresh hashbrown v0.17.1
+       Fresh base16ct v0.2.0
+       Fresh arrayvec v0.7.6
+       Fresh educe v0.6.0
+       Fresh stellar-strkey v0.0.13
+       Fresh ark-std v0.5.0
+       Fresh ark-ff-macros v0.5.0
+       Fresh sec1 v0.7.3
+       Fresh itertools v0.13.0
+       Fresh indexmap v2.14.0
+       Fresh group v0.13.0
+       Fresh signature v2.2.0
+       Fresh sha2 v0.10.9
+       Fresh crypto-bigint v0.5.5
+       Fresh ark-ff-asm v0.5.0
+       Fresh allocator-api2 v0.2.21
+       Fresh ark-serialize v0.5.0
+       Fresh base64 v0.22.1
+       Fresh fnv v1.0.7
+       Fresh elliptic-curve v0.13.8
+       Fresh ahash v0.8.12
+       Fresh hashbrown v0.15.5
+       Fresh wasmparser v0.116.1
+       Fresh hmac v0.12.1
+       Fresh derive_arbitrary v1.3.2
+       Fresh ark-ff v0.5.0
+       Fresh soroban-env-macros v26.1.3
+       Fresh rfc6979 v0.4.0
+       Fresh arbitrary v1.3.2
+       Fresh num-derive v0.4.2
+       Fresh thiserror-impl v1.0.69
+       Fresh static_assertions v1.1.0
+       Fresh downcast-rs v1.2.1
+       Fresh indexmap-nostd v0.4.0
+       Fresh serde_with v3.21.0
+       Fresh ark-poly v0.5.0
+       Fresh libm v0.2.16
+       Fresh ecdsa v0.16.9
+       Fresh thiserror v1.0.69
+       Fresh wasmparser-nostd v0.100.2
+       Fresh getrandom v0.3.4
+       Fresh wasmi_arena v0.4.1
+       Fresh smallvec v1.15.2
+       Fresh spin v0.9.8
+       Fresh curve25519-dalek v4.1.3
+       Fresh stellar-xdr v26.0.1
+       Fresh wasmi_core v0.13.0
+       Fresh ark-ec v0.5.0
+       Fresh rand_core v0.9.5
+       Fresh primeorder v0.13.6
+       Fresh darling_core v0.20.11
+       Fresh ed25519 v2.2.3
+       Fresh keccak v0.1.6
+       Fresh errno v0.3.14
+       Fresh bitflags v2.13.1
+       Fresh soroban-wasmi v0.31.1-soroban.20.0.1
+       Fresh byteorder v1.5.0
+       Fresh rustix v1.1.4
+       Fresh sha3 v0.10.9
+       Fresh ark-bn254 v0.5.0
+       Fresh ark-bls12-381 v0.5.0
+       Fresh p256 v0.13.2
+       Fresh darling_macro v0.20.11
+       Fresh getrandom v0.4.3
+       Fresh prettyplease v0.2.37
+       Fresh ed25519-dalek v2.2.0
+       Fresh soroban-spec v26.1.0
+       Fresh hash32 v0.3.1
+       Fresh k256 v0.13.4
+       Fresh soroban-builtin-sdk-macros v26.1.3
+       Fresh fastrand v2.5.0
+       Fresh hex-literal v0.4.1
+       Fresh dtor-proc-macro v0.0.6
+       Fresh stable_deref_trait v1.2.1
+       Fresh soroban-env-common v26.1.3
+       Fresh soroban-spec-rust v26.1.0
+       Fresh darling v0.20.11
+       Fresh wait-timeout v0.2.1
+       Fresh heapless v0.8.0
+       Fresh tempfile v3.27.0
+       Fresh dtor v0.1.1
+       Fresh soroban-env-host v26.1.3
+       Fresh macro-string v0.1.4
+       Fresh heck v0.5.0
+       Fresh ctor-proc-macro v0.0.6
+       Fresh bit-vec v0.8.0
+       Fresh quick-error v1.2.3
+       Fresh rand v0.9.5
+       Fresh rand_chacha v0.9.0
+       Fresh rand_xorshift v0.4.0
+       Fresh bytes-lit v0.0.5
+       Fresh bit-set v0.8.0
+       Fresh soroban-sdk-macros v26.1.0
+       Fresh ctor v0.5.0
+       Fresh rusty-fork v0.3.1
+       Fresh soroban-ledger-snapshot v26.1.0
+       Fresh stellar-strkey v0.0.16
+       Fresh visibility v0.1.1
+       Fresh unarray v0.1.4
+       Fresh regex-syntax v0.8.11
+       Fresh soroban-sdk v26.1.0
+       Fresh proptest v1.11.0
+warning: unused variable: `env`
+   --> 04-prototype-development/contracts/soroban-vault/src/lib.rs:369:20
+    |
+369 |     fn checked_add(env: &Env, a: i128, b: i128) -> i128 {
+    |                    ^^^ help: if this is intentional, prefix it with an underscore: `_env`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `a`
+   --> 04-prototype-development/contracts/soroban-vault/src/lib.rs:369:31
+    |
+369 |     fn checked_add(env: &Env, a: i128, b: i128) -> i128 {
+    |                               ^ help: if this is intentional, prefix it with an underscore: `_a`
+
+warning: unused variable: `b`
+   --> 04-prototype-development/contracts/soroban-vault/src/lib.rs:369:40
+    |
+369 |     fn checked_add(env: &Env, a: i128, b: i128) -> i128 {
+    |                                        ^ help: if this is intentional, prefix it with an underscore: `_b`
+
+       Fresh proptest-arbitrary-interop v0.1.0
+warning: `soroban-vault` (lib) generated 3 warnings (run `cargo fix --lib -p soroban-vault` to apply 3 suggestions)
+       Fresh soroban-vault v0.1.0 (/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/04-prototype-development/contracts/soroban-vault)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.13s
+     Running `/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-dtEgNV.tmp/target/debug/deps/proptest_baseline-3e562011cbd3d845`
+
+running 8 tests
+test fuzz_transfer_shares ... FAILED
+test fuzz_withdraw ... FAILED
+test fuzz_initialize ... ok
+test fuzz_set_admin ... ok
+test fuzz_views ... ok
+test fuzz_last_activity ... ok
+test fuzz_pause ... ok
+test fuzz_deposit ... ok
+
+failures:
+
+---- fuzz_transfer_shares stdout ----
+proptest: FileFailurePersistence::SourceParallel set, but failed to find lib.rs or main.rs
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 29962]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 29962]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.1.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 14981]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 14981]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.2.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 7491]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 7491]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.3.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 3746]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 3746]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.4.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1873]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1873]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.5.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 937]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 937]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.6.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 469]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 469]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.7.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 235]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 235]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.8.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 118]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 118]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.9.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 59]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 59]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.10.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 30]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 30]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.11.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 15]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 15]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.12.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 8]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 8]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.13.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 4]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 4]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.14.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 2]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 2]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.15.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.16.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.17.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.18.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.19.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.20.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.21.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.22.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.23.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]
+
+Writing test snapshot file for test "fuzz_transfer_shares" to "test_snapshots/fuzz_transfer_shares.24.json".
+
+thread 'fuzz_transfer_shares' (3040451) panicked at 04-prototype-development/contracts/soroban-vault/tests/proptest_baseline.rs:80:1:
+Test failed: HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]
+.
+minimal failing input: deposit = 1, part = 1, from = 0, to = 0
+	successes: 0
+	local rejects: 0
+	global rejects: 0
+
+
+---- fuzz_withdraw stdout ----
+proptest: FileFailurePersistence::SourceParallel set, but failed to find lib.rs or main.rs
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 29962]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 29962]
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.1.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 14981]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 14981]
+
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.2.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 7491]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 7491]
+
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.3.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 3746]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 3746]
+
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.4.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 1873]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 1873]
+
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.5.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 937]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 937]
+
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.6.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 469]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 469]
+
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.7.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 235]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 235]
+
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.8.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 118]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 118]
+
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.9.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 59]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 59]
+
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.10.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 30]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 30]
+
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.11.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 15]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 15]
+
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.12.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 8]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 8]
+
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.13.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 4]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 4]
+
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.14.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 2]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 2]
+
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.15.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 1]
+
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.16.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 1]
+
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.17.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 1]
+
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.18.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 1]
+
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.19.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 1]
+
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.20.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 1]
+
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.21.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 1]
+
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.22.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 1]
+
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.23.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]
+
+Writing test snapshot file for test "fuzz_withdraw" to "test_snapshots/fuzz_withdraw.24.json".
+
+thread 'fuzz_withdraw' (3040453) panicked at 04-prototype-development/contracts/soroban-vault/tests/proptest_baseline.rs:80:1:
+Test failed: HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1]
+.
+minimal failing input: deposit = 1, part = 1, who = 0
+	successes: 0
+	local rejects: 0
+	global rejects: 0
+
+
+
+failures:
+    fuzz_transfer_shares
+    fuzz_withdraw
+
+test result: FAILED. 6 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 23.65s
+
+error: test failed, to rerun pass `-p soroban-vault --test proptest_baseline`
+
+*** result: Failure(101)

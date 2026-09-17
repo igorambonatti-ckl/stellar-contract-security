@@ -1,0 +1,21 @@
+04-prototype-development/contracts/soroban-vault/src/lib.rs:85:9: replace Vault::initialize with ()
+04-prototype-development/contracts/soroban-vault/src/lib.rs:114:31: replace == with != in Vault::deposit
+04-prototype-development/contracts/soroban-vault/src/lib.rs:128:19: replace <= with > in Vault::deposit
+04-prototype-development/contracts/soroban-vault/src/lib.rs:101:9: replace Vault::deposit -> i128 with 0
+04-prototype-development/contracts/soroban-vault/src/lib.rs:101:9: replace Vault::deposit -> i128 with 1
+04-prototype-development/contracts/soroban-vault/src/lib.rs:101:9: replace Vault::deposit -> i128 with -1
+04-prototype-development/contracts/soroban-vault/src/lib.rs:149:20: replace < with > in Vault::withdraw
+04-prototype-development/contracts/soroban-vault/src/lib.rs:149:20: replace < with <= in Vault::withdraw
+04-prototype-development/contracts/soroban-vault/src/lib.rs:164:53: replace / with * in Vault::withdraw
+04-prototype-development/contracts/soroban-vault/src/lib.rs:191:25: replace < with == in Vault::transfer_shares
+04-prototype-development/contracts/soroban-vault/src/lib.rs:191:25: replace < with > in Vault::transfer_shares
+04-prototype-development/contracts/soroban-vault/src/lib.rs:310:18: replace <= with > in Vault::require_positive
+04-prototype-development/contracts/soroban-vault/src/lib.rs:320:9: replace Vault::total_shares_internal -> i128 with 1
+04-prototype-development/contracts/soroban-vault/src/lib.rs:320:9: replace Vault::total_shares_internal -> i128 with -1
+04-prototype-development/contracts/soroban-vault/src/lib.rs:332:9: replace Vault::balance_internal -> i128 with 0
+04-prototype-development/contracts/soroban-vault/src/lib.rs:332:9: replace Vault::balance_internal -> i128 with 1
+04-prototype-development/contracts/soroban-vault/src/lib.rs:332:9: replace Vault::balance_internal -> i128 with -1
+04-prototype-development/contracts/soroban-vault/src/lib.rs:339:9: replace Vault::set_balance with ()
+04-prototype-development/contracts/soroban-vault/src/lib.rs:377:9: replace Vault::checked_add -> i128 with 0
+04-prototype-development/contracts/soroban-vault/src/lib.rs:377:9: replace Vault::checked_add -> i128 with 1
+04-prototype-development/contracts/soroban-vault/src/lib.rs:377:9: replace Vault::checked_add -> i128 with -1

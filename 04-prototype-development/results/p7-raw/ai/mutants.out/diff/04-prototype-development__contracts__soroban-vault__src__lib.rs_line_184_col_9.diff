@@ -1,0 +1,44 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::transfer_shares with ()
+@@ -176,40 +176,17 @@
+ 
+         amount
+     }
+ 
+     /// Move `shares` between two holders.
+     pub fn transfer_shares(env: Env, from: Address, to: Address, shares: i128) {
+         // I5 — the sender must authorize. Dropping this is `bug_missing_auth`,
+         // the SOR-001 / Wormhole bug class.
+-        #[cfg(not(feature = "bug_missing_auth"))]
+-        from.require_auth();
+-
+-        Self::require_not_paused(&env);
+-        Self::require_positive(&env, shares);
+-
+-        let from_balance = Self::balance_internal(&env, &from);
+-        if from_balance < shares {
+-            panic_with_error!(&env, VaultError::InsufficientBalance);
+-        }
+-
+-        // I8 — a self-transfer must be a no-op. Handling it by reading both
+-        // balances and writing both back would duplicate the shares, which is
+-        // the `bug_self_transfer` seed (scenario S17).
+-        #[cfg(not(feature = "bug_self_transfer"))]
+-        if from == to {
+-            Self::touch(&env, &from);
+-            return;
+-        }
+-
+-        let to_balance = Self::balance_internal(&env, &to);
+-        Self::set_balance(&env, &from, Self::checked_sub(&env, from_balance, shares));
+-        Self::set_balance(&env, &to, Self::checked_add(&env, to_balance, shares));
+-        Self::touch(&env, &from);
++        () /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     // ── Admin ────────────────────────────────────────────────────────────────
+ 
+     /// Hand the admin role to `new_admin`. Only the current admin may do this (I4).
+     pub fn set_admin(env: Env, new_admin: Address) {
+         Self::require_admin(&env);
+         env.storage().instance().set(&DataKey::Admin, &new_admin);

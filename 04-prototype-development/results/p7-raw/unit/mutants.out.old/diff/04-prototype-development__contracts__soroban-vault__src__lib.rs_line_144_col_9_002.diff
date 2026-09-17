@@ -1,0 +1,54 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::withdraw -> i128 with -1
+@@ -136,50 +136,17 @@
+         Self::set_total_shares(&env, Self::checked_add(&env, total, shares));
+         Self::touch(&env, &from);
+ 
+         shares
+     }
+ 
+     /// Burn `shares` and return the corresponding amount of the underlying token.
+     pub fn withdraw(env: Env, from: Address, shares: i128) -> i128 {
+-        from.require_auth();
+-        Self::require_not_paused(&env);
+-        Self::require_positive(&env, shares);
+-
+-        let balance = Self::balance_internal(&env, &from);
+-        if balance < shares {
+-            panic_with_error!(&env, VaultError::InsufficientBalance);
+-        }
+-
+-        let token_addr = Self::token_address(&env);
+-        let client = token::TokenClient::new(&env, &token_addr);
+-        let vault = env.current_contract_address();
+-
+-        let total = Self::total_shares_internal(&env);
+-        let assets = client.balance(&vault);
+-
+-        // amount = shares * assets / total
+-        let amount = if total == 0 {
+-            0
+-        } else {
+-            Self::checked_mul(&env, shares, assets) / total
+-        };
+-
+-        // Effects before interaction (CEI) — the reentrancy discipline from
+-        // scenario S02.
+-        Self::set_balance(&env, &from, Self::checked_sub(&env, balance, shares));
+-        Self::set_total_shares(&env, Self::checked_sub(&env, total, shares));
+-
+-        if amount > 0 {
+-            client.transfer(&vault, &from, &amount);
+-        }
+-        Self::touch(&env, &from);
+-
+-        amount
++        -1 /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     /// Move `shares` between two holders.
+     pub fn transfer_shares(env: Env, from: Address, to: Address, shares: i128) {
+         // I5 — the sender must authorize. Dropping this is `bug_missing_auth`,
+         // the SOR-001 / Wormhole bug class.
+         #[cfg(not(feature = "bug_missing_auth"))]
+         from.require_auth();

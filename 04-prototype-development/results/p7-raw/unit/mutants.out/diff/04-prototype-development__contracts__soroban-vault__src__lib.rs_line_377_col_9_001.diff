@@ -1,0 +1,28 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::checked_add -> i128 with 1
+@@ -369,24 +369,17 @@
+     fn checked_add(env: &Env, a: i128, b: i128) -> i128 {
+         // I6 — all arithmetic is checked. `bug_overflow` swaps this for wrapping
+         // arithmetic, the BeautyChain / SOR-005 bug class.
+         //
+         // Note it uses `wrapping_add`, not a bare `+`. A bare `+` panics on
+         // overflow in debug builds *and* in this workspace's release profile
+         // (`overflow-checks = true`, the Soroban template default), so it would
+         // not actually be a bug — see `results/seeds.md`.
+-        #[cfg(feature = "bug_overflow")]
+-        {
+-            let _ = env;
+-            return a.wrapping_add(b);
+-        }
+-        #[cfg(not(feature = "bug_overflow"))]
+-        a.checked_add(b)
+-            .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))
++        1 /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     fn checked_sub(env: &Env, a: i128, b: i128) -> i128 {
+         a.checked_sub(b)
+             .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))
+     }
+ 
+     fn checked_mul(env: &Env, a: i128, b: i128) -> i128 {

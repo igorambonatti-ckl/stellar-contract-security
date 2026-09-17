@@ -1,0 +1,7 @@
+04-prototype-development/contracts/soroban-vault/src/lib.rs:172:19: replace > with >= in Vault::withdraw
+04-prototype-development/contracts/soroban-vault/src/lib.rs:191:25: replace < with == in Vault::transfer_shares
+04-prototype-development/contracts/soroban-vault/src/lib.rs:191:25: replace < with <= in Vault::transfer_shares
+04-prototype-development/contracts/soroban-vault/src/lib.rs:314:18: replace < with == in Vault::require_positive
+04-prototype-development/contracts/soroban-vault/src/lib.rs:314:18: replace < with > in Vault::require_positive
+04-prototype-development/contracts/soroban-vault/src/lib.rs:314:18: replace < with <= in Vault::require_positive
+04-prototype-development/contracts/soroban-vault/src/lib.rs:361:9: replace Vault::bump_instance with ()

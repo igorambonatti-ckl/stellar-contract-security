@@ -1,0 +1,403 @@
+
+*** 04-prototype-development/contracts/soroban-vault/src/lib.rs:229:9: replace Vault::total_shares -> i128 with 1
+
+*** mutation diff:
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::total_shares -> i128 with 1
+@@ -221,17 +221,17 @@
+         Self::require_admin(&env);
+         env.storage().instance().set(&DataKey::Paused, &true);
+         Self::bump_instance(&env);
+     }
+ 
+     // ── Views ────────────────────────────────────────────────────────────────
+ 
+     pub fn total_shares(env: Env) -> i128 {
+-        Self::total_shares_internal(&env)
++        1 /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     pub fn balance_of(env: Env, who: Address) -> i128 {
+         Self::balance_internal(&env, &who)
+     }
+ 
+     pub fn admin(env: Env) -> Address {
+         Self::admin_address(&env)
+
+
+*** /Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo test --no-run --verbose --package=soroban-vault@0.1.0
+       Fresh unicode-ident v1.0.24
+       Fresh version_check v0.9.5
+       Fresh cfg-if v1.0.4
+       Fresh typenum v1.20.1
+       Fresh itoa v1.0.18
+       Fresh memchr v2.8.2
+       Fresh autocfg v1.5.1
+       Fresh proc-macro2 v1.0.106
+       Fresh subtle v2.6.1
+       Fresh const-oid v0.9.6
+       Fresh strsim v0.11.1
+       Fresh ident_case v1.0.1
+       Fresh quote v1.0.45
+       Fresh serde_core v1.0.228
+       Fresh zmij v1.0.21
+       Fresh semver v1.0.28
+       Fresh dyn-clone v1.0.20
+       Fresh data-encoding v2.11.0
+       Fresh syn v2.0.117
+       Fresh serde_json v1.0.150
+       Fresh getrandom v0.2.17
+       Fresh zerocopy v0.8.52
+       Fresh once_cell v1.21.4
+       Fresh escape-bytes v0.1.1
+       Fresh ethnum v1.5.3
+       Fresh serde_derive v1.0.228
+       Fresh zeroize_derive v1.5.0
+       Fresh rand_core v0.6.4
+       Fresh darling_core v0.23.0
+       Fresh ppv-lite86 v0.2.21
+       Fresh num-traits v0.2.19
+       Fresh libc v0.2.186
+       Fresh cfg_eval v0.1.2
+       Fresh enum-ordinalize-derive v4.3.2
+       Fresh ark-serialize-derive v0.5.0
+       Fresh rustc_version v0.4.1
+       Fresh serde v1.0.228
+       Fresh zeroize v1.9.0
+       Fresh darling_macro v0.23.0
+       Fresh rand_chacha v0.3.1
+       Fresh num-integer v0.1.46
+       Fresh cpufeatures v0.2.17
+       Fresh paste v1.0.15
+       Fresh ff v0.13.1
+       Fresh enum-ordinalize v4.3.2
+       Fresh generic-array v0.14.9
+       Fresh crate-git-revision v0.0.6
+       Fresh darling v0.23.0
+       Fresh schemars v0.8.22
+       Fresh hex v0.4.3
+       Fresh rand v0.8.6
+       Fresh num-bigint v0.4.6
+       Fresh der v0.7.10
+       Fresh base16ct v0.2.0
+       Fresh equivalent v1.0.2
+       Fresh hashbrown v0.17.1
+       Fresh either v1.16.0
+       Fresh arrayvec v0.7.6
+       Fresh crypto-common v0.1.6
+       Fresh block-buffer v0.10.4
+       Fresh serde_with_macros v3.21.0
+       Fresh ark-std v0.5.0
+       Fresh ark-ff-macros v0.5.0
+       Fresh sec1 v0.7.3
+       Fresh indexmap v2.14.0
+       Fresh crypto-bigint v0.5.5
+       Fresh itertools v0.13.0
+       Fresh educe v0.6.0
+       Fresh digest v0.10.7
+       Fresh group v0.13.0
+       Fresh ark-ff-asm v0.5.0
+       Fresh base64 v0.22.1
+       Fresh allocator-api2 v0.2.21
+       Fresh fnv v1.0.7
+       Fresh wasmparser v0.116.1
+       Fresh derive_arbitrary v1.3.2
+       Fresh stellar-strkey v0.0.13
+       Fresh ark-serialize v0.5.0
+       Fresh signature v2.2.0
+       Fresh sha2 v0.10.9
+       Fresh hashbrown v0.15.5
+       Fresh elliptic-curve v0.13.8
+       Fresh hmac v0.12.1
+       Fresh ahash v0.8.12
+       Fresh arbitrary v1.3.2
+       Fresh ark-ff v0.5.0
+       Fresh rfc6979 v0.4.0
+       Fresh libm v0.2.16
+       Fresh num-derive v0.4.2
+       Fresh thiserror-impl v1.0.69
+       Fresh downcast-rs v1.2.1
+       Fresh static_assertions v1.1.0
+       Fresh indexmap-nostd v0.4.0
+       Fresh getrandom v0.3.4
+       Fresh serde_with v3.21.0
+       Fresh soroban-env-macros v26.1.3
+       Fresh ark-poly v0.5.0
+       Fresh thiserror v1.0.69
+       Fresh wasmparser-nostd v0.100.2
+       Fresh wasmi_core v0.13.0
+       Fresh ecdsa v0.16.9
+       Fresh wasmi_arena v0.4.1
+       Fresh smallvec v1.15.2
+       Fresh spin v0.9.8
+       Fresh curve25519-dalek v4.1.3
+       Fresh ark-ec v0.5.0
+       Fresh soroban-wasmi v0.31.1-soroban.20.0.1
+       Fresh rand_core v0.9.5
+       Fresh stellar-xdr v26.0.1
+       Fresh primeorder v0.13.6
+       Fresh ed25519 v2.2.3
+       Fresh darling_core v0.20.11
+       Fresh keccak v0.1.6
+       Fresh errno v0.3.14
+       Fresh bitflags v2.13.1
+       Fresh byteorder v1.5.0
+       Fresh ark-bn254 v0.5.0
+       Fresh prettyplease v0.2.37
+       Fresh p256 v0.13.2
+       Fresh ed25519-dalek v2.2.0
+       Fresh darling_macro v0.20.11
+       Fresh ark-bls12-381 v0.5.0
+       Fresh getrandom v0.4.3
+       Fresh sha3 v0.10.9
+       Fresh rustix v1.1.4
+       Fresh hash32 v0.3.1
+       Fresh soroban-spec v26.1.0
+       Fresh k256 v0.13.4
+       Fresh soroban-builtin-sdk-macros v26.1.3
+       Fresh fastrand v2.5.0
+       Fresh stable_deref_trait v1.2.1
+       Fresh hex-literal v0.4.1
+       Fresh dtor-proc-macro v0.0.6
+       Fresh darling v0.20.11
+       Fresh soroban-env-common v26.1.3
+       Fresh heapless v0.8.0
+       Fresh dtor v0.1.1
+       Fresh soroban-spec-rust v26.1.0
+       Fresh tempfile v3.27.0
+       Fresh soroban-env-host v26.1.3
+       Fresh macro-string v0.1.4
+       Fresh wait-timeout v0.2.1
+       Fresh heck v0.5.0
+       Fresh bit-vec v0.8.0
+       Fresh ctor-proc-macro v0.0.6
+       Fresh quick-error v1.2.3
+       Fresh rand_chacha v0.9.0
+       Fresh soroban-ledger-snapshot v26.1.0
+       Fresh bit-set v0.8.0
+       Fresh ctor v0.5.0
+       Fresh stellar-strkey v0.0.16
+       Fresh rusty-fork v0.3.1
+       Fresh soroban-sdk-macros v26.1.0
+       Fresh rand_xorshift v0.4.0
+       Fresh rand v0.9.5
+       Fresh bytes-lit v0.0.5
+       Fresh visibility v0.1.1
+       Fresh unarray v0.1.4
+       Fresh regex-syntax v0.8.11
+       Fresh soroban-sdk v26.1.0
+       Fresh proptest v1.11.0
+       Fresh proptest-arbitrary-interop v0.1.0
+       Dirty soroban-vault v0.1.0 (/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/04-prototype-development/contracts/soroban-vault): the file `04-prototype-development/contracts/soroban-vault/src/lib.rs` has changed (1789675608.212889557s, 29s after last build at 1789675579.264444373s)
+   Compiling soroban-vault v0.1.0 (/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/04-prototype-development/contracts/soroban-vault)
+     Running `/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc --crate-name soroban_vault --edition=2021 04-prototype-development/contracts/soroban-vault/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("bug_missing_auth", "bug_no_ttl", "bug_overflow", "bug_reinit", "bug_self_transfer", "bug_temp_nonce", "bug_zero_amount"))' -C metadata=1d80e85bbbdf9027 -C extra-filename=-bce8593a16df1a94 --out-dir /private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps -C incremental=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/incremental -L dependency=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps --extern arbitrary=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps/libarbitrary-b15fe09805a10503.rlib --extern proptest=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps/libproptest-ebc82c2f62035854.rlib --extern proptest_arbitrary_interop=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps/libproptest_arbitrary_interop-8fcd0e348bdb6c2d.rlib --extern soroban_sdk=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps/libsoroban_sdk-e62747f56c1fb4bb.rlib`
+     Running `/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc --crate-name soroban_vault --edition=2021 04-prototype-development/contracts/soroban-vault/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("bug_missing_auth", "bug_no_ttl", "bug_overflow", "bug_reinit", "bug_self_transfer", "bug_temp_nonce", "bug_zero_amount"))' -C metadata=3876bb9ecdd8693e -C extra-filename=-89a10c6dc4b3cd63 --out-dir /private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps -C incremental=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/incremental -L dependency=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps --extern soroban_sdk=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps/libsoroban_sdk-e62747f56c1fb4bb.rmeta`
+warning: unused variable: `env`
+   --> 04-prototype-development/contracts/soroban-vault/src/lib.rs:228:25
+    |
+228 |     pub fn total_shares(env: Env) -> i128 {
+    |                         ^^^ help: if this is intentional, prefix it with an underscore: `_env`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: `soroban-vault` (lib) generated 1 warning (run `cargo fix --lib -p soroban-vault` to apply 1 suggestion)
+     Running `/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc --crate-name proptest_baseline --edition=2021 04-prototype-development/contracts/soroban-vault/tests/proptest_baseline.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("bug_missing_auth", "bug_no_ttl", "bug_overflow", "bug_reinit", "bug_self_transfer", "bug_temp_nonce", "bug_zero_amount"))' -C metadata=8c7067f738ca187b -C extra-filename=-3e562011cbd3d845 --out-dir /private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps -C incremental=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/incremental -L dependency=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps --extern arbitrary=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps/libarbitrary-b15fe09805a10503.rlib --extern proptest=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps/libproptest-ebc82c2f62035854.rlib --extern proptest_arbitrary_interop=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps/libproptest_arbitrary_interop-8fcd0e348bdb6c2d.rlib --extern soroban_sdk=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps/libsoroban_sdk-e62747f56c1fb4bb.rlib --extern soroban_vault=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps/libsoroban_vault-89a10c6dc4b3cd63.rlib`
+     Running `/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc --crate-name proptest_ai --edition=2021 04-prototype-development/contracts/soroban-vault/tests/proptest_ai.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("bug_missing_auth", "bug_no_ttl", "bug_overflow", "bug_reinit", "bug_self_transfer", "bug_temp_nonce", "bug_zero_amount"))' -C metadata=5763f149b77c10de -C extra-filename=-f790cf1d5da483ca --out-dir /private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps -C incremental=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/incremental -L dependency=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps --extern arbitrary=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps/libarbitrary-b15fe09805a10503.rlib --extern proptest=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps/libproptest-ebc82c2f62035854.rlib --extern proptest_arbitrary_interop=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps/libproptest_arbitrary_interop-8fcd0e348bdb6c2d.rlib --extern soroban_sdk=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps/libsoroban_sdk-e62747f56c1fb4bb.rlib --extern soroban_vault=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps/libsoroban_vault-89a10c6dc4b3cd63.rlib`
+warning: `soroban-vault` (lib test) generated 1 warning (1 duplicate)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.23s
+  Executable `/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps/soroban_vault-bce8593a16df1a94`
+  Executable `/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps/proptest_ai-f790cf1d5da483ca`
+  Executable `/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps/proptest_baseline-3e562011cbd3d845`
+
+*** result: Success
+
+*** /Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo test --verbose --package=soroban-vault@0.1.0 --test proptest_baseline
+       Fresh unicode-ident v1.0.24
+       Fresh version_check v0.9.5
+       Fresh cfg-if v1.0.4
+       Fresh typenum v1.20.1
+       Fresh memchr v2.8.2
+       Fresh itoa v1.0.18
+       Fresh subtle v2.6.1
+       Fresh proc-macro2 v1.0.106
+       Fresh autocfg v1.5.1
+       Fresh const-oid v0.9.6
+       Fresh ident_case v1.0.1
+       Fresh strsim v0.11.1
+       Fresh quote v1.0.45
+       Fresh serde_core v1.0.228
+       Fresh zmij v1.0.21
+       Fresh semver v1.0.28
+       Fresh dyn-clone v1.0.20
+       Fresh syn v2.0.117
+       Fresh serde_json v1.0.150
+       Fresh getrandom v0.2.17
+       Fresh zerocopy v0.8.52
+       Fresh data-encoding v2.11.0
+       Fresh once_cell v1.21.4
+       Fresh escape-bytes v0.1.1
+       Fresh serde_derive v1.0.228
+       Fresh zeroize_derive v1.5.0
+       Fresh rand_core v0.6.4
+       Fresh darling_core v0.23.0
+       Fresh ppv-lite86 v0.2.21
+       Fresh num-traits v0.2.19
+       Fresh libc v0.2.186
+       Fresh cfg_eval v0.1.2
+       Fresh paste v1.0.15
+       Fresh ethnum v1.5.3
+       Fresh enum-ordinalize-derive v4.3.2
+       Fresh serde v1.0.228
+       Fresh zeroize v1.9.0
+       Fresh darling_macro v0.23.0
+       Fresh cpufeatures v0.2.17
+       Fresh rand_chacha v0.3.1
+       Fresh num-integer v0.1.46
+       Fresh ff v0.13.1
+       Fresh enum-ordinalize v4.3.2
+       Fresh ark-serialize-derive v0.5.0
+       Fresh rustc_version v0.4.1
+       Fresh generic-array v0.14.9
+       Fresh crate-git-revision v0.0.6
+       Fresh darling v0.23.0
+       Fresh schemars v0.8.22
+       Fresh hex v0.4.3
+       Fresh rand v0.8.6
+       Fresh num-bigint v0.4.6
+       Fresh der v0.7.10
+       Fresh either v1.16.0
+       Fresh base16ct v0.2.0
+       Fresh hashbrown v0.17.1
+       Fresh arrayvec v0.7.6
+       Fresh block-buffer v0.10.4
+       Fresh crypto-common v0.1.6
+       Fresh serde_with_macros v3.21.0
+       Fresh ark-std v0.5.0
+       Fresh equivalent v1.0.2
+       Fresh sec1 v0.7.3
+       Fresh crypto-bigint v0.5.5
+       Fresh ark-ff-macros v0.5.0
+       Fresh educe v0.6.0
+       Fresh itertools v0.13.0
+       Fresh digest v0.10.7
+       Fresh indexmap v2.14.0
+       Fresh group v0.13.0
+       Fresh ark-ff-asm v0.5.0
+       Fresh base64 v0.22.1
+       Fresh allocator-api2 v0.2.21
+       Fresh fnv v1.0.7
+       Fresh ahash v0.8.12
+       Fresh derive_arbitrary v1.3.2
+       Fresh stellar-strkey v0.0.13
+       Fresh sha2 v0.10.9
+       Fresh ark-serialize v0.5.0
+       Fresh signature v2.2.0
+       Fresh wasmparser v0.116.1
+       Fresh hmac v0.12.1
+       Fresh hashbrown v0.15.5
+       Fresh elliptic-curve v0.13.8
+       Fresh arbitrary v1.3.2
+       Fresh ark-ff v0.5.0
+       Fresh rfc6979 v0.4.0
+       Fresh libm v0.2.16
+       Fresh num-derive v0.4.2
+       Fresh thiserror-impl v1.0.69
+       Fresh static_assertions v1.1.0
+       Fresh downcast-rs v1.2.1
+       Fresh indexmap-nostd v0.4.0
+       Fresh getrandom v0.3.4
+       Fresh serde_with v3.21.0
+       Fresh soroban-env-macros v26.1.3
+       Fresh ark-poly v0.5.0
+       Fresh ecdsa v0.16.9
+       Fresh wasmi_core v0.13.0
+       Fresh thiserror v1.0.69
+       Fresh wasmparser-nostd v0.100.2
+       Fresh spin v0.9.8
+       Fresh smallvec v1.15.2
+       Fresh wasmi_arena v0.4.1
+       Fresh curve25519-dalek v4.1.3
+       Fresh ark-ec v0.5.0
+       Fresh soroban-wasmi v0.31.1-soroban.20.0.1
+       Fresh stellar-xdr v26.0.1
+       Fresh rand_core v0.9.5
+       Fresh primeorder v0.13.6
+       Fresh ed25519 v2.2.3
+       Fresh darling_core v0.20.11
+       Fresh keccak v0.1.6
+       Fresh errno v0.3.14
+       Fresh bitflags v2.13.1
+       Fresh byteorder v1.5.0
+       Fresh ark-bls12-381 v0.5.0
+       Fresh ed25519-dalek v2.2.0
+       Fresh getrandom v0.4.3
+       Fresh prettyplease v0.2.37
+       Fresh p256 v0.13.2
+       Fresh sha3 v0.10.9
+       Fresh ark-bn254 v0.5.0
+       Fresh darling_macro v0.20.11
+       Fresh rustix v1.1.4
+       Fresh hash32 v0.3.1
+       Fresh soroban-spec v26.1.0
+       Fresh k256 v0.13.4
+       Fresh soroban-builtin-sdk-macros v26.1.3
+       Fresh fastrand v2.5.0
+       Fresh dtor-proc-macro v0.0.6
+       Fresh hex-literal v0.4.1
+       Fresh stable_deref_trait v1.2.1
+       Fresh darling v0.20.11
+       Fresh soroban-env-common v26.1.3
+       Fresh heapless v0.8.0
+       Fresh tempfile v3.27.0
+       Fresh soroban-env-host v26.1.3
+       Fresh dtor v0.1.1
+       Fresh soroban-spec-rust v26.1.0
+       Fresh macro-string v0.1.4
+       Fresh wait-timeout v0.2.1
+       Fresh heck v0.5.0
+       Fresh ctor-proc-macro v0.0.6
+       Fresh bit-vec v0.8.0
+       Fresh quick-error v1.2.3
+       Fresh rand_xorshift v0.4.0
+       Fresh bit-set v0.8.0
+       Fresh stellar-strkey v0.0.16
+       Fresh rusty-fork v0.3.1
+       Fresh ctor v0.5.0
+       Fresh soroban-ledger-snapshot v26.1.0
+       Fresh soroban-sdk-macros v26.1.0
+       Fresh rand_chacha v0.9.0
+       Fresh rand v0.9.5
+       Fresh bytes-lit v0.0.5
+       Fresh visibility v0.1.1
+       Fresh unarray v0.1.4
+       Fresh regex-syntax v0.8.11
+       Fresh soroban-sdk v26.1.0
+       Fresh proptest v1.11.0
+       Fresh proptest-arbitrary-interop v0.1.0
+warning: unused variable: `env`
+   --> 04-prototype-development/contracts/soroban-vault/src/lib.rs:228:25
+    |
+228 |     pub fn total_shares(env: Env) -> i128 {
+    |                         ^^^ help: if this is intentional, prefix it with an underscore: `_env`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: `soroban-vault` (lib) generated 1 warning (run `cargo fix --lib -p soroban-vault` to apply 1 suggestion)
+       Fresh soroban-vault v0.1.0 (/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/04-prototype-development/contracts/soroban-vault)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.14s
+     Running `/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-g3i1C7.tmp/target/debug/deps/proptest_baseline-3e562011cbd3d845`
+
+running 8 tests
+test fuzz_initialize ... ok
+test fuzz_set_admin ... ok
+test fuzz_views ... ok
+test fuzz_last_activity ... ok
+test fuzz_pause ... ok
+test fuzz_deposit ... ok
+test fuzz_transfer_shares ... ok
+test fuzz_withdraw ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 27.29s
+
+
+*** result: Success

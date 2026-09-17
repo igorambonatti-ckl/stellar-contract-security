@@ -1,0 +1,25 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::touch with ()
+@@ -345,21 +345,17 @@
+         #[cfg(not(feature = "bug_no_ttl"))]
+         env.storage()
+             .persistent()
+             .extend_ttl(&key, BUMP_THRESHOLD, BUMP_AMOUNT);
+     }
+ 
+     /// Record non-authoritative activity telemetry in the temporary tier.
+     fn touch(env: &Env, who: &Address) {
+-        let key = DataKey::LastActivity(who.clone());
+-        env.storage()
+-            .temporary()
+-            .set(&key, &env.ledger().sequence());
+-        env.storage().temporary().extend_ttl(&key, TEMP_TTL, TEMP_TTL);
++        () /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     fn bump_instance(env: &Env) {
+         #[cfg(not(feature = "bug_no_ttl"))]
+         env.storage()
+             .instance()
+             .extend_ttl(BUMP_THRESHOLD, BUMP_AMOUNT);
+         #[cfg(feature = "bug_no_ttl")]

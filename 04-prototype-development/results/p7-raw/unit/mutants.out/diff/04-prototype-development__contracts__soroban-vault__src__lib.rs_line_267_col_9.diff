@@ -1,0 +1,24 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::token_address -> Address with Default::default()
+@@ -259,20 +259,17 @@
+     fn admin_address(env: &Env) -> Address {
+         env.storage()
+             .instance()
+             .get(&DataKey::Admin)
+             .unwrap_or_else(|| panic_with_error!(env, VaultError::NotInitialized))
+     }
+ 
+     fn token_address(env: &Env) -> Address {
+-        env.storage()
+-            .instance()
+-            .get(&DataKey::Token)
+-            .unwrap_or_else(|| panic_with_error!(env, VaultError::NotInitialized))
++        Default::default() /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     fn require_admin(env: &Env) {
+         let admin = Self::admin_address(env);
+ 
+         // With `bug_temp_nonce`, admin authority is additionally gated on a
+         // temporary-storage value. When that entry expires the check silently
+         // changes behaviour — invariant I11, scenario S14.

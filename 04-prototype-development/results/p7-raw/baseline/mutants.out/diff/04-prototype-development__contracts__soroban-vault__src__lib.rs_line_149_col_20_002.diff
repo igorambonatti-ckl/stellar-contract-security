@@ -1,0 +1,21 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace < with <= in Vault::withdraw
+@@ -141,17 +141,17 @@
+ 
+     /// Burn `shares` and return the corresponding amount of the underlying token.
+     pub fn withdraw(env: Env, from: Address, shares: i128) -> i128 {
+         from.require_auth();
+         Self::require_not_paused(&env);
+         Self::require_positive(&env, shares);
+ 
+         let balance = Self::balance_internal(&env, &from);
+-        if balance < shares {
++        if balance <= /* ~ changed by cargo-mutants ~ */ shares {
+             panic_with_error!(&env, VaultError::InsufficientBalance);
+         }
+ 
+         let token_addr = Self::token_address(&env);
+         let client = token::TokenClient::new(&env, &token_addr);
+         let vault = env.current_contract_address();
+ 
+         let total = Self::total_shares_internal(&env);

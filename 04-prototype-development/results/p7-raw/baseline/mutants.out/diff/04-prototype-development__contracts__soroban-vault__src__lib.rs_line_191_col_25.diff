@@ -1,0 +1,21 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace < with == in Vault::transfer_shares
+@@ -183,17 +183,17 @@
+         // the SOR-001 / Wormhole bug class.
+         #[cfg(not(feature = "bug_missing_auth"))]
+         from.require_auth();
+ 
+         Self::require_not_paused(&env);
+         Self::require_positive(&env, shares);
+ 
+         let from_balance = Self::balance_internal(&env, &from);
+-        if from_balance < shares {
++        if from_balance == /* ~ changed by cargo-mutants ~ */ shares {
+             panic_with_error!(&env, VaultError::InsufficientBalance);
+         }
+ 
+         // I8 — a self-transfer must be a no-op. Handling it by reading both
+         // balances and writing both back would duplicate the shares, which is
+         // the `bug_self_transfer` seed (scenario S17).
+         #[cfg(not(feature = "bug_self_transfer"))]
+         if from == to {

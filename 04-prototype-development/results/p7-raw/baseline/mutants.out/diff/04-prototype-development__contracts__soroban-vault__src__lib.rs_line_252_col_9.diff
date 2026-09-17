@@ -1,0 +1,21 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::last_activity -> Option<u32> with None
+@@ -244,17 +244,17 @@
+             .unwrap_or(false)
+     }
+ 
+     /// Ledger of the address's last vault operation.
+     ///
+     /// **Non-authoritative.** Lives in temporary storage and may vanish at any
+     /// time; nothing in this contract is gated on it (I11).
+     pub fn last_activity(env: Env, who: Address) -> Option<u32> {
+-        env.storage().temporary().get(&DataKey::LastActivity(who))
++        None /* ~ changed by cargo-mutants ~ */
+     }
+ }
+ 
+ // ── Internal helpers ─────────────────────────────────────────────────────────
+ 
+ impl Vault {
+     fn admin_address(env: &Env) -> Address {
+         env.storage()

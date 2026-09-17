@@ -1,0 +1,21 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace <= with > in Vault::require_positive
+@@ -302,17 +302,17 @@
+             panic_with_error!(env, VaultError::Paused);
+         }
+     }
+ 
+     fn require_positive(env: &Env, value: i128) {
+         // I7 — non-positive amounts must be rejected outright. Accepting them is
+         // the `bug_zero_amount` seed.
+         #[cfg(not(feature = "bug_zero_amount"))]
+-        if value <= 0 {
++        if value > /* ~ changed by cargo-mutants ~ */ 0 {
+             panic_with_error!(env, VaultError::InvalidAmount);
+         }
+         #[cfg(feature = "bug_zero_amount")]
+         if value < 0 {
+             panic_with_error!(env, VaultError::InvalidAmount);
+         }
+     }
+ 

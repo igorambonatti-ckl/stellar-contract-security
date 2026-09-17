@@ -1,0 +1,6 @@
+04-prototype-development/contracts/soroban-vault/src/lib.rs:233:9: replace Vault::balance_of -> i128 with 0
+04-prototype-development/contracts/soroban-vault/src/lib.rs:233:9: replace Vault::balance_of -> i128 with -1
+04-prototype-development/contracts/soroban-vault/src/lib.rs:332:9: replace Vault::balance_internal -> i128 with 0
+04-prototype-development/contracts/soroban-vault/src/lib.rs:332:9: replace Vault::balance_internal -> i128 with -1
+04-prototype-development/contracts/soroban-vault/src/lib.rs:339:9: replace Vault::set_balance with ()
+04-prototype-development/contracts/soroban-vault/src/lib.rs:377:9: replace Vault::checked_add -> i128 with 0

@@ -1,0 +1,30 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::initialize with ()
+@@ -77,26 +77,17 @@
+ impl Vault {
+     // ── Lifecycle ────────────────────────────────────────────────────────────
+ 
+     /// Initialize the vault. Guarded so it can only ever succeed once (I9).
+     pub fn initialize(env: Env, admin: Address, token: Address) {
+         // I9 — re-initialization must always abort. Removing this guard is the
+         // `bug_reinit` seed, and it is the Parity / front-run-init bug class
+         // (scenarios S13, S19).
+-        #[cfg(not(feature = "bug_reinit"))]
+-        if env.storage().instance().has(&DataKey::Admin) {
+-            panic_with_error!(&env, VaultError::AlreadyInitialized);
+-        }
+-
+-        env.storage().instance().set(&DataKey::Admin, &admin);
+-        env.storage().instance().set(&DataKey::Token, &token);
+-        env.storage().instance().set(&DataKey::Paused, &false);
+-        env.storage().instance().set(&DataKey::TotalShares, &0i128);
+-        Self::bump_instance(&env);
++        () /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     // ── Core operations ──────────────────────────────────────────────────────
+ 
+     /// Deposit `amount` of the underlying token; returns the shares minted.
+     pub fn deposit(env: Env, from: Address, amount: i128) -> i128 {
+         from.require_auth();
+         Self::require_not_paused(&env);

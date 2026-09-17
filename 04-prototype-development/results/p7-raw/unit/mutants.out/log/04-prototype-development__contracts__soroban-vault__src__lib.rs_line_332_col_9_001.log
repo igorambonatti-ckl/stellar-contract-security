@@ -1,0 +1,614 @@
+
+*** 04-prototype-development/contracts/soroban-vault/src/lib.rs:332:9: replace Vault::balance_internal -> i128 with 1
+
+*** mutation diff:
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::balance_internal -> i128 with 1
+@@ -324,20 +324,17 @@
+     }
+ 
+     fn set_total_shares(env: &Env, value: i128) {
+         env.storage().instance().set(&DataKey::TotalShares, &value);
+         Self::bump_instance(env);
+     }
+ 
+     fn balance_internal(env: &Env, who: &Address) -> i128 {
+-        env.storage()
+-            .persistent()
+-            .get(&DataKey::Balance(who.clone()))
+-            .unwrap_or(0)
++        1 /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     fn set_balance(env: &Env, who: &Address, value: i128) {
+         let key = DataKey::Balance(who.clone());
+         env.storage().persistent().set(&key, &value);
+ 
+         // I10′ — a correct contract keeps its own entries alive rather than
+         // silently relying on protocol-23 auto-restoration, which costs rent.
+
+
+*** /Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo test --no-run --verbose --package=soroban-vault@0.1.0
+       Fresh unicode-ident v1.0.24
+       Fresh version_check v0.9.5
+       Fresh cfg-if v1.0.4
+       Fresh typenum v1.20.1
+       Fresh itoa v1.0.18
+       Fresh memchr v2.8.2
+       Fresh subtle v2.6.1
+       Fresh proc-macro2 v1.0.106
+       Fresh autocfg v1.5.1
+       Fresh const-oid v0.9.6
+       Fresh ident_case v1.0.1
+       Fresh strsim v0.11.1
+       Fresh quote v1.0.45
+       Fresh serde_core v1.0.228
+       Fresh zmij v1.0.21
+       Fresh semver v1.0.28
+       Fresh dyn-clone v1.0.20
+       Fresh data-encoding v2.11.0
+       Fresh syn v2.0.117
+       Fresh serde_json v1.0.150
+       Fresh getrandom v0.2.17
+       Fresh zerocopy v0.8.52
+       Fresh once_cell v1.21.4
+       Fresh ethnum v1.5.3
+       Fresh escape-bytes v0.1.1
+       Fresh serde_derive v1.0.228
+       Fresh zeroize_derive v1.5.0
+       Fresh rand_core v0.6.4
+       Fresh darling_core v0.23.0
+       Fresh ppv-lite86 v0.2.21
+       Fresh num-traits v0.2.19
+       Fresh libc v0.2.186
+       Fresh cfg_eval v0.1.2
+       Fresh enum-ordinalize-derive v4.3.2
+       Fresh ark-serialize-derive v0.5.0
+       Fresh serde v1.0.228
+       Fresh zeroize v1.9.0
+       Fresh darling_macro v0.23.0
+       Fresh cpufeatures v0.2.17
+       Fresh rand_chacha v0.3.1
+       Fresh paste v1.0.15
+       Fresh num-integer v0.1.46
+       Fresh ff v0.13.1
+       Fresh enum-ordinalize v4.3.2
+       Fresh rustc_version v0.4.1
+       Fresh hashbrown v0.17.1
+       Fresh generic-array v0.14.9
+       Fresh crate-git-revision v0.0.6
+       Fresh darling v0.23.0
+       Fresh schemars v0.8.22
+       Fresh hex v0.4.3
+       Fresh rand v0.8.6
+       Fresh der v0.7.10
+       Fresh num-bigint v0.4.6
+       Fresh equivalent v1.0.2
+       Fresh arrayvec v0.7.6
+       Fresh base16ct v0.2.0
+       Fresh crypto-common v0.1.6
+       Fresh block-buffer v0.10.4
+       Fresh serde_with_macros v3.21.0
+       Fresh ark-std v0.5.0
+       Fresh either v1.16.0
+       Fresh sec1 v0.7.3
+       Fresh indexmap v2.14.0
+       Fresh ark-ff-macros v0.5.0
+       Fresh crypto-bigint v0.5.5
+       Fresh group v0.13.0
+       Fresh digest v0.10.7
+       Fresh itertools v0.13.0
+       Fresh educe v0.6.0
+       Fresh ark-ff-asm v0.5.0
+       Fresh allocator-api2 v0.2.21
+       Fresh fnv v1.0.7
+       Fresh base64 v0.22.1
+       Fresh wasmparser v0.116.1
+       Fresh ahash v0.8.12
+       Fresh derive_arbitrary v1.3.2
+       Fresh stellar-strkey v0.0.13
+       Fresh ark-serialize v0.5.0
+       Fresh sha2 v0.10.9
+       Fresh signature v2.2.0
+       Fresh hmac v0.12.1
+       Fresh elliptic-curve v0.13.8
+       Fresh hashbrown v0.15.5
+       Fresh arbitrary v1.3.2
+       Fresh num-derive v0.4.2
+       Fresh ark-ff v0.5.0
+       Fresh libm v0.2.16
+       Fresh rfc6979 v0.4.0
+       Fresh thiserror-impl v1.0.69
+       Fresh static_assertions v1.1.0
+       Fresh indexmap-nostd v0.4.0
+       Fresh downcast-rs v1.2.1
+       Fresh serde_with v3.21.0
+       Fresh ark-poly v0.5.0
+       Fresh soroban-env-macros v26.1.3
+       Fresh ecdsa v0.16.9
+       Fresh getrandom v0.3.4
+       Fresh wasmi_core v0.13.0
+       Fresh wasmparser-nostd v0.100.2
+       Fresh thiserror v1.0.69
+       Fresh wasmi_arena v0.4.1
+       Fresh spin v0.9.8
+       Fresh smallvec v1.15.2
+       Fresh stellar-xdr v26.0.1
+       Fresh ark-ec v0.5.0
+       Fresh rand_core v0.9.5
+       Fresh soroban-wasmi v0.31.1-soroban.20.0.1
+       Fresh curve25519-dalek v4.1.3
+       Fresh ed25519 v2.2.3
+       Fresh primeorder v0.13.6
+       Fresh darling_core v0.20.11
+       Fresh keccak v0.1.6
+       Fresh errno v0.3.14
+       Fresh byteorder v1.5.0
+       Fresh bitflags v2.13.1
+       Fresh prettyplease v0.2.37
+       Fresh getrandom v0.4.3
+       Fresh ark-bn254 v0.5.0
+       Fresh ark-bls12-381 v0.5.0
+       Fresh p256 v0.13.2
+       Fresh sha3 v0.10.9
+       Fresh darling_macro v0.20.11
+       Fresh ed25519-dalek v2.2.0
+       Fresh hash32 v0.3.1
+       Fresh rustix v1.1.4
+       Fresh soroban-spec v26.1.0
+       Fresh k256 v0.13.4
+       Fresh soroban-builtin-sdk-macros v26.1.3
+       Fresh hex-literal v0.4.1
+       Fresh fastrand v2.5.0
+       Fresh dtor-proc-macro v0.0.6
+       Fresh stable_deref_trait v1.2.1
+       Fresh darling v0.20.11
+       Fresh soroban-env-common v26.1.3
+       Fresh heapless v0.8.0
+       Fresh soroban-env-host v26.1.3
+       Fresh soroban-spec-rust v26.1.0
+       Fresh dtor v0.1.1
+       Fresh tempfile v3.27.0
+       Fresh macro-string v0.1.4
+       Fresh wait-timeout v0.2.1
+       Fresh ctor-proc-macro v0.0.6
+       Fresh heck v0.5.0
+       Fresh quick-error v1.2.3
+       Fresh bit-vec v0.8.0
+       Fresh rand v0.9.5
+       Fresh bit-set v0.8.0
+       Fresh soroban-sdk-macros v26.1.0
+       Fresh stellar-strkey v0.0.16
+       Fresh rusty-fork v0.3.1
+       Fresh ctor v0.5.0
+       Fresh soroban-ledger-snapshot v26.1.0
+       Fresh rand_chacha v0.9.0
+       Fresh rand_xorshift v0.4.0
+       Fresh bytes-lit v0.0.5
+       Fresh visibility v0.1.1
+       Fresh regex-syntax v0.8.11
+       Fresh unarray v0.1.4
+       Fresh soroban-sdk v26.1.0
+       Fresh proptest v1.11.0
+       Fresh proptest-arbitrary-interop v0.1.0
+       Dirty soroban-vault v0.1.0 (/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/04-prototype-development/contracts/soroban-vault): the file `04-prototype-development/contracts/soroban-vault/src/lib.rs` has changed (1789675350.711869121s, 2s after last build at 1789675348.686013075s)
+   Compiling soroban-vault v0.1.0 (/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/04-prototype-development/contracts/soroban-vault)
+     Running `/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc --crate-name soroban_vault --edition=2021 04-prototype-development/contracts/soroban-vault/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("bug_missing_auth", "bug_no_ttl", "bug_overflow", "bug_reinit", "bug_self_transfer", "bug_temp_nonce", "bug_zero_amount"))' -C metadata=1d80e85bbbdf9027 -C extra-filename=-bce8593a16df1a94 --out-dir /private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps -C incremental=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/incremental -L dependency=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps --extern arbitrary=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps/libarbitrary-b15fe09805a10503.rlib --extern proptest=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps/libproptest-ebc82c2f62035854.rlib --extern proptest_arbitrary_interop=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps/libproptest_arbitrary_interop-8fcd0e348bdb6c2d.rlib --extern soroban_sdk=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps/libsoroban_sdk-e62747f56c1fb4bb.rlib`
+     Running `/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc --crate-name soroban_vault --edition=2021 04-prototype-development/contracts/soroban-vault/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("bug_missing_auth", "bug_no_ttl", "bug_overflow", "bug_reinit", "bug_self_transfer", "bug_temp_nonce", "bug_zero_amount"))' -C metadata=3876bb9ecdd8693e -C extra-filename=-89a10c6dc4b3cd63 --out-dir /private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps -C incremental=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/incremental -L dependency=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps --extern soroban_sdk=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps/libsoroban_sdk-e62747f56c1fb4bb.rmeta`
+warning: unused variable: `env`
+   --> 04-prototype-development/contracts/soroban-vault/src/lib.rs:331:25
+    |
+331 |     fn balance_internal(env: &Env, who: &Address) -> i128 {
+    |                         ^^^ help: if this is intentional, prefix it with an underscore: `_env`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `who`
+   --> 04-prototype-development/contracts/soroban-vault/src/lib.rs:331:36
+    |
+331 |     fn balance_internal(env: &Env, who: &Address) -> i128 {
+    |                                    ^^^ help: if this is intentional, prefix it with an underscore: `_who`
+
+warning: `soroban-vault` (lib) generated 2 warnings (run `cargo fix --lib -p soroban-vault` to apply 2 suggestions)
+     Running `/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc --crate-name proptest_baseline --edition=2021 04-prototype-development/contracts/soroban-vault/tests/proptest_baseline.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("bug_missing_auth", "bug_no_ttl", "bug_overflow", "bug_reinit", "bug_self_transfer", "bug_temp_nonce", "bug_zero_amount"))' -C metadata=8c7067f738ca187b -C extra-filename=-3e562011cbd3d845 --out-dir /private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps -C incremental=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/incremental -L dependency=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps --extern arbitrary=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps/libarbitrary-b15fe09805a10503.rlib --extern proptest=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps/libproptest-ebc82c2f62035854.rlib --extern proptest_arbitrary_interop=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps/libproptest_arbitrary_interop-8fcd0e348bdb6c2d.rlib --extern soroban_sdk=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps/libsoroban_sdk-e62747f56c1fb4bb.rlib --extern soroban_vault=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps/libsoroban_vault-89a10c6dc4b3cd63.rlib`
+     Running `/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc --crate-name proptest_ai --edition=2021 04-prototype-development/contracts/soroban-vault/tests/proptest_ai.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("bug_missing_auth", "bug_no_ttl", "bug_overflow", "bug_reinit", "bug_self_transfer", "bug_temp_nonce", "bug_zero_amount"))' -C metadata=5763f149b77c10de -C extra-filename=-f790cf1d5da483ca --out-dir /private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps -C incremental=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/incremental -L dependency=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps --extern arbitrary=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps/libarbitrary-b15fe09805a10503.rlib --extern proptest=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps/libproptest-ebc82c2f62035854.rlib --extern proptest_arbitrary_interop=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps/libproptest_arbitrary_interop-8fcd0e348bdb6c2d.rlib --extern soroban_sdk=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps/libsoroban_sdk-e62747f56c1fb4bb.rlib --extern soroban_vault=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps/libsoroban_vault-89a10c6dc4b3cd63.rlib`
+warning: `soroban-vault` (lib test) generated 2 warnings (2 duplicates)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.07s
+  Executable `/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps/soroban_vault-bce8593a16df1a94`
+  Executable `/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps/proptest_ai-f790cf1d5da483ca`
+  Executable `/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps/proptest_baseline-3e562011cbd3d845`
+
+*** result: Success
+
+*** /Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo test --verbose --package=soroban-vault@0.1.0 --lib
+       Fresh unicode-ident v1.0.24
+       Fresh version_check v0.9.5
+       Fresh cfg-if v1.0.4
+       Fresh typenum v1.20.1
+       Fresh proc-macro2 v1.0.106
+       Fresh itoa v1.0.18
+       Fresh memchr v2.8.2
+       Fresh subtle v2.6.1
+       Fresh autocfg v1.5.1
+       Fresh quote v1.0.45
+       Fresh serde_core v1.0.228
+       Fresh const-oid v0.9.6
+       Fresh strsim v0.11.1
+       Fresh ident_case v1.0.1
+       Fresh syn v2.0.117
+       Fresh zmij v1.0.21
+       Fresh getrandom v0.2.17
+       Fresh semver v1.0.28
+       Fresh dyn-clone v1.0.20
+       Fresh data-encoding v2.11.0
+       Fresh serde_derive v1.0.228
+       Fresh zeroize_derive v1.5.0
+       Fresh serde_json v1.0.150
+       Fresh rand_core v0.6.4
+       Fresh zerocopy v0.8.52
+       Fresh darling_core v0.23.0
+       Fresh num-traits v0.2.19
+       Fresh serde v1.0.228
+       Fresh zeroize v1.9.0
+       Fresh darling_macro v0.23.0
+       Fresh ppv-lite86 v0.2.21
+       Fresh libc v0.2.186
+       Fresh once_cell v1.21.4
+       Fresh cfg_eval v0.1.2
+       Fresh escape-bytes v0.1.1
+       Fresh generic-array v0.14.9
+       Fresh crate-git-revision v0.0.6
+       Fresh darling v0.23.0
+       Fresh schemars v0.8.22
+       Fresh hex v0.4.3
+       Fresh paste v1.0.15
+       Fresh rand_chacha v0.3.1
+       Fresh cpufeatures v0.2.17
+       Fresh ethnum v1.5.3
+       Fresh crypto-common v0.1.6
+       Fresh block-buffer v0.10.4
+       Fresh serde_with_macros v3.21.0
+       Fresh rand v0.8.6
+       Fresh num-integer v0.1.46
+       Fresh enum-ordinalize-derive v4.3.2
+       Fresh der v0.7.10
+       Fresh ff v0.13.1
+       Fresh rustc_version v0.4.1
+       Fresh digest v0.10.7
+       Fresh ark-std v0.5.0
+       Fresh num-bigint v0.4.6
+       Fresh enum-ordinalize v4.3.2
+       Fresh ark-serialize-derive v0.5.0
+       Fresh base16ct v0.2.0
+       Fresh stellar-strkey v0.0.13
+       Fresh arrayvec v0.7.6
+       Fresh either v1.16.0
+       Fresh equivalent v1.0.2
+       Fresh hashbrown v0.17.1
+       Fresh signature v2.2.0
+       Fresh sha2 v0.10.9
+       Fresh sec1 v0.7.3
+       Fresh educe v0.6.0
+       Fresh group v0.13.0
+       Fresh ark-serialize v0.5.0
+       Fresh indexmap v2.14.0
+       Fresh itertools v0.13.0
+       Fresh ark-ff-macros v0.5.0
+       Fresh crypto-bigint v0.5.5
+       Fresh ark-ff-asm v0.5.0
+       Fresh base64 v0.22.1
+       Fresh fnv v1.0.7
+       Fresh allocator-api2 v0.2.21
+       Fresh elliptic-curve v0.13.8
+       Fresh wasmparser v0.116.1
+       Fresh ark-ff v0.5.0
+       Fresh hashbrown v0.15.5
+       Fresh ahash v0.8.12
+       Fresh hmac v0.12.1
+       Fresh derive_arbitrary v1.3.2
+       Fresh soroban-env-macros v26.1.3
+       Fresh ark-poly v0.5.0
+       Fresh libm v0.2.16
+       Fresh getrandom v0.3.4
+       Fresh arbitrary v1.3.2
+       Fresh rfc6979 v0.4.0
+       Fresh thiserror-impl v1.0.69
+       Fresh num-derive v0.4.2
+       Fresh indexmap-nostd v0.4.0
+       Fresh static_assertions v1.1.0
+       Fresh downcast-rs v1.2.1
+       Fresh ecdsa v0.16.9
+       Fresh ark-ec v0.5.0
+       Fresh thiserror v1.0.69
+       Fresh rand_core v0.9.5
+       Fresh wasmparser-nostd v0.100.2
+       Fresh serde_with v3.21.0
+       Fresh wasmi_core v0.13.0
+       Fresh errno v0.3.14
+       Fresh bitflags v2.13.1
+       Fresh spin v0.9.8
+       Fresh wasmi_arena v0.4.1
+       Fresh smallvec v1.15.2
+       Fresh getrandom v0.4.3
+       Fresh curve25519-dalek v4.1.3
+       Fresh stellar-xdr v26.0.1
+       Fresh primeorder v0.13.6
+       Fresh soroban-wasmi v0.31.1-soroban.20.0.1
+       Fresh rustix v1.1.4
+       Fresh darling_core v0.20.11
+       Fresh ed25519 v2.2.3
+       Fresh keccak v0.1.6
+       Fresh fastrand v2.5.0
+       Fresh byteorder v1.5.0
+       Fresh darling_macro v0.20.11
+       Fresh prettyplease v0.2.37
+       Fresh ed25519-dalek v2.2.0
+       Fresh tempfile v3.27.0
+       Fresh sha3 v0.10.9
+       Fresh hash32 v0.3.1
+       Fresh p256 v0.13.2
+       Fresh ark-bn254 v0.5.0
+       Fresh k256 v0.13.4
+       Fresh ark-bls12-381 v0.5.0
+       Fresh soroban-spec v26.1.0
+       Fresh soroban-builtin-sdk-macros v26.1.3
+       Fresh wait-timeout v0.2.1
+       Fresh hex-literal v0.4.1
+       Fresh bit-vec v0.8.0
+       Fresh quick-error v1.2.3
+       Fresh dtor-proc-macro v0.0.6
+       Fresh stable_deref_trait v1.2.1
+       Fresh soroban-env-common v26.1.3
+       Fresh bit-set v0.8.0
+       Fresh rusty-fork v0.3.1
+       Fresh heapless v0.8.0
+       Fresh soroban-env-host v26.1.3
+       Fresh soroban-spec-rust v26.1.0
+       Fresh dtor v0.1.1
+       Fresh darling v0.20.11
+       Fresh rand_chacha v0.9.0
+       Fresh rand v0.9.5
+       Fresh rand_xorshift v0.4.0
+       Fresh macro-string v0.1.4
+       Fresh unarray v0.1.4
+       Fresh ctor-proc-macro v0.0.6
+       Fresh regex-syntax v0.8.11
+       Fresh heck v0.5.0
+       Fresh soroban-ledger-snapshot v26.1.0
+       Fresh stellar-strkey v0.0.16
+       Fresh bytes-lit v0.0.5
+       Fresh visibility v0.1.1
+       Fresh ctor v0.5.0
+       Fresh proptest v1.11.0
+       Fresh soroban-sdk-macros v26.1.0
+       Fresh soroban-sdk v26.1.0
+       Fresh proptest-arbitrary-interop v0.1.0
+       Fresh soroban-vault v0.1.0 (/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/04-prototype-development/contracts/soroban-vault)
+warning: unused variable: `env`
+   --> 04-prototype-development/contracts/soroban-vault/src/lib.rs:331:25
+    |
+331 |     fn balance_internal(env: &Env, who: &Address) -> i128 {
+    |                         ^^^ help: if this is intentional, prefix it with an underscore: `_env`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `who`
+   --> 04-prototype-development/contracts/soroban-vault/src/lib.rs:331:36
+    |
+331 |     fn balance_internal(env: &Env, who: &Address) -> i128 {
+    |                                    ^^^ help: if this is intentional, prefix it with an underscore: `_who`
+
+warning: `soroban-vault` (lib test) generated 2 warnings (run `cargo fix --lib -p soroban-vault --tests` to apply 2 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.13s
+     Running `/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-Iw7q9L.tmp/target/debug/deps/soroban_vault-bce8593a16df1a94`
+
+running 22 tests
+test test::pause_sets_the_flag ... ok
+test test::set_admin_hands_over_the_role ... ok
+test test_invariants::i1_supply_conservation ... FAILED
+test test_invariants::i12_pause_halts_all_mutations ... FAILED
+test test::transfer_shares_moves_balance ... FAILED
+test test::initialize_sets_initial_state ... FAILED
+test test_invariants::i10_persistent_entries_are_ttl_managed_not_restored ... ok
+test test_invariants::i11_temporary_state_is_never_authoritative ... FAILED
+test test::deposit_mints_one_to_one_on_empty_vault ... FAILED
+test test::deposit_withdraw_round_trip_is_lossless_for_a_sole_depositor ... FAILED
+test test::withdraw_returns_assets_and_burns_shares ... FAILED
+test test::views_report_state ... FAILED
+test test::deposit_mints_proportionally_on_funded_vault ... ok
+test test_invariants::i10_restoration_signature_is_detectable ... FAILED
+test test_invariants::i4_admin_operations_require_admin_auth ... ok
+test test_invariants::i9_reinitialization_is_rejected ... ok
+test test_invariants::i2_zero_supply_iff_empty ... FAILED
+test test_invariants::i6_arithmetic_is_checked ... ok
+test test_invariants::i3_round_trip_never_profits ... FAILED
+test test_invariants::i5_user_operations_require_sender_auth ... FAILED
+test test_invariants::i7_non_positive_amounts_rejected ... ok
+test test_invariants::i8_self_transfer_is_a_noop ... FAILED
+
+failures:
+
+---- test_invariants::i1_supply_conservation stdout ----
+
+thread 'test_invariants::i1_supply_conservation' (2980356) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 200]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 200]
+
+Writing test snapshot file for test "test_invariants::i1_supply_conservation" to "test_snapshots/test_invariants/i1_supply_conservation.1.json".
+
+---- test_invariants::i12_pause_halts_all_mutations stdout ----
+
+thread 'test_invariants::i12_pause_halts_all_mutations' (2980355) panicked at 04-prototype-development/contracts/soroban-vault/src/test_invariants.rs:264:5:
+assertion `left == right` failed
+  left: 1
+ right: 1000
+Writing test snapshot file for test "test_invariants::i12_pause_halts_all_mutations" to "test_snapshots/test_invariants/i12_pause_halts_all_mutations.1.json".
+
+---- test::transfer_shares_moves_balance stdout ----
+
+thread 'test::transfer_shares_moves_balance' (2980349) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 300]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, 300]
+
+Writing test snapshot file for test "test::transfer_shares_moves_balance" to "test_snapshots/test/transfer_shares_moves_balance.1.json".
+
+---- test::initialize_sets_initial_state stdout ----
+
+thread 'test::initialize_sets_initial_state' (2980346) panicked at 04-prototype-development/contracts/soroban-vault/src/test.rs:17:5:
+assertion `left == right` failed
+  left: 1
+ right: 0
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+Writing test snapshot file for test "test::initialize_sets_initial_state" to "test_snapshots/test/initialize_sets_initial_state.1.json".
+
+---- test_invariants::i11_temporary_state_is_never_authoritative stdout ----
+
+thread 'test_invariants::i11_temporary_state_is_never_authoritative' (2980354) panicked at 04-prototype-development/contracts/soroban-vault/src/test_invariants.rs:241:5:
+assertion `left == right` failed
+  left: 1
+ right: 1000
+Writing test snapshot file for test "test_invariants::i11_temporary_state_is_never_authoritative" to "test_snapshots/test_invariants/i11_temporary_state_is_never_authoritative.1.json".
+
+---- test::deposit_mints_one_to_one_on_empty_vault stdout ----
+
+thread 'test::deposit_mints_one_to_one_on_empty_vault' (2980343) panicked at 04-prototype-development/contracts/soroban-vault/src/test.rs:26:5:
+assertion `left == right` failed
+  left: 1
+ right: 1000
+Writing test snapshot file for test "test::deposit_mints_one_to_one_on_empty_vault" to "test_snapshots/test/deposit_mints_one_to_one_on_empty_vault.1.json".
+
+---- test::deposit_withdraw_round_trip_is_lossless_for_a_sole_depositor stdout ----
+
+thread 'test::deposit_withdraw_round_trip_is_lossless_for_a_sole_depositor' (2980345) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 7777]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 7777]
+
+Writing test snapshot file for test "test::deposit_withdraw_round_trip_is_lossless_for_a_sole_depositor" to "test_snapshots/test/deposit_withdraw_round_trip_is_lossless_for_a_sole_depositor.1.json".
+
+---- test::withdraw_returns_assets_and_burns_shares stdout ----
+
+thread 'test::withdraw_returns_assets_and_burns_shares' (2980351) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 400]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 400]
+
+Writing test snapshot file for test "test::withdraw_returns_assets_and_burns_shares" to "test_snapshots/test/withdraw_returns_assets_and_burns_shares.1.json".
+
+---- test::views_report_state stdout ----
+
+thread 'test::views_report_state' (2980350) panicked at 04-prototype-development/contracts/soroban-vault/src/test.rs:88:5:
+assertion `left == right` failed
+  left: 1
+ right: 250
+Writing test snapshot file for test "test::views_report_state" to "test_snapshots/test/views_report_state.1.json".
+
+---- test_invariants::i10_restoration_signature_is_detectable stdout ----
+
+thread 'test_invariants::i10_restoration_signature_is_detectable' (2980353) panicked at 04-prototype-development/contracts/soroban-vault/src/test_invariants.rs:212:5:
+assertion `left == right` failed: data survives — auto-restoration, not TTL management
+  left: 1
+ right: 1000
+Writing test snapshot file for test "test_invariants::i10_restoration_signature_is_detectable" to "test_snapshots/test_invariants/i10_restoration_signature_is_detectable.1.json".
+
+---- test_invariants::i2_zero_supply_iff_empty stdout ----
+
+thread 'test_invariants::i2_zero_supply_iff_empty' (2980423) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1000]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 1000]
+
+Writing test snapshot file for test "test_invariants::i2_zero_supply_iff_empty" to "test_snapshots/test_invariants/i2_zero_supply_iff_empty.1.json".
+
+---- test_invariants::i3_round_trip_never_profits stdout ----
+
+thread 'test_invariants::i3_round_trip_never_profits' (2980424) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", withdraw, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 3333]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, withdraw], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 3333]
+
+Writing test snapshot file for test "test_invariants::i3_round_trip_never_profits" to "test_snapshots/test_invariants/i3_round_trip_never_profits.1.json".
+
+---- test_invariants::i5_user_operations_require_sender_auth stdout ----
+
+thread 'test_invariants::i5_user_operations_require_sender_auth' (2980426) panicked at 04-prototype-development/contracts/soroban-vault/src/test_invariants.rs:93:5:
+assertion `left == right` failed: no balance moved on a rejected call
+  left: 1
+ right: 1000
+Writing test snapshot file for test "test_invariants::i5_user_operations_require_sender_auth" to "test_snapshots/test_invariants/i5_user_operations_require_sender_auth.1.json".
+
+---- test_invariants::i8_self_transfer_is_a_noop stdout ----
+
+thread 'test_invariants::i8_self_transfer_is_a_noop' (2980432) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #4)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #4)], data:["contract call failed", transfer_shares, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 400]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, topics:[error, Error(Contract, #4)], data:["failing with contract error", 4]
+   5: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, transfer_shares], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4, 400]
+
+Writing test snapshot file for test "test_invariants::i8_self_transfer_is_a_noop" to "test_snapshots/test_invariants/i8_self_transfer_is_a_noop.1.json".
+
+
+failures:
+    test::deposit_mints_one_to_one_on_empty_vault
+    test::deposit_withdraw_round_trip_is_lossless_for_a_sole_depositor
+    test::initialize_sets_initial_state
+    test::transfer_shares_moves_balance
+    test::views_report_state
+    test::withdraw_returns_assets_and_burns_shares
+    test_invariants::i10_restoration_signature_is_detectable
+    test_invariants::i11_temporary_state_is_never_authoritative
+    test_invariants::i12_pause_halts_all_mutations
+    test_invariants::i1_supply_conservation
+    test_invariants::i2_zero_supply_iff_empty
+    test_invariants::i3_round_trip_never_profits
+    test_invariants::i5_user_operations_require_sender_auth
+    test_invariants::i8_self_transfer_is_a_noop
+
+test result: FAILED. 8 passed; 14 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
+
+error: test failed, to rerun pass `-p soroban-vault --lib`
+
+*** result: Failure(101)

@@ -1,0 +1,21 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace <= with > in Vault::deposit
+@@ -120,17 +120,17 @@
+                 panic_with_error!(&env, VaultError::InvalidAmount);
+             }
+             numerator / assets_before
+         };
+ 
+         // I3/I7 — a deposit that mints zero shares is value donated to existing
+         // holders. Rejecting it closes the share-inflation vector (S18).
+         #[cfg(not(feature = "bug_zero_amount"))]
+-        if shares <= 0 {
++        if shares > /* ~ changed by cargo-mutants ~ */ 0 {
+             panic_with_error!(&env, VaultError::ZeroShares);
+         }
+ 
+         client.transfer(&from, &vault, &amount);
+ 
+         let balance = Self::balance_internal(&env, &from);
+         Self::set_balance(&env, &from, Self::checked_add(&env, balance, shares));
+         Self::set_total_shares(&env, Self::checked_add(&env, total, shares));

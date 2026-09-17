@@ -1,0 +1,59 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::deposit -> i128 with 1
+@@ -93,55 +93,17 @@
+         env.storage().instance().set(&DataKey::TotalShares, &0i128);
+         Self::bump_instance(&env);
+     }
+ 
+     // ── Core operations ──────────────────────────────────────────────────────
+ 
+     /// Deposit `amount` of the underlying token; returns the shares minted.
+     pub fn deposit(env: Env, from: Address, amount: i128) -> i128 {
+-        from.require_auth();
+-        Self::require_not_paused(&env);
+-        Self::require_positive(&env, amount);
+-
+-        let token_addr = Self::token_address(&env);
+-        let client = token::TokenClient::new(&env, &token_addr);
+-        let vault = env.current_contract_address();
+-
+-        // Assets held *before* the incoming transfer — the correct basis for
+-        // the share price.
+-        let assets_before = client.balance(&vault);
+-        let total = Self::total_shares_internal(&env);
+-
+-        let shares = if total == 0 {
+-            amount
+-        } else {
+-            // amount * total / assets_before
+-            let numerator = Self::checked_mul(&env, amount, total);
+-            if assets_before <= 0 {
+-                panic_with_error!(&env, VaultError::InvalidAmount);
+-            }
+-            numerator / assets_before
+-        };
+-
+-        // I3/I7 — a deposit that mints zero shares is value donated to existing
+-        // holders. Rejecting it closes the share-inflation vector (S18).
+-        #[cfg(not(feature = "bug_zero_amount"))]
+-        if shares <= 0 {
+-            panic_with_error!(&env, VaultError::ZeroShares);
+-        }
+-
+-        client.transfer(&from, &vault, &amount);
+-
+-        let balance = Self::balance_internal(&env, &from);
+-        Self::set_balance(&env, &from, Self::checked_add(&env, balance, shares));
+-        Self::set_total_shares(&env, Self::checked_add(&env, total, shares));
+-        Self::touch(&env, &from);
+-
+-        shares
++        1 /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     /// Burn `shares` and return the corresponding amount of the underlying token.
+     pub fn withdraw(env: Env, from: Address, shares: i128) -> i128 {
+         from.require_auth();
+         Self::require_not_paused(&env);
+         Self::require_positive(&env, shares);
+ 

@@ -1,0 +1,2178 @@
+[
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::initialize with ()\n@@ -77,26 +77,17 @@\n impl Vault {\n     // ── Lifecycle ────────────────────────────────────────────────────────────\n \n     /// Initialize the vault. Guarded so it can only ever succeed once (I9).\n     pub fn initialize(env: Env, admin: Address, token: Address) {\n         // I9 — re-initialization must always abort. Removing this guard is the\n         // `bug_reinit` seed, and it is the Parity / front-run-init bug class\n         // (scenarios S13, S19).\n-        #[cfg(not(feature = \"bug_reinit\"))]\n-        if env.storage().instance().has(&DataKey::Admin) {\n-            panic_with_error!(&env, VaultError::AlreadyInitialized);\n-        }\n-\n-        env.storage().instance().set(&DataKey::Admin, &admin);\n-        env.storage().instance().set(&DataKey::Token, &token);\n-        env.storage().instance().set(&DataKey::Paused, &false);\n-        env.storage().instance().set(&DataKey::TotalShares, &0i128);\n-        Self::bump_instance(&env);\n+        () /* ~ changed by cargo-mutants ~ */\n     }\n \n     // ── Core operations ──────────────────────────────────────────────────────\n \n     /// Deposit `amount` of the underlying token; returns the shares minted.\n     pub fn deposit(env: Env, from: Address, amount: i128) -> i128 {\n         from.require_auth();\n         Self::require_not_paused(&env);\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::initialize",
+      "return_type": "",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 95
+        },
+        "start": {
+          "column": 5,
+          "line": 80
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:85:9: replace Vault::initialize with ()",
+    "package": "soroban-vault",
+    "replacement": "()",
+    "span": {
+      "end": {
+        "column": 35,
+        "line": 94
+      },
+      "start": {
+        "column": 9,
+        "line": 85
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::deposit -> i128 with 0\n@@ -93,55 +93,17 @@\n         env.storage().instance().set(&DataKey::TotalShares, &0i128);\n         Self::bump_instance(&env);\n     }\n \n     // ── Core operations ──────────────────────────────────────────────────────\n \n     /// Deposit `amount` of the underlying token; returns the shares minted.\n     pub fn deposit(env: Env, from: Address, amount: i128) -> i128 {\n-        from.require_auth();\n-        Self::require_not_paused(&env);\n-        Self::require_positive(&env, amount);\n-\n-        let token_addr = Self::token_address(&env);\n-        let client = token::TokenClient::new(&env, &token_addr);\n-        let vault = env.current_contract_address();\n-\n-        // Assets held *before* the incoming transfer — the correct basis for\n-        // the share price.\n-        let assets_before = client.balance(&vault);\n-        let total = Self::total_shares_internal(&env);\n-\n-        let shares = if total == 0 {\n-            amount\n-        } else {\n-            // amount * total / assets_before\n-            let numerator = Self::checked_mul(&env, amount, total);\n-            if assets_before <= 0 {\n-                panic_with_error!(&env, VaultError::InvalidAmount);\n-            }\n-            numerator / assets_before\n-        };\n-\n-        // I3/I7 — a deposit that mints zero shares is value donated to existing\n-        // holders. Rejecting it closes the share-inflation vector (S18).\n-        #[cfg(not(feature = \"bug_zero_amount\"))]\n-        if shares <= 0 {\n-            panic_with_error!(&env, VaultError::ZeroShares);\n-        }\n-\n-        client.transfer(&from, &vault, &amount);\n-\n-        let balance = Self::balance_internal(&env, &from);\n-        Self::set_balance(&env, &from, Self::checked_add(&env, balance, shares));\n-        Self::set_total_shares(&env, Self::checked_add(&env, total, shares));\n-        Self::touch(&env, &from);\n-\n-        shares\n+        0 /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Burn `shares` and return the corresponding amount of the underlying token.\n     pub fn withdraw(env: Env, from: Address, shares: i128) -> i128 {\n         from.require_auth();\n         Self::require_not_paused(&env);\n         Self::require_positive(&env, shares);\n \n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::deposit",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 140
+        },
+        "start": {
+          "column": 5,
+          "line": 99
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:101:9: replace Vault::deposit -> i128 with 0",
+    "package": "soroban-vault",
+    "replacement": "0",
+    "span": {
+      "end": {
+        "column": 15,
+        "line": 139
+      },
+      "start": {
+        "column": 9,
+        "line": 101
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::deposit -> i128 with 1\n@@ -93,55 +93,17 @@\n         env.storage().instance().set(&DataKey::TotalShares, &0i128);\n         Self::bump_instance(&env);\n     }\n \n     // ── Core operations ──────────────────────────────────────────────────────\n \n     /// Deposit `amount` of the underlying token; returns the shares minted.\n     pub fn deposit(env: Env, from: Address, amount: i128) -> i128 {\n-        from.require_auth();\n-        Self::require_not_paused(&env);\n-        Self::require_positive(&env, amount);\n-\n-        let token_addr = Self::token_address(&env);\n-        let client = token::TokenClient::new(&env, &token_addr);\n-        let vault = env.current_contract_address();\n-\n-        // Assets held *before* the incoming transfer — the correct basis for\n-        // the share price.\n-        let assets_before = client.balance(&vault);\n-        let total = Self::total_shares_internal(&env);\n-\n-        let shares = if total == 0 {\n-            amount\n-        } else {\n-            // amount * total / assets_before\n-            let numerator = Self::checked_mul(&env, amount, total);\n-            if assets_before <= 0 {\n-                panic_with_error!(&env, VaultError::InvalidAmount);\n-            }\n-            numerator / assets_before\n-        };\n-\n-        // I3/I7 — a deposit that mints zero shares is value donated to existing\n-        // holders. Rejecting it closes the share-inflation vector (S18).\n-        #[cfg(not(feature = \"bug_zero_amount\"))]\n-        if shares <= 0 {\n-            panic_with_error!(&env, VaultError::ZeroShares);\n-        }\n-\n-        client.transfer(&from, &vault, &amount);\n-\n-        let balance = Self::balance_internal(&env, &from);\n-        Self::set_balance(&env, &from, Self::checked_add(&env, balance, shares));\n-        Self::set_total_shares(&env, Self::checked_add(&env, total, shares));\n-        Self::touch(&env, &from);\n-\n-        shares\n+        1 /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Burn `shares` and return the corresponding amount of the underlying token.\n     pub fn withdraw(env: Env, from: Address, shares: i128) -> i128 {\n         from.require_auth();\n         Self::require_not_paused(&env);\n         Self::require_positive(&env, shares);\n \n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::deposit",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 140
+        },
+        "start": {
+          "column": 5,
+          "line": 99
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:101:9: replace Vault::deposit -> i128 with 1",
+    "package": "soroban-vault",
+    "replacement": "1",
+    "span": {
+      "end": {
+        "column": 15,
+        "line": 139
+      },
+      "start": {
+        "column": 9,
+        "line": 101
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::deposit -> i128 with -1\n@@ -93,55 +93,17 @@\n         env.storage().instance().set(&DataKey::TotalShares, &0i128);\n         Self::bump_instance(&env);\n     }\n \n     // ── Core operations ──────────────────────────────────────────────────────\n \n     /// Deposit `amount` of the underlying token; returns the shares minted.\n     pub fn deposit(env: Env, from: Address, amount: i128) -> i128 {\n-        from.require_auth();\n-        Self::require_not_paused(&env);\n-        Self::require_positive(&env, amount);\n-\n-        let token_addr = Self::token_address(&env);\n-        let client = token::TokenClient::new(&env, &token_addr);\n-        let vault = env.current_contract_address();\n-\n-        // Assets held *before* the incoming transfer — the correct basis for\n-        // the share price.\n-        let assets_before = client.balance(&vault);\n-        let total = Self::total_shares_internal(&env);\n-\n-        let shares = if total == 0 {\n-            amount\n-        } else {\n-            // amount * total / assets_before\n-            let numerator = Self::checked_mul(&env, amount, total);\n-            if assets_before <= 0 {\n-                panic_with_error!(&env, VaultError::InvalidAmount);\n-            }\n-            numerator / assets_before\n-        };\n-\n-        // I3/I7 — a deposit that mints zero shares is value donated to existing\n-        // holders. Rejecting it closes the share-inflation vector (S18).\n-        #[cfg(not(feature = \"bug_zero_amount\"))]\n-        if shares <= 0 {\n-            panic_with_error!(&env, VaultError::ZeroShares);\n-        }\n-\n-        client.transfer(&from, &vault, &amount);\n-\n-        let balance = Self::balance_internal(&env, &from);\n-        Self::set_balance(&env, &from, Self::checked_add(&env, balance, shares));\n-        Self::set_total_shares(&env, Self::checked_add(&env, total, shares));\n-        Self::touch(&env, &from);\n-\n-        shares\n+        -1 /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Burn `shares` and return the corresponding amount of the underlying token.\n     pub fn withdraw(env: Env, from: Address, shares: i128) -> i128 {\n         from.require_auth();\n         Self::require_not_paused(&env);\n         Self::require_positive(&env, shares);\n \n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::deposit",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 140
+        },
+        "start": {
+          "column": 5,
+          "line": 99
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:101:9: replace Vault::deposit -> i128 with -1",
+    "package": "soroban-vault",
+    "replacement": "-1",
+    "span": {
+      "end": {
+        "column": 15,
+        "line": 139
+      },
+      "start": {
+        "column": 9,
+        "line": 101
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace == with != in Vault::deposit\n@@ -106,17 +106,17 @@\n         let client = token::TokenClient::new(&env, &token_addr);\n         let vault = env.current_contract_address();\n \n         // Assets held *before* the incoming transfer — the correct basis for\n         // the share price.\n         let assets_before = client.balance(&vault);\n         let total = Self::total_shares_internal(&env);\n \n-        let shares = if total == 0 {\n+        let shares = if total != /* ~ changed by cargo-mutants ~ */ 0 {\n             amount\n         } else {\n             // amount * total / assets_before\n             let numerator = Self::checked_mul(&env, amount, total);\n             if assets_before <= 0 {\n                 panic_with_error!(&env, VaultError::InvalidAmount);\n             }\n             numerator / assets_before\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::deposit",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 140
+        },
+        "start": {
+          "column": 5,
+          "line": 99
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:114:31: replace == with != in Vault::deposit",
+    "package": "soroban-vault",
+    "replacement": "!=",
+    "span": {
+      "end": {
+        "column": 33,
+        "line": 114
+      },
+      "start": {
+        "column": 31,
+        "line": 114
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace <= with > in Vault::deposit\n@@ -111,17 +111,17 @@\n         let assets_before = client.balance(&vault);\n         let total = Self::total_shares_internal(&env);\n \n         let shares = if total == 0 {\n             amount\n         } else {\n             // amount * total / assets_before\n             let numerator = Self::checked_mul(&env, amount, total);\n-            if assets_before <= 0 {\n+            if assets_before > /* ~ changed by cargo-mutants ~ */ 0 {\n                 panic_with_error!(&env, VaultError::InvalidAmount);\n             }\n             numerator / assets_before\n         };\n \n         // I3/I7 — a deposit that mints zero shares is value donated to existing\n         // holders. Rejecting it closes the share-inflation vector (S18).\n         #[cfg(not(feature = \"bug_zero_amount\"))]\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::deposit",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 140
+        },
+        "start": {
+          "column": 5,
+          "line": 99
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:119:30: replace <= with > in Vault::deposit",
+    "package": "soroban-vault",
+    "replacement": ">",
+    "span": {
+      "end": {
+        "column": 32,
+        "line": 119
+      },
+      "start": {
+        "column": 30,
+        "line": 119
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace / with % in Vault::deposit\n@@ -114,17 +114,17 @@\n         let shares = if total == 0 {\n             amount\n         } else {\n             // amount * total / assets_before\n             let numerator = Self::checked_mul(&env, amount, total);\n             if assets_before <= 0 {\n                 panic_with_error!(&env, VaultError::InvalidAmount);\n             }\n-            numerator / assets_before\n+            numerator % /* ~ changed by cargo-mutants ~ */ assets_before\n         };\n \n         // I3/I7 — a deposit that mints zero shares is value donated to existing\n         // holders. Rejecting it closes the share-inflation vector (S18).\n         #[cfg(not(feature = \"bug_zero_amount\"))]\n         if shares <= 0 {\n             panic_with_error!(&env, VaultError::ZeroShares);\n         }\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::deposit",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 140
+        },
+        "start": {
+          "column": 5,
+          "line": 99
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:122:23: replace / with % in Vault::deposit",
+    "package": "soroban-vault",
+    "replacement": "%",
+    "span": {
+      "end": {
+        "column": 24,
+        "line": 122
+      },
+      "start": {
+        "column": 23,
+        "line": 122
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace / with * in Vault::deposit\n@@ -114,17 +114,17 @@\n         let shares = if total == 0 {\n             amount\n         } else {\n             // amount * total / assets_before\n             let numerator = Self::checked_mul(&env, amount, total);\n             if assets_before <= 0 {\n                 panic_with_error!(&env, VaultError::InvalidAmount);\n             }\n-            numerator / assets_before\n+            numerator * /* ~ changed by cargo-mutants ~ */ assets_before\n         };\n \n         // I3/I7 — a deposit that mints zero shares is value donated to existing\n         // holders. Rejecting it closes the share-inflation vector (S18).\n         #[cfg(not(feature = \"bug_zero_amount\"))]\n         if shares <= 0 {\n             panic_with_error!(&env, VaultError::ZeroShares);\n         }\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::deposit",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 140
+        },
+        "start": {
+          "column": 5,
+          "line": 99
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:122:23: replace / with * in Vault::deposit",
+    "package": "soroban-vault",
+    "replacement": "*",
+    "span": {
+      "end": {
+        "column": 24,
+        "line": 122
+      },
+      "start": {
+        "column": 23,
+        "line": 122
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace <= with > in Vault::deposit\n@@ -120,17 +120,17 @@\n                 panic_with_error!(&env, VaultError::InvalidAmount);\n             }\n             numerator / assets_before\n         };\n \n         // I3/I7 — a deposit that mints zero shares is value donated to existing\n         // holders. Rejecting it closes the share-inflation vector (S18).\n         #[cfg(not(feature = \"bug_zero_amount\"))]\n-        if shares <= 0 {\n+        if shares > /* ~ changed by cargo-mutants ~ */ 0 {\n             panic_with_error!(&env, VaultError::ZeroShares);\n         }\n \n         client.transfer(&from, &vault, &amount);\n \n         let balance = Self::balance_internal(&env, &from);\n         Self::set_balance(&env, &from, Self::checked_add(&env, balance, shares));\n         Self::set_total_shares(&env, Self::checked_add(&env, total, shares));\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::deposit",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 140
+        },
+        "start": {
+          "column": 5,
+          "line": 99
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:128:19: replace <= with > in Vault::deposit",
+    "package": "soroban-vault",
+    "replacement": ">",
+    "span": {
+      "end": {
+        "column": 21,
+        "line": 128
+      },
+      "start": {
+        "column": 19,
+        "line": 128
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::withdraw -> i128 with 0\n@@ -136,50 +136,17 @@\n         Self::set_total_shares(&env, Self::checked_add(&env, total, shares));\n         Self::touch(&env, &from);\n \n         shares\n     }\n \n     /// Burn `shares` and return the corresponding amount of the underlying token.\n     pub fn withdraw(env: Env, from: Address, shares: i128) -> i128 {\n-        from.require_auth();\n-        Self::require_not_paused(&env);\n-        Self::require_positive(&env, shares);\n-\n-        let balance = Self::balance_internal(&env, &from);\n-        if balance < shares {\n-            panic_with_error!(&env, VaultError::InsufficientBalance);\n-        }\n-\n-        let token_addr = Self::token_address(&env);\n-        let client = token::TokenClient::new(&env, &token_addr);\n-        let vault = env.current_contract_address();\n-\n-        let total = Self::total_shares_internal(&env);\n-        let assets = client.balance(&vault);\n-\n-        // amount = shares * assets / total\n-        let amount = if total == 0 {\n-            0\n-        } else {\n-            Self::checked_mul(&env, shares, assets) / total\n-        };\n-\n-        // Effects before interaction (CEI) — the reentrancy discipline from\n-        // scenario S02.\n-        Self::set_balance(&env, &from, Self::checked_sub(&env, balance, shares));\n-        Self::set_total_shares(&env, Self::checked_sub(&env, total, shares));\n-\n-        if amount > 0 {\n-            client.transfer(&vault, &from, &amount);\n-        }\n-        Self::touch(&env, &from);\n-\n-        amount\n+        0 /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Move `shares` between two holders.\n     pub fn transfer_shares(env: Env, from: Address, to: Address, shares: i128) {\n         // I5 — the sender must authorize. Dropping this is `bug_missing_auth`,\n         // the SOR-001 / Wormhole bug class.\n         #[cfg(not(feature = \"bug_missing_auth\"))]\n         from.require_auth();\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::withdraw",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 178
+        },
+        "start": {
+          "column": 5,
+          "line": 142
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:144:9: replace Vault::withdraw -> i128 with 0",
+    "package": "soroban-vault",
+    "replacement": "0",
+    "span": {
+      "end": {
+        "column": 15,
+        "line": 177
+      },
+      "start": {
+        "column": 9,
+        "line": 144
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::withdraw -> i128 with 1\n@@ -136,50 +136,17 @@\n         Self::set_total_shares(&env, Self::checked_add(&env, total, shares));\n         Self::touch(&env, &from);\n \n         shares\n     }\n \n     /// Burn `shares` and return the corresponding amount of the underlying token.\n     pub fn withdraw(env: Env, from: Address, shares: i128) -> i128 {\n-        from.require_auth();\n-        Self::require_not_paused(&env);\n-        Self::require_positive(&env, shares);\n-\n-        let balance = Self::balance_internal(&env, &from);\n-        if balance < shares {\n-            panic_with_error!(&env, VaultError::InsufficientBalance);\n-        }\n-\n-        let token_addr = Self::token_address(&env);\n-        let client = token::TokenClient::new(&env, &token_addr);\n-        let vault = env.current_contract_address();\n-\n-        let total = Self::total_shares_internal(&env);\n-        let assets = client.balance(&vault);\n-\n-        // amount = shares * assets / total\n-        let amount = if total == 0 {\n-            0\n-        } else {\n-            Self::checked_mul(&env, shares, assets) / total\n-        };\n-\n-        // Effects before interaction (CEI) — the reentrancy discipline from\n-        // scenario S02.\n-        Self::set_balance(&env, &from, Self::checked_sub(&env, balance, shares));\n-        Self::set_total_shares(&env, Self::checked_sub(&env, total, shares));\n-\n-        if amount > 0 {\n-            client.transfer(&vault, &from, &amount);\n-        }\n-        Self::touch(&env, &from);\n-\n-        amount\n+        1 /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Move `shares` between two holders.\n     pub fn transfer_shares(env: Env, from: Address, to: Address, shares: i128) {\n         // I5 — the sender must authorize. Dropping this is `bug_missing_auth`,\n         // the SOR-001 / Wormhole bug class.\n         #[cfg(not(feature = \"bug_missing_auth\"))]\n         from.require_auth();\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::withdraw",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 178
+        },
+        "start": {
+          "column": 5,
+          "line": 142
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:144:9: replace Vault::withdraw -> i128 with 1",
+    "package": "soroban-vault",
+    "replacement": "1",
+    "span": {
+      "end": {
+        "column": 15,
+        "line": 177
+      },
+      "start": {
+        "column": 9,
+        "line": 144
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::withdraw -> i128 with -1\n@@ -136,50 +136,17 @@\n         Self::set_total_shares(&env, Self::checked_add(&env, total, shares));\n         Self::touch(&env, &from);\n \n         shares\n     }\n \n     /// Burn `shares` and return the corresponding amount of the underlying token.\n     pub fn withdraw(env: Env, from: Address, shares: i128) -> i128 {\n-        from.require_auth();\n-        Self::require_not_paused(&env);\n-        Self::require_positive(&env, shares);\n-\n-        let balance = Self::balance_internal(&env, &from);\n-        if balance < shares {\n-            panic_with_error!(&env, VaultError::InsufficientBalance);\n-        }\n-\n-        let token_addr = Self::token_address(&env);\n-        let client = token::TokenClient::new(&env, &token_addr);\n-        let vault = env.current_contract_address();\n-\n-        let total = Self::total_shares_internal(&env);\n-        let assets = client.balance(&vault);\n-\n-        // amount = shares * assets / total\n-        let amount = if total == 0 {\n-            0\n-        } else {\n-            Self::checked_mul(&env, shares, assets) / total\n-        };\n-\n-        // Effects before interaction (CEI) — the reentrancy discipline from\n-        // scenario S02.\n-        Self::set_balance(&env, &from, Self::checked_sub(&env, balance, shares));\n-        Self::set_total_shares(&env, Self::checked_sub(&env, total, shares));\n-\n-        if amount > 0 {\n-            client.transfer(&vault, &from, &amount);\n-        }\n-        Self::touch(&env, &from);\n-\n-        amount\n+        -1 /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Move `shares` between two holders.\n     pub fn transfer_shares(env: Env, from: Address, to: Address, shares: i128) {\n         // I5 — the sender must authorize. Dropping this is `bug_missing_auth`,\n         // the SOR-001 / Wormhole bug class.\n         #[cfg(not(feature = \"bug_missing_auth\"))]\n         from.require_auth();\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::withdraw",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 178
+        },
+        "start": {
+          "column": 5,
+          "line": 142
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:144:9: replace Vault::withdraw -> i128 with -1",
+    "package": "soroban-vault",
+    "replacement": "-1",
+    "span": {
+      "end": {
+        "column": 15,
+        "line": 177
+      },
+      "start": {
+        "column": 9,
+        "line": 144
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace < with == in Vault::withdraw\n@@ -141,17 +141,17 @@\n \n     /// Burn `shares` and return the corresponding amount of the underlying token.\n     pub fn withdraw(env: Env, from: Address, shares: i128) -> i128 {\n         from.require_auth();\n         Self::require_not_paused(&env);\n         Self::require_positive(&env, shares);\n \n         let balance = Self::balance_internal(&env, &from);\n-        if balance < shares {\n+        if balance == /* ~ changed by cargo-mutants ~ */ shares {\n             panic_with_error!(&env, VaultError::InsufficientBalance);\n         }\n \n         let token_addr = Self::token_address(&env);\n         let client = token::TokenClient::new(&env, &token_addr);\n         let vault = env.current_contract_address();\n \n         let total = Self::total_shares_internal(&env);\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::withdraw",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 178
+        },
+        "start": {
+          "column": 5,
+          "line": 142
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:149:20: replace < with == in Vault::withdraw",
+    "package": "soroban-vault",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 21,
+        "line": 149
+      },
+      "start": {
+        "column": 20,
+        "line": 149
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace < with > in Vault::withdraw\n@@ -141,17 +141,17 @@\n \n     /// Burn `shares` and return the corresponding amount of the underlying token.\n     pub fn withdraw(env: Env, from: Address, shares: i128) -> i128 {\n         from.require_auth();\n         Self::require_not_paused(&env);\n         Self::require_positive(&env, shares);\n \n         let balance = Self::balance_internal(&env, &from);\n-        if balance < shares {\n+        if balance > /* ~ changed by cargo-mutants ~ */ shares {\n             panic_with_error!(&env, VaultError::InsufficientBalance);\n         }\n \n         let token_addr = Self::token_address(&env);\n         let client = token::TokenClient::new(&env, &token_addr);\n         let vault = env.current_contract_address();\n \n         let total = Self::total_shares_internal(&env);\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::withdraw",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 178
+        },
+        "start": {
+          "column": 5,
+          "line": 142
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:149:20: replace < with > in Vault::withdraw",
+    "package": "soroban-vault",
+    "replacement": ">",
+    "span": {
+      "end": {
+        "column": 21,
+        "line": 149
+      },
+      "start": {
+        "column": 20,
+        "line": 149
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace < with <= in Vault::withdraw\n@@ -141,17 +141,17 @@\n \n     /// Burn `shares` and return the corresponding amount of the underlying token.\n     pub fn withdraw(env: Env, from: Address, shares: i128) -> i128 {\n         from.require_auth();\n         Self::require_not_paused(&env);\n         Self::require_positive(&env, shares);\n \n         let balance = Self::balance_internal(&env, &from);\n-        if balance < shares {\n+        if balance <= /* ~ changed by cargo-mutants ~ */ shares {\n             panic_with_error!(&env, VaultError::InsufficientBalance);\n         }\n \n         let token_addr = Self::token_address(&env);\n         let client = token::TokenClient::new(&env, &token_addr);\n         let vault = env.current_contract_address();\n \n         let total = Self::total_shares_internal(&env);\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::withdraw",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 178
+        },
+        "start": {
+          "column": 5,
+          "line": 142
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:149:20: replace < with <= in Vault::withdraw",
+    "package": "soroban-vault",
+    "replacement": "<=",
+    "span": {
+      "end": {
+        "column": 21,
+        "line": 149
+      },
+      "start": {
+        "column": 20,
+        "line": 149
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace == with != in Vault::withdraw\n@@ -153,17 +153,17 @@\n         let token_addr = Self::token_address(&env);\n         let client = token::TokenClient::new(&env, &token_addr);\n         let vault = env.current_contract_address();\n \n         let total = Self::total_shares_internal(&env);\n         let assets = client.balance(&vault);\n \n         // amount = shares * assets / total\n-        let amount = if total == 0 {\n+        let amount = if total != /* ~ changed by cargo-mutants ~ */ 0 {\n             0\n         } else {\n             Self::checked_mul(&env, shares, assets) / total\n         };\n \n         // Effects before interaction (CEI) — the reentrancy discipline from\n         // scenario S02.\n         Self::set_balance(&env, &from, Self::checked_sub(&env, balance, shares));\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::withdraw",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 178
+        },
+        "start": {
+          "column": 5,
+          "line": 142
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:161:31: replace == with != in Vault::withdraw",
+    "package": "soroban-vault",
+    "replacement": "!=",
+    "span": {
+      "end": {
+        "column": 33,
+        "line": 161
+      },
+      "start": {
+        "column": 31,
+        "line": 161
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace / with % in Vault::withdraw\n@@ -156,17 +156,17 @@\n \n         let total = Self::total_shares_internal(&env);\n         let assets = client.balance(&vault);\n \n         // amount = shares * assets / total\n         let amount = if total == 0 {\n             0\n         } else {\n-            Self::checked_mul(&env, shares, assets) / total\n+            Self::checked_mul(&env, shares, assets) % /* ~ changed by cargo-mutants ~ */ total\n         };\n \n         // Effects before interaction (CEI) — the reentrancy discipline from\n         // scenario S02.\n         Self::set_balance(&env, &from, Self::checked_sub(&env, balance, shares));\n         Self::set_total_shares(&env, Self::checked_sub(&env, total, shares));\n \n         if amount > 0 {\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::withdraw",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 178
+        },
+        "start": {
+          "column": 5,
+          "line": 142
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:164:53: replace / with % in Vault::withdraw",
+    "package": "soroban-vault",
+    "replacement": "%",
+    "span": {
+      "end": {
+        "column": 54,
+        "line": 164
+      },
+      "start": {
+        "column": 53,
+        "line": 164
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace / with * in Vault::withdraw\n@@ -156,17 +156,17 @@\n \n         let total = Self::total_shares_internal(&env);\n         let assets = client.balance(&vault);\n \n         // amount = shares * assets / total\n         let amount = if total == 0 {\n             0\n         } else {\n-            Self::checked_mul(&env, shares, assets) / total\n+            Self::checked_mul(&env, shares, assets) * /* ~ changed by cargo-mutants ~ */ total\n         };\n \n         // Effects before interaction (CEI) — the reentrancy discipline from\n         // scenario S02.\n         Self::set_balance(&env, &from, Self::checked_sub(&env, balance, shares));\n         Self::set_total_shares(&env, Self::checked_sub(&env, total, shares));\n \n         if amount > 0 {\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::withdraw",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 178
+        },
+        "start": {
+          "column": 5,
+          "line": 142
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:164:53: replace / with * in Vault::withdraw",
+    "package": "soroban-vault",
+    "replacement": "*",
+    "span": {
+      "end": {
+        "column": 54,
+        "line": 164
+      },
+      "start": {
+        "column": 53,
+        "line": 164
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace > with == in Vault::withdraw\n@@ -164,17 +164,17 @@\n             Self::checked_mul(&env, shares, assets) / total\n         };\n \n         // Effects before interaction (CEI) — the reentrancy discipline from\n         // scenario S02.\n         Self::set_balance(&env, &from, Self::checked_sub(&env, balance, shares));\n         Self::set_total_shares(&env, Self::checked_sub(&env, total, shares));\n \n-        if amount > 0 {\n+        if amount == /* ~ changed by cargo-mutants ~ */ 0 {\n             client.transfer(&vault, &from, &amount);\n         }\n         Self::touch(&env, &from);\n \n         amount\n     }\n \n     /// Move `shares` between two holders.\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::withdraw",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 178
+        },
+        "start": {
+          "column": 5,
+          "line": 142
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:172:19: replace > with == in Vault::withdraw",
+    "package": "soroban-vault",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 20,
+        "line": 172
+      },
+      "start": {
+        "column": 19,
+        "line": 172
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace > with < in Vault::withdraw\n@@ -164,17 +164,17 @@\n             Self::checked_mul(&env, shares, assets) / total\n         };\n \n         // Effects before interaction (CEI) — the reentrancy discipline from\n         // scenario S02.\n         Self::set_balance(&env, &from, Self::checked_sub(&env, balance, shares));\n         Self::set_total_shares(&env, Self::checked_sub(&env, total, shares));\n \n-        if amount > 0 {\n+        if amount < /* ~ changed by cargo-mutants ~ */ 0 {\n             client.transfer(&vault, &from, &amount);\n         }\n         Self::touch(&env, &from);\n \n         amount\n     }\n \n     /// Move `shares` between two holders.\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::withdraw",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 178
+        },
+        "start": {
+          "column": 5,
+          "line": 142
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:172:19: replace > with < in Vault::withdraw",
+    "package": "soroban-vault",
+    "replacement": "<",
+    "span": {
+      "end": {
+        "column": 20,
+        "line": 172
+      },
+      "start": {
+        "column": 19,
+        "line": 172
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace > with >= in Vault::withdraw\n@@ -164,17 +164,17 @@\n             Self::checked_mul(&env, shares, assets) / total\n         };\n \n         // Effects before interaction (CEI) — the reentrancy discipline from\n         // scenario S02.\n         Self::set_balance(&env, &from, Self::checked_sub(&env, balance, shares));\n         Self::set_total_shares(&env, Self::checked_sub(&env, total, shares));\n \n-        if amount > 0 {\n+        if amount >= /* ~ changed by cargo-mutants ~ */ 0 {\n             client.transfer(&vault, &from, &amount);\n         }\n         Self::touch(&env, &from);\n \n         amount\n     }\n \n     /// Move `shares` between two holders.\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::withdraw",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 178
+        },
+        "start": {
+          "column": 5,
+          "line": 142
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:172:19: replace > with >= in Vault::withdraw",
+    "package": "soroban-vault",
+    "replacement": ">=",
+    "span": {
+      "end": {
+        "column": 20,
+        "line": 172
+      },
+      "start": {
+        "column": 19,
+        "line": 172
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::transfer_shares with ()\n@@ -176,40 +176,17 @@\n \n         amount\n     }\n \n     /// Move `shares` between two holders.\n     pub fn transfer_shares(env: Env, from: Address, to: Address, shares: i128) {\n         // I5 — the sender must authorize. Dropping this is `bug_missing_auth`,\n         // the SOR-001 / Wormhole bug class.\n-        #[cfg(not(feature = \"bug_missing_auth\"))]\n-        from.require_auth();\n-\n-        Self::require_not_paused(&env);\n-        Self::require_positive(&env, shares);\n-\n-        let from_balance = Self::balance_internal(&env, &from);\n-        if from_balance < shares {\n-            panic_with_error!(&env, VaultError::InsufficientBalance);\n-        }\n-\n-        // I8 — a self-transfer must be a no-op. Handling it by reading both\n-        // balances and writing both back would duplicate the shares, which is\n-        // the `bug_self_transfer` seed (scenario S17).\n-        #[cfg(not(feature = \"bug_self_transfer\"))]\n-        if from == to {\n-            Self::touch(&env, &from);\n-            return;\n-        }\n-\n-        let to_balance = Self::balance_internal(&env, &to);\n-        Self::set_balance(&env, &from, Self::checked_sub(&env, from_balance, shares));\n-        Self::set_balance(&env, &to, Self::checked_add(&env, to_balance, shares));\n-        Self::touch(&env, &from);\n+        () /* ~ changed by cargo-mutants ~ */\n     }\n \n     // ── Admin ────────────────────────────────────────────────────────────────\n \n     /// Hand the admin role to `new_admin`. Only the current admin may do this (I4).\n     pub fn set_admin(env: Env, new_admin: Address) {\n         Self::require_admin(&env);\n         env.storage().instance().set(&DataKey::Admin, &new_admin);\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::transfer_shares",
+      "return_type": "",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 208
+        },
+        "start": {
+          "column": 5,
+          "line": 180
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:184:9: replace Vault::transfer_shares with ()",
+    "package": "soroban-vault",
+    "replacement": "()",
+    "span": {
+      "end": {
+        "column": 34,
+        "line": 207
+      },
+      "start": {
+        "column": 9,
+        "line": 184
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace < with == in Vault::transfer_shares\n@@ -183,17 +183,17 @@\n         // the SOR-001 / Wormhole bug class.\n         #[cfg(not(feature = \"bug_missing_auth\"))]\n         from.require_auth();\n \n         Self::require_not_paused(&env);\n         Self::require_positive(&env, shares);\n \n         let from_balance = Self::balance_internal(&env, &from);\n-        if from_balance < shares {\n+        if from_balance == /* ~ changed by cargo-mutants ~ */ shares {\n             panic_with_error!(&env, VaultError::InsufficientBalance);\n         }\n \n         // I8 — a self-transfer must be a no-op. Handling it by reading both\n         // balances and writing both back would duplicate the shares, which is\n         // the `bug_self_transfer` seed (scenario S17).\n         #[cfg(not(feature = \"bug_self_transfer\"))]\n         if from == to {\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::transfer_shares",
+      "return_type": "",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 208
+        },
+        "start": {
+          "column": 5,
+          "line": 180
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:191:25: replace < with == in Vault::transfer_shares",
+    "package": "soroban-vault",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 26,
+        "line": 191
+      },
+      "start": {
+        "column": 25,
+        "line": 191
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace < with > in Vault::transfer_shares\n@@ -183,17 +183,17 @@\n         // the SOR-001 / Wormhole bug class.\n         #[cfg(not(feature = \"bug_missing_auth\"))]\n         from.require_auth();\n \n         Self::require_not_paused(&env);\n         Self::require_positive(&env, shares);\n \n         let from_balance = Self::balance_internal(&env, &from);\n-        if from_balance < shares {\n+        if from_balance > /* ~ changed by cargo-mutants ~ */ shares {\n             panic_with_error!(&env, VaultError::InsufficientBalance);\n         }\n \n         // I8 — a self-transfer must be a no-op. Handling it by reading both\n         // balances and writing both back would duplicate the shares, which is\n         // the `bug_self_transfer` seed (scenario S17).\n         #[cfg(not(feature = \"bug_self_transfer\"))]\n         if from == to {\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::transfer_shares",
+      "return_type": "",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 208
+        },
+        "start": {
+          "column": 5,
+          "line": 180
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:191:25: replace < with > in Vault::transfer_shares",
+    "package": "soroban-vault",
+    "replacement": ">",
+    "span": {
+      "end": {
+        "column": 26,
+        "line": 191
+      },
+      "start": {
+        "column": 25,
+        "line": 191
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace < with <= in Vault::transfer_shares\n@@ -183,17 +183,17 @@\n         // the SOR-001 / Wormhole bug class.\n         #[cfg(not(feature = \"bug_missing_auth\"))]\n         from.require_auth();\n \n         Self::require_not_paused(&env);\n         Self::require_positive(&env, shares);\n \n         let from_balance = Self::balance_internal(&env, &from);\n-        if from_balance < shares {\n+        if from_balance <= /* ~ changed by cargo-mutants ~ */ shares {\n             panic_with_error!(&env, VaultError::InsufficientBalance);\n         }\n \n         // I8 — a self-transfer must be a no-op. Handling it by reading both\n         // balances and writing both back would duplicate the shares, which is\n         // the `bug_self_transfer` seed (scenario S17).\n         #[cfg(not(feature = \"bug_self_transfer\"))]\n         if from == to {\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::transfer_shares",
+      "return_type": "",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 208
+        },
+        "start": {
+          "column": 5,
+          "line": 180
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:191:25: replace < with <= in Vault::transfer_shares",
+    "package": "soroban-vault",
+    "replacement": "<=",
+    "span": {
+      "end": {
+        "column": 26,
+        "line": 191
+      },
+      "start": {
+        "column": 25,
+        "line": 191
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace == with != in Vault::transfer_shares\n@@ -191,17 +191,17 @@\n         if from_balance < shares {\n             panic_with_error!(&env, VaultError::InsufficientBalance);\n         }\n \n         // I8 — a self-transfer must be a no-op. Handling it by reading both\n         // balances and writing both back would duplicate the shares, which is\n         // the `bug_self_transfer` seed (scenario S17).\n         #[cfg(not(feature = \"bug_self_transfer\"))]\n-        if from == to {\n+        if from != /* ~ changed by cargo-mutants ~ */ to {\n             Self::touch(&env, &from);\n             return;\n         }\n \n         let to_balance = Self::balance_internal(&env, &to);\n         Self::set_balance(&env, &from, Self::checked_sub(&env, from_balance, shares));\n         Self::set_balance(&env, &to, Self::checked_add(&env, to_balance, shares));\n         Self::touch(&env, &from);\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::transfer_shares",
+      "return_type": "",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 208
+        },
+        "start": {
+          "column": 5,
+          "line": 180
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:199:17: replace == with != in Vault::transfer_shares",
+    "package": "soroban-vault",
+    "replacement": "!=",
+    "span": {
+      "end": {
+        "column": 19,
+        "line": 199
+      },
+      "start": {
+        "column": 17,
+        "line": 199
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::set_admin with ()\n@@ -206,19 +206,17 @@\n         Self::set_balance(&env, &to, Self::checked_add(&env, to_balance, shares));\n         Self::touch(&env, &from);\n     }\n \n     // ── Admin ────────────────────────────────────────────────────────────────\n \n     /// Hand the admin role to `new_admin`. Only the current admin may do this (I4).\n     pub fn set_admin(env: Env, new_admin: Address) {\n-        Self::require_admin(&env);\n-        env.storage().instance().set(&DataKey::Admin, &new_admin);\n-        Self::bump_instance(&env);\n+        () /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Halt all state-mutating entry points (I12). Only the admin may do this (I4).\n     pub fn pause(env: Env) {\n         Self::require_admin(&env);\n         env.storage().instance().set(&DataKey::Paused, &true);\n         Self::bump_instance(&env);\n     }\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::set_admin",
+      "return_type": "",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 217
+        },
+        "start": {
+          "column": 5,
+          "line": 212
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:214:9: replace Vault::set_admin with ()",
+    "package": "soroban-vault",
+    "replacement": "()",
+    "span": {
+      "end": {
+        "column": 35,
+        "line": 216
+      },
+      "start": {
+        "column": 9,
+        "line": 214
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::pause with ()\n@@ -213,19 +213,17 @@\n     pub fn set_admin(env: Env, new_admin: Address) {\n         Self::require_admin(&env);\n         env.storage().instance().set(&DataKey::Admin, &new_admin);\n         Self::bump_instance(&env);\n     }\n \n     /// Halt all state-mutating entry points (I12). Only the admin may do this (I4).\n     pub fn pause(env: Env) {\n-        Self::require_admin(&env);\n-        env.storage().instance().set(&DataKey::Paused, &true);\n-        Self::bump_instance(&env);\n+        () /* ~ changed by cargo-mutants ~ */\n     }\n \n     // ── Views ────────────────────────────────────────────────────────────────\n \n     pub fn total_shares(env: Env) -> i128 {\n         Self::total_shares_internal(&env)\n     }\n \n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::pause",
+      "return_type": "",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 224
+        },
+        "start": {
+          "column": 5,
+          "line": 219
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:221:9: replace Vault::pause with ()",
+    "package": "soroban-vault",
+    "replacement": "()",
+    "span": {
+      "end": {
+        "column": 35,
+        "line": 223
+      },
+      "start": {
+        "column": 9,
+        "line": 221
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::total_shares -> i128 with 0\n@@ -221,17 +221,17 @@\n         Self::require_admin(&env);\n         env.storage().instance().set(&DataKey::Paused, &true);\n         Self::bump_instance(&env);\n     }\n \n     // ── Views ────────────────────────────────────────────────────────────────\n \n     pub fn total_shares(env: Env) -> i128 {\n-        Self::total_shares_internal(&env)\n+        0 /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn balance_of(env: Env, who: Address) -> i128 {\n         Self::balance_internal(&env, &who)\n     }\n \n     pub fn admin(env: Env) -> Address {\n         Self::admin_address(&env)\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::total_shares",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 230
+        },
+        "start": {
+          "column": 5,
+          "line": 228
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:229:9: replace Vault::total_shares -> i128 with 0",
+    "package": "soroban-vault",
+    "replacement": "0",
+    "span": {
+      "end": {
+        "column": 42,
+        "line": 229
+      },
+      "start": {
+        "column": 9,
+        "line": 229
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::total_shares -> i128 with 1\n@@ -221,17 +221,17 @@\n         Self::require_admin(&env);\n         env.storage().instance().set(&DataKey::Paused, &true);\n         Self::bump_instance(&env);\n     }\n \n     // ── Views ────────────────────────────────────────────────────────────────\n \n     pub fn total_shares(env: Env) -> i128 {\n-        Self::total_shares_internal(&env)\n+        1 /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn balance_of(env: Env, who: Address) -> i128 {\n         Self::balance_internal(&env, &who)\n     }\n \n     pub fn admin(env: Env) -> Address {\n         Self::admin_address(&env)\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::total_shares",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 230
+        },
+        "start": {
+          "column": 5,
+          "line": 228
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:229:9: replace Vault::total_shares -> i128 with 1",
+    "package": "soroban-vault",
+    "replacement": "1",
+    "span": {
+      "end": {
+        "column": 42,
+        "line": 229
+      },
+      "start": {
+        "column": 9,
+        "line": 229
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::total_shares -> i128 with -1\n@@ -221,17 +221,17 @@\n         Self::require_admin(&env);\n         env.storage().instance().set(&DataKey::Paused, &true);\n         Self::bump_instance(&env);\n     }\n \n     // ── Views ────────────────────────────────────────────────────────────────\n \n     pub fn total_shares(env: Env) -> i128 {\n-        Self::total_shares_internal(&env)\n+        -1 /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn balance_of(env: Env, who: Address) -> i128 {\n         Self::balance_internal(&env, &who)\n     }\n \n     pub fn admin(env: Env) -> Address {\n         Self::admin_address(&env)\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::total_shares",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 230
+        },
+        "start": {
+          "column": 5,
+          "line": 228
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:229:9: replace Vault::total_shares -> i128 with -1",
+    "package": "soroban-vault",
+    "replacement": "-1",
+    "span": {
+      "end": {
+        "column": 42,
+        "line": 229
+      },
+      "start": {
+        "column": 9,
+        "line": 229
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::balance_of -> i128 with 0\n@@ -225,17 +225,17 @@\n \n     // ── Views ────────────────────────────────────────────────────────────────\n \n     pub fn total_shares(env: Env) -> i128 {\n         Self::total_shares_internal(&env)\n     }\n \n     pub fn balance_of(env: Env, who: Address) -> i128 {\n-        Self::balance_internal(&env, &who)\n+        0 /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn admin(env: Env) -> Address {\n         Self::admin_address(&env)\n     }\n \n     pub fn is_paused(env: Env) -> bool {\n         env.storage()\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::balance_of",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 234
+        },
+        "start": {
+          "column": 5,
+          "line": 232
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:233:9: replace Vault::balance_of -> i128 with 0",
+    "package": "soroban-vault",
+    "replacement": "0",
+    "span": {
+      "end": {
+        "column": 43,
+        "line": 233
+      },
+      "start": {
+        "column": 9,
+        "line": 233
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::balance_of -> i128 with 1\n@@ -225,17 +225,17 @@\n \n     // ── Views ────────────────────────────────────────────────────────────────\n \n     pub fn total_shares(env: Env) -> i128 {\n         Self::total_shares_internal(&env)\n     }\n \n     pub fn balance_of(env: Env, who: Address) -> i128 {\n-        Self::balance_internal(&env, &who)\n+        1 /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn admin(env: Env) -> Address {\n         Self::admin_address(&env)\n     }\n \n     pub fn is_paused(env: Env) -> bool {\n         env.storage()\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::balance_of",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 234
+        },
+        "start": {
+          "column": 5,
+          "line": 232
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:233:9: replace Vault::balance_of -> i128 with 1",
+    "package": "soroban-vault",
+    "replacement": "1",
+    "span": {
+      "end": {
+        "column": 43,
+        "line": 233
+      },
+      "start": {
+        "column": 9,
+        "line": 233
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::balance_of -> i128 with -1\n@@ -225,17 +225,17 @@\n \n     // ── Views ────────────────────────────────────────────────────────────────\n \n     pub fn total_shares(env: Env) -> i128 {\n         Self::total_shares_internal(&env)\n     }\n \n     pub fn balance_of(env: Env, who: Address) -> i128 {\n-        Self::balance_internal(&env, &who)\n+        -1 /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn admin(env: Env) -> Address {\n         Self::admin_address(&env)\n     }\n \n     pub fn is_paused(env: Env) -> bool {\n         env.storage()\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::balance_of",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 234
+        },
+        "start": {
+          "column": 5,
+          "line": 232
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:233:9: replace Vault::balance_of -> i128 with -1",
+    "package": "soroban-vault",
+    "replacement": "-1",
+    "span": {
+      "end": {
+        "column": 43,
+        "line": 233
+      },
+      "start": {
+        "column": 9,
+        "line": 233
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::admin -> Address with Default::default()\n@@ -229,17 +229,17 @@\n         Self::total_shares_internal(&env)\n     }\n \n     pub fn balance_of(env: Env, who: Address) -> i128 {\n         Self::balance_internal(&env, &who)\n     }\n \n     pub fn admin(env: Env) -> Address {\n-        Self::admin_address(&env)\n+        Default::default() /* ~ changed by cargo-mutants ~ */\n     }\n \n     pub fn is_paused(env: Env) -> bool {\n         env.storage()\n             .instance()\n             .get(&DataKey::Paused)\n             .unwrap_or(false)\n     }\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::admin",
+      "return_type": "-> Address",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 238
+        },
+        "start": {
+          "column": 5,
+          "line": 236
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:237:9: replace Vault::admin -> Address with Default::default()",
+    "package": "soroban-vault",
+    "replacement": "Default::default()",
+    "span": {
+      "end": {
+        "column": 34,
+        "line": 237
+      },
+      "start": {
+        "column": 9,
+        "line": 237
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::is_paused -> bool with true\n@@ -233,20 +233,17 @@\n         Self::balance_internal(&env, &who)\n     }\n \n     pub fn admin(env: Env) -> Address {\n         Self::admin_address(&env)\n     }\n \n     pub fn is_paused(env: Env) -> bool {\n-        env.storage()\n-            .instance()\n-            .get(&DataKey::Paused)\n-            .unwrap_or(false)\n+        true /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Ledger of the address's last vault operation.\n     ///\n     /// **Non-authoritative.** Lives in temporary storage and may vanish at any\n     /// time; nothing in this contract is gated on it (I11).\n     pub fn last_activity(env: Env, who: Address) -> Option<u32> {\n         env.storage().temporary().get(&DataKey::LastActivity(who))\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::is_paused",
+      "return_type": "-> bool",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 245
+        },
+        "start": {
+          "column": 5,
+          "line": 240
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:241:9: replace Vault::is_paused -> bool with true",
+    "package": "soroban-vault",
+    "replacement": "true",
+    "span": {
+      "end": {
+        "column": 30,
+        "line": 244
+      },
+      "start": {
+        "column": 9,
+        "line": 241
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::is_paused -> bool with false\n@@ -233,20 +233,17 @@\n         Self::balance_internal(&env, &who)\n     }\n \n     pub fn admin(env: Env) -> Address {\n         Self::admin_address(&env)\n     }\n \n     pub fn is_paused(env: Env) -> bool {\n-        env.storage()\n-            .instance()\n-            .get(&DataKey::Paused)\n-            .unwrap_or(false)\n+        false /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Ledger of the address's last vault operation.\n     ///\n     /// **Non-authoritative.** Lives in temporary storage and may vanish at any\n     /// time; nothing in this contract is gated on it (I11).\n     pub fn last_activity(env: Env, who: Address) -> Option<u32> {\n         env.storage().temporary().get(&DataKey::LastActivity(who))\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::is_paused",
+      "return_type": "-> bool",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 245
+        },
+        "start": {
+          "column": 5,
+          "line": 240
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:241:9: replace Vault::is_paused -> bool with false",
+    "package": "soroban-vault",
+    "replacement": "false",
+    "span": {
+      "end": {
+        "column": 30,
+        "line": 244
+      },
+      "start": {
+        "column": 9,
+        "line": 241
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::last_activity -> Option<u32> with None\n@@ -244,17 +244,17 @@\n             .unwrap_or(false)\n     }\n \n     /// Ledger of the address's last vault operation.\n     ///\n     /// **Non-authoritative.** Lives in temporary storage and may vanish at any\n     /// time; nothing in this contract is gated on it (I11).\n     pub fn last_activity(env: Env, who: Address) -> Option<u32> {\n-        env.storage().temporary().get(&DataKey::LastActivity(who))\n+        None /* ~ changed by cargo-mutants ~ */\n     }\n }\n \n // ── Internal helpers ─────────────────────────────────────────────────────────\n \n impl Vault {\n     fn admin_address(env: &Env) -> Address {\n         env.storage()\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::last_activity",
+      "return_type": "-> Option<u32>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 253
+        },
+        "start": {
+          "column": 5,
+          "line": 247
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:252:9: replace Vault::last_activity -> Option<u32> with None",
+    "package": "soroban-vault",
+    "replacement": "None",
+    "span": {
+      "end": {
+        "column": 67,
+        "line": 252
+      },
+      "start": {
+        "column": 9,
+        "line": 252
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::last_activity -> Option<u32> with Some(0)\n@@ -244,17 +244,17 @@\n             .unwrap_or(false)\n     }\n \n     /// Ledger of the address's last vault operation.\n     ///\n     /// **Non-authoritative.** Lives in temporary storage and may vanish at any\n     /// time; nothing in this contract is gated on it (I11).\n     pub fn last_activity(env: Env, who: Address) -> Option<u32> {\n-        env.storage().temporary().get(&DataKey::LastActivity(who))\n+        Some(0) /* ~ changed by cargo-mutants ~ */\n     }\n }\n \n // ── Internal helpers ─────────────────────────────────────────────────────────\n \n impl Vault {\n     fn admin_address(env: &Env) -> Address {\n         env.storage()\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::last_activity",
+      "return_type": "-> Option<u32>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 253
+        },
+        "start": {
+          "column": 5,
+          "line": 247
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:252:9: replace Vault::last_activity -> Option<u32> with Some(0)",
+    "package": "soroban-vault",
+    "replacement": "Some(0)",
+    "span": {
+      "end": {
+        "column": 67,
+        "line": 252
+      },
+      "start": {
+        "column": 9,
+        "line": 252
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::last_activity -> Option<u32> with Some(1)\n@@ -244,17 +244,17 @@\n             .unwrap_or(false)\n     }\n \n     /// Ledger of the address's last vault operation.\n     ///\n     /// **Non-authoritative.** Lives in temporary storage and may vanish at any\n     /// time; nothing in this contract is gated on it (I11).\n     pub fn last_activity(env: Env, who: Address) -> Option<u32> {\n-        env.storage().temporary().get(&DataKey::LastActivity(who))\n+        Some(1) /* ~ changed by cargo-mutants ~ */\n     }\n }\n \n // ── Internal helpers ─────────────────────────────────────────────────────────\n \n impl Vault {\n     fn admin_address(env: &Env) -> Address {\n         env.storage()\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::last_activity",
+      "return_type": "-> Option<u32>",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 253
+        },
+        "start": {
+          "column": 5,
+          "line": 247
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:252:9: replace Vault::last_activity -> Option<u32> with Some(1)",
+    "package": "soroban-vault",
+    "replacement": "Some(1)",
+    "span": {
+      "end": {
+        "column": 67,
+        "line": 252
+      },
+      "start": {
+        "column": 9,
+        "line": 252
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::admin_address -> Address with Default::default()\n@@ -252,20 +252,17 @@\n         env.storage().temporary().get(&DataKey::LastActivity(who))\n     }\n }\n \n // ── Internal helpers ─────────────────────────────────────────────────────────\n \n impl Vault {\n     fn admin_address(env: &Env) -> Address {\n-        env.storage()\n-            .instance()\n-            .get(&DataKey::Admin)\n-            .unwrap_or_else(|| panic_with_error!(env, VaultError::NotInitialized))\n+        Default::default() /* ~ changed by cargo-mutants ~ */\n     }\n \n     fn token_address(env: &Env) -> Address {\n         env.storage()\n             .instance()\n             .get(&DataKey::Token)\n             .unwrap_or_else(|| panic_with_error!(env, VaultError::NotInitialized))\n     }\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::admin_address",
+      "return_type": "-> Address",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 264
+        },
+        "start": {
+          "column": 5,
+          "line": 259
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:260:9: replace Vault::admin_address -> Address with Default::default()",
+    "package": "soroban-vault",
+    "replacement": "Default::default()",
+    "span": {
+      "end": {
+        "column": 83,
+        "line": 263
+      },
+      "start": {
+        "column": 9,
+        "line": 260
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::token_address -> Address with Default::default()\n@@ -259,20 +259,17 @@\n     fn admin_address(env: &Env) -> Address {\n         env.storage()\n             .instance()\n             .get(&DataKey::Admin)\n             .unwrap_or_else(|| panic_with_error!(env, VaultError::NotInitialized))\n     }\n \n     fn token_address(env: &Env) -> Address {\n-        env.storage()\n-            .instance()\n-            .get(&DataKey::Token)\n-            .unwrap_or_else(|| panic_with_error!(env, VaultError::NotInitialized))\n+        Default::default() /* ~ changed by cargo-mutants ~ */\n     }\n \n     fn require_admin(env: &Env) {\n         let admin = Self::admin_address(env);\n \n         // With `bug_temp_nonce`, admin authority is additionally gated on a\n         // temporary-storage value. When that entry expires the check silently\n         // changes behaviour — invariant I11, scenario S14.\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::token_address",
+      "return_type": "-> Address",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 271
+        },
+        "start": {
+          "column": 5,
+          "line": 266
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:267:9: replace Vault::token_address -> Address with Default::default()",
+    "package": "soroban-vault",
+    "replacement": "Default::default()",
+    "span": {
+      "end": {
+        "column": 83,
+        "line": 270
+      },
+      "start": {
+        "column": 9,
+        "line": 267
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::require_admin with ()\n@@ -266,35 +266,17 @@\n     fn token_address(env: &Env) -> Address {\n         env.storage()\n             .instance()\n             .get(&DataKey::Token)\n             .unwrap_or_else(|| panic_with_error!(env, VaultError::NotInitialized))\n     }\n \n     fn require_admin(env: &Env) {\n-        let admin = Self::admin_address(env);\n-\n-        // With `bug_temp_nonce`, admin authority is additionally gated on a\n-        // temporary-storage value. When that entry expires the check silently\n-        // changes behaviour — invariant I11, scenario S14.\n-        #[cfg(feature = \"bug_temp_nonce\")]\n-        {\n-            let seen: Option<u32> = env\n-                .storage()\n-                .temporary()\n-                .get(&DataKey::LastActivity(admin.clone()));\n-            if seen.is_none() {\n-                // \"Never acted, so cannot be the real admin\" — plausible-looking\n-                // and catastrophically wrong.\n-                panic_with_error!(env, VaultError::NotInitialized);\n-            }\n-        }\n-\n-        admin.require_auth();\n+        () /* ~ changed by cargo-mutants ~ */\n     }\n \n     fn require_not_paused(env: &Env) {\n         if env\n             .storage()\n             .instance()\n             .get(&DataKey::Paused)\n             .unwrap_or(false)\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::require_admin",
+      "return_type": "",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 293
+        },
+        "start": {
+          "column": 5,
+          "line": 273
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:274:9: replace Vault::require_admin with ()",
+    "package": "soroban-vault",
+    "replacement": "()",
+    "span": {
+      "end": {
+        "column": 30,
+        "line": 292
+      },
+      "start": {
+        "column": 9,
+        "line": 274
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::require_not_paused with ()\n@@ -288,24 +288,17 @@\n                 panic_with_error!(env, VaultError::NotInitialized);\n             }\n         }\n \n         admin.require_auth();\n     }\n \n     fn require_not_paused(env: &Env) {\n-        if env\n-            .storage()\n-            .instance()\n-            .get(&DataKey::Paused)\n-            .unwrap_or(false)\n-        {\n-            panic_with_error!(env, VaultError::Paused);\n-        }\n+        () /* ~ changed by cargo-mutants ~ */\n     }\n \n     fn require_positive(env: &Env, value: i128) {\n         // I7 — non-positive amounts must be rejected outright. Accepting them is\n         // the `bug_zero_amount` seed.\n         #[cfg(not(feature = \"bug_zero_amount\"))]\n         if value <= 0 {\n             panic_with_error!(env, VaultError::InvalidAmount);\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::require_not_paused",
+      "return_type": "",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 304
+        },
+        "start": {
+          "column": 5,
+          "line": 295
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:296:9: replace Vault::require_not_paused with ()",
+    "package": "soroban-vault",
+    "replacement": "()",
+    "span": {
+      "end": {
+        "column": 10,
+        "line": 303
+      },
+      "start": {
+        "column": 9,
+        "line": 296
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::require_positive with ()\n@@ -301,24 +301,17 @@\n         {\n             panic_with_error!(env, VaultError::Paused);\n         }\n     }\n \n     fn require_positive(env: &Env, value: i128) {\n         // I7 — non-positive amounts must be rejected outright. Accepting them is\n         // the `bug_zero_amount` seed.\n-        #[cfg(not(feature = \"bug_zero_amount\"))]\n-        if value <= 0 {\n-            panic_with_error!(env, VaultError::InvalidAmount);\n-        }\n-        #[cfg(feature = \"bug_zero_amount\")]\n-        if value < 0 {\n-            panic_with_error!(env, VaultError::InvalidAmount);\n-        }\n+        () /* ~ changed by cargo-mutants ~ */\n     }\n \n     fn total_shares_internal(env: &Env) -> i128 {\n         env.storage()\n             .instance()\n             .get(&DataKey::TotalShares)\n             .unwrap_or(0)\n     }\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::require_positive",
+      "return_type": "",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 317
+        },
+        "start": {
+          "column": 5,
+          "line": 306
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:309:9: replace Vault::require_positive with ()",
+    "package": "soroban-vault",
+    "replacement": "()",
+    "span": {
+      "end": {
+        "column": 10,
+        "line": 316
+      },
+      "start": {
+        "column": 9,
+        "line": 309
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace <= with > in Vault::require_positive\n@@ -302,17 +302,17 @@\n             panic_with_error!(env, VaultError::Paused);\n         }\n     }\n \n     fn require_positive(env: &Env, value: i128) {\n         // I7 — non-positive amounts must be rejected outright. Accepting them is\n         // the `bug_zero_amount` seed.\n         #[cfg(not(feature = \"bug_zero_amount\"))]\n-        if value <= 0 {\n+        if value > /* ~ changed by cargo-mutants ~ */ 0 {\n             panic_with_error!(env, VaultError::InvalidAmount);\n         }\n         #[cfg(feature = \"bug_zero_amount\")]\n         if value < 0 {\n             panic_with_error!(env, VaultError::InvalidAmount);\n         }\n     }\n \n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::require_positive",
+      "return_type": "",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 317
+        },
+        "start": {
+          "column": 5,
+          "line": 306
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:310:18: replace <= with > in Vault::require_positive",
+    "package": "soroban-vault",
+    "replacement": ">",
+    "span": {
+      "end": {
+        "column": 20,
+        "line": 310
+      },
+      "start": {
+        "column": 18,
+        "line": 310
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace < with == in Vault::require_positive\n@@ -306,17 +306,17 @@\n     fn require_positive(env: &Env, value: i128) {\n         // I7 — non-positive amounts must be rejected outright. Accepting them is\n         // the `bug_zero_amount` seed.\n         #[cfg(not(feature = \"bug_zero_amount\"))]\n         if value <= 0 {\n             panic_with_error!(env, VaultError::InvalidAmount);\n         }\n         #[cfg(feature = \"bug_zero_amount\")]\n-        if value < 0 {\n+        if value == /* ~ changed by cargo-mutants ~ */ 0 {\n             panic_with_error!(env, VaultError::InvalidAmount);\n         }\n     }\n \n     fn total_shares_internal(env: &Env) -> i128 {\n         env.storage()\n             .instance()\n             .get(&DataKey::TotalShares)\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::require_positive",
+      "return_type": "",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 317
+        },
+        "start": {
+          "column": 5,
+          "line": 306
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:314:18: replace < with == in Vault::require_positive",
+    "package": "soroban-vault",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 19,
+        "line": 314
+      },
+      "start": {
+        "column": 18,
+        "line": 314
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace < with > in Vault::require_positive\n@@ -306,17 +306,17 @@\n     fn require_positive(env: &Env, value: i128) {\n         // I7 — non-positive amounts must be rejected outright. Accepting them is\n         // the `bug_zero_amount` seed.\n         #[cfg(not(feature = \"bug_zero_amount\"))]\n         if value <= 0 {\n             panic_with_error!(env, VaultError::InvalidAmount);\n         }\n         #[cfg(feature = \"bug_zero_amount\")]\n-        if value < 0 {\n+        if value > /* ~ changed by cargo-mutants ~ */ 0 {\n             panic_with_error!(env, VaultError::InvalidAmount);\n         }\n     }\n \n     fn total_shares_internal(env: &Env) -> i128 {\n         env.storage()\n             .instance()\n             .get(&DataKey::TotalShares)\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::require_positive",
+      "return_type": "",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 317
+        },
+        "start": {
+          "column": 5,
+          "line": 306
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:314:18: replace < with > in Vault::require_positive",
+    "package": "soroban-vault",
+    "replacement": ">",
+    "span": {
+      "end": {
+        "column": 19,
+        "line": 314
+      },
+      "start": {
+        "column": 18,
+        "line": 314
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace < with <= in Vault::require_positive\n@@ -306,17 +306,17 @@\n     fn require_positive(env: &Env, value: i128) {\n         // I7 — non-positive amounts must be rejected outright. Accepting them is\n         // the `bug_zero_amount` seed.\n         #[cfg(not(feature = \"bug_zero_amount\"))]\n         if value <= 0 {\n             panic_with_error!(env, VaultError::InvalidAmount);\n         }\n         #[cfg(feature = \"bug_zero_amount\")]\n-        if value < 0 {\n+        if value <= /* ~ changed by cargo-mutants ~ */ 0 {\n             panic_with_error!(env, VaultError::InvalidAmount);\n         }\n     }\n \n     fn total_shares_internal(env: &Env) -> i128 {\n         env.storage()\n             .instance()\n             .get(&DataKey::TotalShares)\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::require_positive",
+      "return_type": "",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 317
+        },
+        "start": {
+          "column": 5,
+          "line": 306
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:314:18: replace < with <= in Vault::require_positive",
+    "package": "soroban-vault",
+    "replacement": "<=",
+    "span": {
+      "end": {
+        "column": 19,
+        "line": 314
+      },
+      "start": {
+        "column": 18,
+        "line": 314
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::total_shares_internal -> i128 with 0\n@@ -312,20 +312,17 @@\n         }\n         #[cfg(feature = \"bug_zero_amount\")]\n         if value < 0 {\n             panic_with_error!(env, VaultError::InvalidAmount);\n         }\n     }\n \n     fn total_shares_internal(env: &Env) -> i128 {\n-        env.storage()\n-            .instance()\n-            .get(&DataKey::TotalShares)\n-            .unwrap_or(0)\n+        0 /* ~ changed by cargo-mutants ~ */\n     }\n \n     fn set_total_shares(env: &Env, value: i128) {\n         env.storage().instance().set(&DataKey::TotalShares, &value);\n         Self::bump_instance(env);\n     }\n \n     fn balance_internal(env: &Env, who: &Address) -> i128 {\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::total_shares_internal",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 324
+        },
+        "start": {
+          "column": 5,
+          "line": 319
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:320:9: replace Vault::total_shares_internal -> i128 with 0",
+    "package": "soroban-vault",
+    "replacement": "0",
+    "span": {
+      "end": {
+        "column": 26,
+        "line": 323
+      },
+      "start": {
+        "column": 9,
+        "line": 320
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::total_shares_internal -> i128 with 1\n@@ -312,20 +312,17 @@\n         }\n         #[cfg(feature = \"bug_zero_amount\")]\n         if value < 0 {\n             panic_with_error!(env, VaultError::InvalidAmount);\n         }\n     }\n \n     fn total_shares_internal(env: &Env) -> i128 {\n-        env.storage()\n-            .instance()\n-            .get(&DataKey::TotalShares)\n-            .unwrap_or(0)\n+        1 /* ~ changed by cargo-mutants ~ */\n     }\n \n     fn set_total_shares(env: &Env, value: i128) {\n         env.storage().instance().set(&DataKey::TotalShares, &value);\n         Self::bump_instance(env);\n     }\n \n     fn balance_internal(env: &Env, who: &Address) -> i128 {\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::total_shares_internal",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 324
+        },
+        "start": {
+          "column": 5,
+          "line": 319
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:320:9: replace Vault::total_shares_internal -> i128 with 1",
+    "package": "soroban-vault",
+    "replacement": "1",
+    "span": {
+      "end": {
+        "column": 26,
+        "line": 323
+      },
+      "start": {
+        "column": 9,
+        "line": 320
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::total_shares_internal -> i128 with -1\n@@ -312,20 +312,17 @@\n         }\n         #[cfg(feature = \"bug_zero_amount\")]\n         if value < 0 {\n             panic_with_error!(env, VaultError::InvalidAmount);\n         }\n     }\n \n     fn total_shares_internal(env: &Env) -> i128 {\n-        env.storage()\n-            .instance()\n-            .get(&DataKey::TotalShares)\n-            .unwrap_or(0)\n+        -1 /* ~ changed by cargo-mutants ~ */\n     }\n \n     fn set_total_shares(env: &Env, value: i128) {\n         env.storage().instance().set(&DataKey::TotalShares, &value);\n         Self::bump_instance(env);\n     }\n \n     fn balance_internal(env: &Env, who: &Address) -> i128 {\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::total_shares_internal",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 324
+        },
+        "start": {
+          "column": 5,
+          "line": 319
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:320:9: replace Vault::total_shares_internal -> i128 with -1",
+    "package": "soroban-vault",
+    "replacement": "-1",
+    "span": {
+      "end": {
+        "column": 26,
+        "line": 323
+      },
+      "start": {
+        "column": 9,
+        "line": 320
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::set_total_shares with ()\n@@ -319,18 +319,17 @@\n     fn total_shares_internal(env: &Env) -> i128 {\n         env.storage()\n             .instance()\n             .get(&DataKey::TotalShares)\n             .unwrap_or(0)\n     }\n \n     fn set_total_shares(env: &Env, value: i128) {\n-        env.storage().instance().set(&DataKey::TotalShares, &value);\n-        Self::bump_instance(env);\n+        () /* ~ changed by cargo-mutants ~ */\n     }\n \n     fn balance_internal(env: &Env, who: &Address) -> i128 {\n         env.storage()\n             .persistent()\n             .get(&DataKey::Balance(who.clone()))\n             .unwrap_or(0)\n     }\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::set_total_shares",
+      "return_type": "",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 329
+        },
+        "start": {
+          "column": 5,
+          "line": 326
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:327:9: replace Vault::set_total_shares with ()",
+    "package": "soroban-vault",
+    "replacement": "()",
+    "span": {
+      "end": {
+        "column": 34,
+        "line": 328
+      },
+      "start": {
+        "column": 9,
+        "line": 327
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::balance_internal -> i128 with 0\n@@ -324,20 +324,17 @@\n     }\n \n     fn set_total_shares(env: &Env, value: i128) {\n         env.storage().instance().set(&DataKey::TotalShares, &value);\n         Self::bump_instance(env);\n     }\n \n     fn balance_internal(env: &Env, who: &Address) -> i128 {\n-        env.storage()\n-            .persistent()\n-            .get(&DataKey::Balance(who.clone()))\n-            .unwrap_or(0)\n+        0 /* ~ changed by cargo-mutants ~ */\n     }\n \n     fn set_balance(env: &Env, who: &Address, value: i128) {\n         let key = DataKey::Balance(who.clone());\n         env.storage().persistent().set(&key, &value);\n \n         // I10′ — a correct contract keeps its own entries alive rather than\n         // silently relying on protocol-23 auto-restoration, which costs rent.\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::balance_internal",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 336
+        },
+        "start": {
+          "column": 5,
+          "line": 331
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:332:9: replace Vault::balance_internal -> i128 with 0",
+    "package": "soroban-vault",
+    "replacement": "0",
+    "span": {
+      "end": {
+        "column": 26,
+        "line": 335
+      },
+      "start": {
+        "column": 9,
+        "line": 332
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::balance_internal -> i128 with 1\n@@ -324,20 +324,17 @@\n     }\n \n     fn set_total_shares(env: &Env, value: i128) {\n         env.storage().instance().set(&DataKey::TotalShares, &value);\n         Self::bump_instance(env);\n     }\n \n     fn balance_internal(env: &Env, who: &Address) -> i128 {\n-        env.storage()\n-            .persistent()\n-            .get(&DataKey::Balance(who.clone()))\n-            .unwrap_or(0)\n+        1 /* ~ changed by cargo-mutants ~ */\n     }\n \n     fn set_balance(env: &Env, who: &Address, value: i128) {\n         let key = DataKey::Balance(who.clone());\n         env.storage().persistent().set(&key, &value);\n \n         // I10′ — a correct contract keeps its own entries alive rather than\n         // silently relying on protocol-23 auto-restoration, which costs rent.\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::balance_internal",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 336
+        },
+        "start": {
+          "column": 5,
+          "line": 331
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:332:9: replace Vault::balance_internal -> i128 with 1",
+    "package": "soroban-vault",
+    "replacement": "1",
+    "span": {
+      "end": {
+        "column": 26,
+        "line": 335
+      },
+      "start": {
+        "column": 9,
+        "line": 332
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::balance_internal -> i128 with -1\n@@ -324,20 +324,17 @@\n     }\n \n     fn set_total_shares(env: &Env, value: i128) {\n         env.storage().instance().set(&DataKey::TotalShares, &value);\n         Self::bump_instance(env);\n     }\n \n     fn balance_internal(env: &Env, who: &Address) -> i128 {\n-        env.storage()\n-            .persistent()\n-            .get(&DataKey::Balance(who.clone()))\n-            .unwrap_or(0)\n+        -1 /* ~ changed by cargo-mutants ~ */\n     }\n \n     fn set_balance(env: &Env, who: &Address, value: i128) {\n         let key = DataKey::Balance(who.clone());\n         env.storage().persistent().set(&key, &value);\n \n         // I10′ — a correct contract keeps its own entries alive rather than\n         // silently relying on protocol-23 auto-restoration, which costs rent.\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::balance_internal",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 336
+        },
+        "start": {
+          "column": 5,
+          "line": 331
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:332:9: replace Vault::balance_internal -> i128 with -1",
+    "package": "soroban-vault",
+    "replacement": "-1",
+    "span": {
+      "end": {
+        "column": 26,
+        "line": 335
+      },
+      "start": {
+        "column": 9,
+        "line": 332
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::set_balance with ()\n@@ -331,26 +331,17 @@\n     fn balance_internal(env: &Env, who: &Address) -> i128 {\n         env.storage()\n             .persistent()\n             .get(&DataKey::Balance(who.clone()))\n             .unwrap_or(0)\n     }\n \n     fn set_balance(env: &Env, who: &Address, value: i128) {\n-        let key = DataKey::Balance(who.clone());\n-        env.storage().persistent().set(&key, &value);\n-\n-        // I10′ — a correct contract keeps its own entries alive rather than\n-        // silently relying on protocol-23 auto-restoration, which costs rent.\n-        // Omitting this bump is the `bug_no_ttl` seed.\n-        #[cfg(not(feature = \"bug_no_ttl\"))]\n-        env.storage()\n-            .persistent()\n-            .extend_ttl(&key, BUMP_THRESHOLD, BUMP_AMOUNT);\n+        () /* ~ changed by cargo-mutants ~ */\n     }\n \n     /// Record non-authoritative activity telemetry in the temporary tier.\n     fn touch(env: &Env, who: &Address) {\n         let key = DataKey::LastActivity(who.clone());\n         env.storage()\n             .temporary()\n             .set(&key, &env.ledger().sequence());\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::set_balance",
+      "return_type": "",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 349
+        },
+        "start": {
+          "column": 5,
+          "line": 338
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:339:9: replace Vault::set_balance with ()",
+    "package": "soroban-vault",
+    "replacement": "()",
+    "span": {
+      "end": {
+        "column": 60,
+        "line": 348
+      },
+      "start": {
+        "column": 9,
+        "line": 339
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::touch with ()\n@@ -345,21 +345,17 @@\n         #[cfg(not(feature = \"bug_no_ttl\"))]\n         env.storage()\n             .persistent()\n             .extend_ttl(&key, BUMP_THRESHOLD, BUMP_AMOUNT);\n     }\n \n     /// Record non-authoritative activity telemetry in the temporary tier.\n     fn touch(env: &Env, who: &Address) {\n-        let key = DataKey::LastActivity(who.clone());\n-        env.storage()\n-            .temporary()\n-            .set(&key, &env.ledger().sequence());\n-        env.storage().temporary().extend_ttl(&key, TEMP_TTL, TEMP_TTL);\n+        () /* ~ changed by cargo-mutants ~ */\n     }\n \n     fn bump_instance(env: &Env) {\n         #[cfg(not(feature = \"bug_no_ttl\"))]\n         env.storage()\n             .instance()\n             .extend_ttl(BUMP_THRESHOLD, BUMP_AMOUNT);\n         #[cfg(feature = \"bug_no_ttl\")]\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::touch",
+      "return_type": "",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 358
+        },
+        "start": {
+          "column": 5,
+          "line": 351
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:353:9: replace Vault::touch with ()",
+    "package": "soroban-vault",
+    "replacement": "()",
+    "span": {
+      "end": {
+        "column": 72,
+        "line": 357
+      },
+      "start": {
+        "column": 9,
+        "line": 353
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::bump_instance with ()\n@@ -353,22 +353,17 @@\n         let key = DataKey::LastActivity(who.clone());\n         env.storage()\n             .temporary()\n             .set(&key, &env.ledger().sequence());\n         env.storage().temporary().extend_ttl(&key, TEMP_TTL, TEMP_TTL);\n     }\n \n     fn bump_instance(env: &Env) {\n-        #[cfg(not(feature = \"bug_no_ttl\"))]\n-        env.storage()\n-            .instance()\n-            .extend_ttl(BUMP_THRESHOLD, BUMP_AMOUNT);\n-        #[cfg(feature = \"bug_no_ttl\")]\n-        let _ = env;\n+        () /* ~ changed by cargo-mutants ~ */\n     }\n \n     fn checked_add(env: &Env, a: i128, b: i128) -> i128 {\n         // I6 — all arithmetic is checked. `bug_overflow` swaps this for wrapping\n         // arithmetic, the BeautyChain / SOR-005 bug class.\n         //\n         // Note it uses `wrapping_add`, not a bare `+`. A bare `+` panics on\n         // overflow in debug builds *and* in this workspace's release profile\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::bump_instance",
+      "return_type": "",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 367
+        },
+        "start": {
+          "column": 5,
+          "line": 360
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:361:9: replace Vault::bump_instance with ()",
+    "package": "soroban-vault",
+    "replacement": "()",
+    "span": {
+      "end": {
+        "column": 21,
+        "line": 366
+      },
+      "start": {
+        "column": 9,
+        "line": 361
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::checked_add -> i128 with 0\n@@ -369,24 +369,17 @@\n     fn checked_add(env: &Env, a: i128, b: i128) -> i128 {\n         // I6 — all arithmetic is checked. `bug_overflow` swaps this for wrapping\n         // arithmetic, the BeautyChain / SOR-005 bug class.\n         //\n         // Note it uses `wrapping_add`, not a bare `+`. A bare `+` panics on\n         // overflow in debug builds *and* in this workspace's release profile\n         // (`overflow-checks = true`, the Soroban template default), so it would\n         // not actually be a bug — see `results/seeds.md`.\n-        #[cfg(feature = \"bug_overflow\")]\n-        {\n-            let _ = env;\n-            return a.wrapping_add(b);\n-        }\n-        #[cfg(not(feature = \"bug_overflow\"))]\n-        a.checked_add(b)\n-            .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))\n+        0 /* ~ changed by cargo-mutants ~ */\n     }\n \n     fn checked_sub(env: &Env, a: i128, b: i128) -> i128 {\n         a.checked_sub(b)\n             .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))\n     }\n \n     fn checked_mul(env: &Env, a: i128, b: i128) -> i128 {\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::checked_add",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 385
+        },
+        "start": {
+          "column": 5,
+          "line": 369
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:377:9: replace Vault::checked_add -> i128 with 0",
+    "package": "soroban-vault",
+    "replacement": "0",
+    "span": {
+      "end": {
+        "column": 77,
+        "line": 384
+      },
+      "start": {
+        "column": 9,
+        "line": 377
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::checked_add -> i128 with 1\n@@ -369,24 +369,17 @@\n     fn checked_add(env: &Env, a: i128, b: i128) -> i128 {\n         // I6 — all arithmetic is checked. `bug_overflow` swaps this for wrapping\n         // arithmetic, the BeautyChain / SOR-005 bug class.\n         //\n         // Note it uses `wrapping_add`, not a bare `+`. A bare `+` panics on\n         // overflow in debug builds *and* in this workspace's release profile\n         // (`overflow-checks = true`, the Soroban template default), so it would\n         // not actually be a bug — see `results/seeds.md`.\n-        #[cfg(feature = \"bug_overflow\")]\n-        {\n-            let _ = env;\n-            return a.wrapping_add(b);\n-        }\n-        #[cfg(not(feature = \"bug_overflow\"))]\n-        a.checked_add(b)\n-            .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))\n+        1 /* ~ changed by cargo-mutants ~ */\n     }\n \n     fn checked_sub(env: &Env, a: i128, b: i128) -> i128 {\n         a.checked_sub(b)\n             .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))\n     }\n \n     fn checked_mul(env: &Env, a: i128, b: i128) -> i128 {\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::checked_add",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 385
+        },
+        "start": {
+          "column": 5,
+          "line": 369
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:377:9: replace Vault::checked_add -> i128 with 1",
+    "package": "soroban-vault",
+    "replacement": "1",
+    "span": {
+      "end": {
+        "column": 77,
+        "line": 384
+      },
+      "start": {
+        "column": 9,
+        "line": 377
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::checked_add -> i128 with -1\n@@ -369,24 +369,17 @@\n     fn checked_add(env: &Env, a: i128, b: i128) -> i128 {\n         // I6 — all arithmetic is checked. `bug_overflow` swaps this for wrapping\n         // arithmetic, the BeautyChain / SOR-005 bug class.\n         //\n         // Note it uses `wrapping_add`, not a bare `+`. A bare `+` panics on\n         // overflow in debug builds *and* in this workspace's release profile\n         // (`overflow-checks = true`, the Soroban template default), so it would\n         // not actually be a bug — see `results/seeds.md`.\n-        #[cfg(feature = \"bug_overflow\")]\n-        {\n-            let _ = env;\n-            return a.wrapping_add(b);\n-        }\n-        #[cfg(not(feature = \"bug_overflow\"))]\n-        a.checked_add(b)\n-            .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))\n+        -1 /* ~ changed by cargo-mutants ~ */\n     }\n \n     fn checked_sub(env: &Env, a: i128, b: i128) -> i128 {\n         a.checked_sub(b)\n             .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))\n     }\n \n     fn checked_mul(env: &Env, a: i128, b: i128) -> i128 {\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::checked_add",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 385
+        },
+        "start": {
+          "column": 5,
+          "line": 369
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:377:9: replace Vault::checked_add -> i128 with -1",
+    "package": "soroban-vault",
+    "replacement": "-1",
+    "span": {
+      "end": {
+        "column": 77,
+        "line": 384
+      },
+      "start": {
+        "column": 9,
+        "line": 377
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::checked_sub -> i128 with 0\n@@ -380,18 +380,17 @@\n             return a.wrapping_add(b);\n         }\n         #[cfg(not(feature = \"bug_overflow\"))]\n         a.checked_add(b)\n             .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))\n     }\n \n     fn checked_sub(env: &Env, a: i128, b: i128) -> i128 {\n-        a.checked_sub(b)\n-            .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))\n+        0 /* ~ changed by cargo-mutants ~ */\n     }\n \n     fn checked_mul(env: &Env, a: i128, b: i128) -> i128 {\n         #[cfg(feature = \"bug_overflow\")]\n         {\n             let _ = env;\n             return a.wrapping_mul(b);\n         }\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::checked_sub",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 390
+        },
+        "start": {
+          "column": 5,
+          "line": 387
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:388:9: replace Vault::checked_sub -> i128 with 0",
+    "package": "soroban-vault",
+    "replacement": "0",
+    "span": {
+      "end": {
+        "column": 77,
+        "line": 389
+      },
+      "start": {
+        "column": 9,
+        "line": 388
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::checked_sub -> i128 with 1\n@@ -380,18 +380,17 @@\n             return a.wrapping_add(b);\n         }\n         #[cfg(not(feature = \"bug_overflow\"))]\n         a.checked_add(b)\n             .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))\n     }\n \n     fn checked_sub(env: &Env, a: i128, b: i128) -> i128 {\n-        a.checked_sub(b)\n-            .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))\n+        1 /* ~ changed by cargo-mutants ~ */\n     }\n \n     fn checked_mul(env: &Env, a: i128, b: i128) -> i128 {\n         #[cfg(feature = \"bug_overflow\")]\n         {\n             let _ = env;\n             return a.wrapping_mul(b);\n         }\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::checked_sub",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 390
+        },
+        "start": {
+          "column": 5,
+          "line": 387
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:388:9: replace Vault::checked_sub -> i128 with 1",
+    "package": "soroban-vault",
+    "replacement": "1",
+    "span": {
+      "end": {
+        "column": 77,
+        "line": 389
+      },
+      "start": {
+        "column": 9,
+        "line": 388
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::checked_sub -> i128 with -1\n@@ -380,18 +380,17 @@\n             return a.wrapping_add(b);\n         }\n         #[cfg(not(feature = \"bug_overflow\"))]\n         a.checked_add(b)\n             .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))\n     }\n \n     fn checked_sub(env: &Env, a: i128, b: i128) -> i128 {\n-        a.checked_sub(b)\n-            .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))\n+        -1 /* ~ changed by cargo-mutants ~ */\n     }\n \n     fn checked_mul(env: &Env, a: i128, b: i128) -> i128 {\n         #[cfg(feature = \"bug_overflow\")]\n         {\n             let _ = env;\n             return a.wrapping_mul(b);\n         }\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::checked_sub",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 390
+        },
+        "start": {
+          "column": 5,
+          "line": 387
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:388:9: replace Vault::checked_sub -> i128 with -1",
+    "package": "soroban-vault",
+    "replacement": "-1",
+    "span": {
+      "end": {
+        "column": 77,
+        "line": 389
+      },
+      "start": {
+        "column": 9,
+        "line": 388
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::checked_mul -> i128 with 0\n@@ -385,23 +385,16 @@\n     }\n \n     fn checked_sub(env: &Env, a: i128, b: i128) -> i128 {\n         a.checked_sub(b)\n             .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))\n     }\n \n     fn checked_mul(env: &Env, a: i128, b: i128) -> i128 {\n-        #[cfg(feature = \"bug_overflow\")]\n-        {\n-            let _ = env;\n-            return a.wrapping_mul(b);\n-        }\n-        #[cfg(not(feature = \"bug_overflow\"))]\n-        a.checked_mul(b)\n-            .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))\n+        0 /* ~ changed by cargo-mutants ~ */\n     }\n }\n \n #[cfg(test)]\n mod testkit;\n mod test;\n mod test_invariants;\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::checked_mul",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 401
+        },
+        "start": {
+          "column": 5,
+          "line": 392
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:393:9: replace Vault::checked_mul -> i128 with 0",
+    "package": "soroban-vault",
+    "replacement": "0",
+    "span": {
+      "end": {
+        "column": 77,
+        "line": 400
+      },
+      "start": {
+        "column": 9,
+        "line": 393
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::checked_mul -> i128 with 1\n@@ -385,23 +385,16 @@\n     }\n \n     fn checked_sub(env: &Env, a: i128, b: i128) -> i128 {\n         a.checked_sub(b)\n             .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))\n     }\n \n     fn checked_mul(env: &Env, a: i128, b: i128) -> i128 {\n-        #[cfg(feature = \"bug_overflow\")]\n-        {\n-            let _ = env;\n-            return a.wrapping_mul(b);\n-        }\n-        #[cfg(not(feature = \"bug_overflow\"))]\n-        a.checked_mul(b)\n-            .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))\n+        1 /* ~ changed by cargo-mutants ~ */\n     }\n }\n \n #[cfg(test)]\n mod testkit;\n mod test;\n mod test_invariants;\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::checked_mul",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 401
+        },
+        "start": {
+          "column": 5,
+          "line": 392
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:393:9: replace Vault::checked_mul -> i128 with 1",
+    "package": "soroban-vault",
+    "replacement": "1",
+    "span": {
+      "end": {
+        "column": 77,
+        "line": 400
+      },
+      "start": {
+        "column": 9,
+        "line": 393
+      }
+    }
+  },
+  {
+    "diff": "--- 04-prototype-development/contracts/soroban-vault/src/lib.rs\n+++ replace Vault::checked_mul -> i128 with -1\n@@ -385,23 +385,16 @@\n     }\n \n     fn checked_sub(env: &Env, a: i128, b: i128) -> i128 {\n         a.checked_sub(b)\n             .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))\n     }\n \n     fn checked_mul(env: &Env, a: i128, b: i128) -> i128 {\n-        #[cfg(feature = \"bug_overflow\")]\n-        {\n-            let _ = env;\n-            return a.wrapping_mul(b);\n-        }\n-        #[cfg(not(feature = \"bug_overflow\"))]\n-        a.checked_mul(b)\n-            .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))\n+        -1 /* ~ changed by cargo-mutants ~ */\n     }\n }\n \n #[cfg(test)]\n mod testkit;\n mod test;\n mod test_invariants;\n",
+    "file": "04-prototype-development/contracts/soroban-vault/src/lib.rs",
+    "function": {
+      "function_name": "Vault::checked_mul",
+      "return_type": "-> i128",
+      "span": {
+        "end": {
+          "column": 6,
+          "line": 401
+        },
+        "start": {
+          "column": 5,
+          "line": 392
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "04-prototype-development/contracts/soroban-vault/src/lib.rs:393:9: replace Vault::checked_mul -> i128 with -1",
+    "package": "soroban-vault",
+    "replacement": "-1",
+    "span": {
+      "end": {
+        "column": 77,
+        "line": 400
+      },
+      "start": {
+        "column": 9,
+        "line": 393
+      }
+    }
+  }
+]

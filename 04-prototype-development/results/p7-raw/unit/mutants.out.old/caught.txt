@@ -1,0 +1,11 @@
+04-prototype-development/contracts/soroban-vault/src/lib.rs:85:9: replace Vault::initialize with ()
+04-prototype-development/contracts/soroban-vault/src/lib.rs:101:9: replace Vault::deposit -> i128 with 0
+04-prototype-development/contracts/soroban-vault/src/lib.rs:119:30: replace <= with > in Vault::deposit
+04-prototype-development/contracts/soroban-vault/src/lib.rs:122:23: replace / with % in Vault::deposit
+04-prototype-development/contracts/soroban-vault/src/lib.rs:122:23: replace / with * in Vault::deposit
+04-prototype-development/contracts/soroban-vault/src/lib.rs:128:19: replace <= with > in Vault::deposit
+04-prototype-development/contracts/soroban-vault/src/lib.rs:144:9: replace Vault::withdraw -> i128 with 0
+04-prototype-development/contracts/soroban-vault/src/lib.rs:144:9: replace Vault::withdraw -> i128 with 1
+04-prototype-development/contracts/soroban-vault/src/lib.rs:144:9: replace Vault::withdraw -> i128 with -1
+04-prototype-development/contracts/soroban-vault/src/lib.rs:149:20: replace < with == in Vault::withdraw
+04-prototype-development/contracts/soroban-vault/src/lib.rs:149:20: replace < with > in Vault::withdraw

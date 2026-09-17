@@ -1,0 +1,21 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace == with != in Vault::withdraw
+@@ -153,17 +153,17 @@
+         let token_addr = Self::token_address(&env);
+         let client = token::TokenClient::new(&env, &token_addr);
+         let vault = env.current_contract_address();
+ 
+         let total = Self::total_shares_internal(&env);
+         let assets = client.balance(&vault);
+ 
+         // amount = shares * assets / total
+-        let amount = if total == 0 {
++        let amount = if total != /* ~ changed by cargo-mutants ~ */ 0 {
+             0
+         } else {
+             Self::checked_mul(&env, shares, assets) / total
+         };
+ 
+         // Effects before interaction (CEI) — the reentrancy discipline from
+         // scenario S02.
+         Self::set_balance(&env, &from, Self::checked_sub(&env, balance, shares));

@@ -1,0 +1,26 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::bump_instance with ()
+@@ -353,22 +353,17 @@
+         let key = DataKey::LastActivity(who.clone());
+         env.storage()
+             .temporary()
+             .set(&key, &env.ledger().sequence());
+         env.storage().temporary().extend_ttl(&key, TEMP_TTL, TEMP_TTL);
+     }
+ 
+     fn bump_instance(env: &Env) {
+-        #[cfg(not(feature = "bug_no_ttl"))]
+-        env.storage()
+-            .instance()
+-            .extend_ttl(BUMP_THRESHOLD, BUMP_AMOUNT);
+-        #[cfg(feature = "bug_no_ttl")]
+-        let _ = env;
++        () /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     fn checked_add(env: &Env, a: i128, b: i128) -> i128 {
+         // I6 — all arithmetic is checked. `bug_overflow` swaps this for wrapping
+         // arithmetic, the BeautyChain / SOR-005 bug class.
+         //
+         // Note it uses `wrapping_add`, not a bare `+`. A bare `+` panics on
+         // overflow in debug builds *and* in this workspace's release profile

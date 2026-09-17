@@ -1,0 +1,39 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::require_admin with ()
+@@ -266,35 +266,17 @@
+     fn token_address(env: &Env) -> Address {
+         env.storage()
+             .instance()
+             .get(&DataKey::Token)
+             .unwrap_or_else(|| panic_with_error!(env, VaultError::NotInitialized))
+     }
+ 
+     fn require_admin(env: &Env) {
+-        let admin = Self::admin_address(env);
+-
+-        // With `bug_temp_nonce`, admin authority is additionally gated on a
+-        // temporary-storage value. When that entry expires the check silently
+-        // changes behaviour — invariant I11, scenario S14.
+-        #[cfg(feature = "bug_temp_nonce")]
+-        {
+-            let seen: Option<u32> = env
+-                .storage()
+-                .temporary()
+-                .get(&DataKey::LastActivity(admin.clone()));
+-            if seen.is_none() {
+-                // "Never acted, so cannot be the real admin" — plausible-looking
+-                // and catastrophically wrong.
+-                panic_with_error!(env, VaultError::NotInitialized);
+-            }
+-        }
+-
+-        admin.require_auth();
++        () /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     fn require_not_paused(env: &Env) {
+         if env
+             .storage()
+             .instance()
+             .get(&DataKey::Paused)
+             .unwrap_or(false)

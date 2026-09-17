@@ -1,0 +1,44 @@
+04-prototype-development/contracts/soroban-vault/src/lib.rs:119:30: replace <= with > in Vault::deposit
+04-prototype-development/contracts/soroban-vault/src/lib.rs:122:23: replace / with % in Vault::deposit
+04-prototype-development/contracts/soroban-vault/src/lib.rs:122:23: replace / with * in Vault::deposit
+04-prototype-development/contracts/soroban-vault/src/lib.rs:144:9: replace Vault::withdraw -> i128 with 0
+04-prototype-development/contracts/soroban-vault/src/lib.rs:144:9: replace Vault::withdraw -> i128 with 1
+04-prototype-development/contracts/soroban-vault/src/lib.rs:144:9: replace Vault::withdraw -> i128 with -1
+04-prototype-development/contracts/soroban-vault/src/lib.rs:149:20: replace < with == in Vault::withdraw
+04-prototype-development/contracts/soroban-vault/src/lib.rs:161:31: replace == with != in Vault::withdraw
+04-prototype-development/contracts/soroban-vault/src/lib.rs:164:53: replace / with % in Vault::withdraw
+04-prototype-development/contracts/soroban-vault/src/lib.rs:172:19: replace > with == in Vault::withdraw
+04-prototype-development/contracts/soroban-vault/src/lib.rs:172:19: replace > with < in Vault::withdraw
+04-prototype-development/contracts/soroban-vault/src/lib.rs:172:19: replace > with >= in Vault::withdraw
+04-prototype-development/contracts/soroban-vault/src/lib.rs:184:9: replace Vault::transfer_shares with ()
+04-prototype-development/contracts/soroban-vault/src/lib.rs:191:25: replace < with <= in Vault::transfer_shares
+04-prototype-development/contracts/soroban-vault/src/lib.rs:199:17: replace == with != in Vault::transfer_shares
+04-prototype-development/contracts/soroban-vault/src/lib.rs:214:9: replace Vault::set_admin with ()
+04-prototype-development/contracts/soroban-vault/src/lib.rs:221:9: replace Vault::pause with ()
+04-prototype-development/contracts/soroban-vault/src/lib.rs:229:9: replace Vault::total_shares -> i128 with 0
+04-prototype-development/contracts/soroban-vault/src/lib.rs:229:9: replace Vault::total_shares -> i128 with 1
+04-prototype-development/contracts/soroban-vault/src/lib.rs:229:9: replace Vault::total_shares -> i128 with -1
+04-prototype-development/contracts/soroban-vault/src/lib.rs:233:9: replace Vault::balance_of -> i128 with 0
+04-prototype-development/contracts/soroban-vault/src/lib.rs:233:9: replace Vault::balance_of -> i128 with 1
+04-prototype-development/contracts/soroban-vault/src/lib.rs:233:9: replace Vault::balance_of -> i128 with -1
+04-prototype-development/contracts/soroban-vault/src/lib.rs:241:9: replace Vault::is_paused -> bool with true
+04-prototype-development/contracts/soroban-vault/src/lib.rs:241:9: replace Vault::is_paused -> bool with false
+04-prototype-development/contracts/soroban-vault/src/lib.rs:252:9: replace Vault::last_activity -> Option<u32> with None
+04-prototype-development/contracts/soroban-vault/src/lib.rs:252:9: replace Vault::last_activity -> Option<u32> with Some(0)
+04-prototype-development/contracts/soroban-vault/src/lib.rs:252:9: replace Vault::last_activity -> Option<u32> with Some(1)
+04-prototype-development/contracts/soroban-vault/src/lib.rs:274:9: replace Vault::require_admin with ()
+04-prototype-development/contracts/soroban-vault/src/lib.rs:296:9: replace Vault::require_not_paused with ()
+04-prototype-development/contracts/soroban-vault/src/lib.rs:309:9: replace Vault::require_positive with ()
+04-prototype-development/contracts/soroban-vault/src/lib.rs:314:18: replace < with == in Vault::require_positive
+04-prototype-development/contracts/soroban-vault/src/lib.rs:314:18: replace < with > in Vault::require_positive
+04-prototype-development/contracts/soroban-vault/src/lib.rs:320:9: replace Vault::total_shares_internal -> i128 with 0
+04-prototype-development/contracts/soroban-vault/src/lib.rs:314:18: replace < with <= in Vault::require_positive
+04-prototype-development/contracts/soroban-vault/src/lib.rs:327:9: replace Vault::set_total_shares with ()
+04-prototype-development/contracts/soroban-vault/src/lib.rs:353:9: replace Vault::touch with ()
+04-prototype-development/contracts/soroban-vault/src/lib.rs:361:9: replace Vault::bump_instance with ()
+04-prototype-development/contracts/soroban-vault/src/lib.rs:388:9: replace Vault::checked_sub -> i128 with 0
+04-prototype-development/contracts/soroban-vault/src/lib.rs:388:9: replace Vault::checked_sub -> i128 with 1
+04-prototype-development/contracts/soroban-vault/src/lib.rs:388:9: replace Vault::checked_sub -> i128 with -1
+04-prototype-development/contracts/soroban-vault/src/lib.rs:393:9: replace Vault::checked_mul -> i128 with 0
+04-prototype-development/contracts/soroban-vault/src/lib.rs:393:9: replace Vault::checked_mul -> i128 with 1
+04-prototype-development/contracts/soroban-vault/src/lib.rs:393:9: replace Vault::checked_mul -> i128 with -1

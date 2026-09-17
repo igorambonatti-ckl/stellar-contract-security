@@ -1,0 +1,24 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::total_shares_internal -> i128 with 0
+@@ -312,20 +312,17 @@
+         }
+         #[cfg(feature = "bug_zero_amount")]
+         if value < 0 {
+             panic_with_error!(env, VaultError::InvalidAmount);
+         }
+     }
+ 
+     fn total_shares_internal(env: &Env) -> i128 {
+-        env.storage()
+-            .instance()
+-            .get(&DataKey::TotalShares)
+-            .unwrap_or(0)
++        0 /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     fn set_total_shares(env: &Env, value: i128) {
+         env.storage().instance().set(&DataKey::TotalShares, &value);
+         Self::bump_instance(env);
+     }
+ 
+     fn balance_internal(env: &Env, who: &Address) -> i128 {

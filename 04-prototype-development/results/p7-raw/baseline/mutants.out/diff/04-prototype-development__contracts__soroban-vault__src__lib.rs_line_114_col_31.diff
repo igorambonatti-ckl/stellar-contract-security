@@ -1,0 +1,21 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace == with != in Vault::deposit
+@@ -106,17 +106,17 @@
+         let client = token::TokenClient::new(&env, &token_addr);
+         let vault = env.current_contract_address();
+ 
+         // Assets held *before* the incoming transfer — the correct basis for
+         // the share price.
+         let assets_before = client.balance(&vault);
+         let total = Self::total_shares_internal(&env);
+ 
+-        let shares = if total == 0 {
++        let shares = if total != /* ~ changed by cargo-mutants ~ */ 0 {
+             amount
+         } else {
+             // amount * total / assets_before
+             let numerator = Self::checked_mul(&env, amount, total);
+             if assets_before <= 0 {
+                 panic_with_error!(&env, VaultError::InvalidAmount);
+             }
+             numerator / assets_before

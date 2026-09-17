@@ -1,0 +1,1684 @@
+
+*** 04-prototype-development/contracts/soroban-vault/src/lib.rs:393:9: replace Vault::checked_mul -> i128 with -1
+
+*** mutation diff:
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::checked_mul -> i128 with -1
+@@ -385,23 +385,16 @@
+     }
+ 
+     fn checked_sub(env: &Env, a: i128, b: i128) -> i128 {
+         a.checked_sub(b)
+             .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))
+     }
+ 
+     fn checked_mul(env: &Env, a: i128, b: i128) -> i128 {
+-        #[cfg(feature = "bug_overflow")]
+-        {
+-            let _ = env;
+-            return a.wrapping_mul(b);
+-        }
+-        #[cfg(not(feature = "bug_overflow"))]
+-        a.checked_mul(b)
+-            .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))
++        -1 /* ~ changed by cargo-mutants ~ */
+     }
+ }
+ 
+ #[cfg(test)]
+ mod testkit;
+ mod test;
+ mod test_invariants;
+
+
+*** /Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo test --no-run --verbose --package=soroban-vault@0.1.0
+    Blocking waiting for file lock on package cache
+       Fresh unicode-ident v1.0.24
+       Fresh version_check v0.9.5
+       Fresh cfg-if v1.0.4
+       Fresh typenum v1.20.1
+       Fresh memchr v2.8.2
+       Fresh itoa v1.0.18
+       Fresh autocfg v1.5.1
+       Fresh subtle v2.6.1
+       Fresh proc-macro2 v1.0.106
+       Fresh const-oid v0.9.6
+       Fresh ident_case v1.0.1
+       Fresh strsim v0.11.1
+       Fresh quote v1.0.45
+       Fresh serde_core v1.0.228
+       Fresh zmij v1.0.21
+       Fresh semver v1.0.28
+       Fresh dyn-clone v1.0.20
+       Fresh data-encoding v2.11.0
+       Fresh syn v2.0.117
+       Fresh serde_json v1.0.150
+       Fresh getrandom v0.2.17
+       Fresh zerocopy v0.8.52
+       Fresh num-traits v0.2.19
+       Fresh once_cell v1.21.4
+       Fresh ethnum v1.5.3
+       Fresh escape-bytes v0.1.1
+       Fresh rustc_version v0.4.1
+       Fresh serde_derive v1.0.228
+       Fresh zeroize_derive v1.5.0
+       Fresh rand_core v0.6.4
+       Fresh darling_core v0.23.0
+       Fresh ppv-lite86 v0.2.21
+       Fresh libc v0.2.186
+       Fresh cfg_eval v0.1.2
+       Fresh paste v1.0.15
+       Fresh num-integer v0.1.46
+       Fresh enum-ordinalize-derive v4.3.2
+       Fresh ark-serialize-derive v0.5.0
+       Fresh serde v1.0.228
+       Fresh zeroize v1.9.0
+       Fresh darling_macro v0.23.0
+       Fresh rand_chacha v0.3.1
+       Fresh cpufeatures v0.2.17
+       Fresh enum-ordinalize v4.3.2
+       Fresh ff v0.13.1
+       Fresh num-bigint v0.4.6
+       Fresh arrayvec v0.7.6
+       Fresh base16ct v0.2.0
+       Fresh equivalent v1.0.2
+       Fresh either v1.16.0
+       Fresh generic-array v0.14.9
+       Fresh crate-git-revision v0.0.6
+       Fresh darling v0.23.0
+       Fresh schemars v0.8.22
+       Fresh hex v0.4.3
+       Fresh rand v0.8.6
+       Fresh der v0.7.10
+       Fresh hashbrown v0.17.1
+       Fresh ark-ff-macros v0.5.0
+       Fresh group v0.13.0
+       Fresh educe v0.6.0
+       Fresh itertools v0.13.0
+       Fresh block-buffer v0.10.4
+       Fresh crypto-common v0.1.6
+       Fresh serde_with_macros v3.21.0
+       Fresh ark-std v0.5.0
+       Fresh crypto-bigint v0.5.5
+       Fresh sec1 v0.7.3
+       Fresh indexmap v2.14.0
+       Fresh ark-ff-asm v0.5.0
+       Fresh allocator-api2 v0.2.21
+       Fresh fnv v1.0.7
+       Fresh base64 v0.22.1
+       Fresh ahash v0.8.12
+       Fresh digest v0.10.7
+       Fresh hashbrown v0.15.5
+       Fresh wasmparser v0.116.1
+       Fresh derive_arbitrary v1.3.2
+       Fresh num-derive v0.4.2
+       Fresh thiserror-impl v1.0.69
+       Fresh downcast-rs v1.2.1
+       Fresh stellar-strkey v0.0.13
+       Fresh ark-serialize v0.5.0
+       Fresh sha2 v0.10.9
+       Fresh signature v2.2.0
+       Fresh elliptic-curve v0.13.8
+       Fresh hmac v0.12.1
+       Fresh libm v0.2.16
+       Fresh arbitrary v1.3.2
+       Fresh static_assertions v1.1.0
+       Fresh indexmap-nostd v0.4.0
+       Fresh serde_with v3.21.0
+       Fresh ark-ff v0.5.0
+       Fresh rfc6979 v0.4.0
+       Fresh getrandom v0.3.4
+       Fresh thiserror v1.0.69
+       Fresh wasmparser-nostd v0.100.2
+       Fresh wasmi_core v0.13.0
+       Fresh smallvec v1.15.2
+       Fresh wasmi_arena v0.4.1
+       Fresh spin v0.9.8
+       Fresh ed25519 v2.2.3
+       Fresh ark-poly v0.5.0
+       Fresh soroban-env-macros v26.1.3
+       Fresh ecdsa v0.16.9
+       Fresh rand_core v0.9.5
+       Fresh soroban-wasmi v0.31.1-soroban.20.0.1
+       Fresh stellar-xdr v26.0.1
+       Fresh curve25519-dalek v4.1.3
+       Fresh primeorder v0.13.6
+       Fresh darling_core v0.20.11
+       Fresh keccak v0.1.6
+       Fresh ark-ec v0.5.0
+       Fresh errno v0.3.14
+       Fresh byteorder v1.5.0
+       Fresh bitflags v2.13.1
+       Fresh getrandom v0.4.3
+       Fresh k256 v0.13.4
+       Fresh darling_macro v0.20.11
+       Fresh ed25519-dalek v2.2.0
+       Fresh prettyplease v0.2.37
+       Fresh p256 v0.13.2
+       Fresh sha3 v0.10.9
+       Fresh hash32 v0.3.1
+       Fresh rustix v1.1.4
+       Fresh ark-bls12-381 v0.5.0
+       Fresh ark-bn254 v0.5.0
+       Fresh soroban-spec v26.1.0
+       Fresh soroban-builtin-sdk-macros v26.1.3
+       Fresh stable_deref_trait v1.2.1
+       Fresh hex-literal v0.4.1
+       Fresh fastrand v2.5.0
+       Fresh dtor-proc-macro v0.0.6
+       Fresh soroban-env-common v26.1.3
+       Fresh darling v0.20.11
+       Fresh dtor v0.1.1
+       Fresh heapless v0.8.0
+       Fresh soroban-env-host v26.1.3
+       Fresh soroban-spec-rust v26.1.0
+       Fresh tempfile v3.27.0
+       Fresh macro-string v0.1.4
+       Fresh wait-timeout v0.2.1
+       Fresh quick-error v1.2.3
+       Fresh heck v0.5.0
+       Fresh bit-vec v0.8.0
+       Fresh ctor-proc-macro v0.0.6
+       Fresh rand v0.9.5
+       Fresh rand_xorshift v0.4.0
+       Fresh soroban-ledger-snapshot v26.1.0
+       Fresh stellar-strkey v0.0.16
+       Fresh soroban-sdk-macros v26.1.0
+       Fresh ctor v0.5.0
+       Fresh rusty-fork v0.3.1
+       Fresh bit-set v0.8.0
+       Fresh rand_chacha v0.9.0
+       Fresh bytes-lit v0.0.5
+       Fresh visibility v0.1.1
+       Fresh regex-syntax v0.8.11
+       Fresh unarray v0.1.4
+       Fresh proptest v1.11.0
+       Fresh soroban-sdk v26.1.0
+       Fresh proptest-arbitrary-interop v0.1.0
+       Dirty soroban-vault v0.1.0 (/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/04-prototype-development/contracts/soroban-vault): the file `04-prototype-development/contracts/soroban-vault/src/lib.rs` has changed (1789677082.402708987s, 39s after last build at 1789677043.492581199s)
+   Compiling soroban-vault v0.1.0 (/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/04-prototype-development/contracts/soroban-vault)
+     Running `/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc --crate-name soroban_vault --edition=2021 04-prototype-development/contracts/soroban-vault/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("bug_missing_auth", "bug_no_ttl", "bug_overflow", "bug_reinit", "bug_self_transfer", "bug_temp_nonce", "bug_zero_amount"))' -C metadata=1d80e85bbbdf9027 -C extra-filename=-bce8593a16df1a94 --out-dir /private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps -C incremental=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/incremental -L dependency=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps --extern arbitrary=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps/libarbitrary-b15fe09805a10503.rlib --extern proptest=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps/libproptest-ebc82c2f62035854.rlib --extern proptest_arbitrary_interop=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps/libproptest_arbitrary_interop-8fcd0e348bdb6c2d.rlib --extern soroban_sdk=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps/libsoroban_sdk-e62747f56c1fb4bb.rlib`
+     Running `/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc --crate-name soroban_vault --edition=2021 04-prototype-development/contracts/soroban-vault/src/lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("bug_missing_auth", "bug_no_ttl", "bug_overflow", "bug_reinit", "bug_self_transfer", "bug_temp_nonce", "bug_zero_amount"))' -C metadata=3876bb9ecdd8693e -C extra-filename=-89a10c6dc4b3cd63 --out-dir /private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps -C incremental=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/incremental -L dependency=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps --extern soroban_sdk=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps/libsoroban_sdk-e62747f56c1fb4bb.rmeta`
+warning: unused variable: `env`
+   --> 04-prototype-development/contracts/soroban-vault/src/lib.rs:392:20
+    |
+392 |     fn checked_mul(env: &Env, a: i128, b: i128) -> i128 {
+    |                    ^^^ help: if this is intentional, prefix it with an underscore: `_env`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `a`
+   --> 04-prototype-development/contracts/soroban-vault/src/lib.rs:392:31
+    |
+392 |     fn checked_mul(env: &Env, a: i128, b: i128) -> i128 {
+    |                               ^ help: if this is intentional, prefix it with an underscore: `_a`
+
+warning: unused variable: `b`
+   --> 04-prototype-development/contracts/soroban-vault/src/lib.rs:392:40
+    |
+392 |     fn checked_mul(env: &Env, a: i128, b: i128) -> i128 {
+    |                                        ^ help: if this is intentional, prefix it with an underscore: `_b`
+
+warning: `soroban-vault` (lib) generated 3 warnings (run `cargo fix --lib -p soroban-vault` to apply 3 suggestions)
+     Running `/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc --crate-name proptest_baseline --edition=2021 04-prototype-development/contracts/soroban-vault/tests/proptest_baseline.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("bug_missing_auth", "bug_no_ttl", "bug_overflow", "bug_reinit", "bug_self_transfer", "bug_temp_nonce", "bug_zero_amount"))' -C metadata=8c7067f738ca187b -C extra-filename=-3e562011cbd3d845 --out-dir /private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps -C incremental=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/incremental -L dependency=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps --extern arbitrary=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps/libarbitrary-b15fe09805a10503.rlib --extern proptest=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps/libproptest-ebc82c2f62035854.rlib --extern proptest_arbitrary_interop=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps/libproptest_arbitrary_interop-8fcd0e348bdb6c2d.rlib --extern soroban_sdk=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps/libsoroban_sdk-e62747f56c1fb4bb.rlib --extern soroban_vault=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps/libsoroban_vault-89a10c6dc4b3cd63.rlib`
+     Running `/Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc --crate-name proptest_ai --edition=2021 04-prototype-development/contracts/soroban-vault/tests/proptest_ai.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 -C split-debuginfo=unpacked --test --check-cfg 'cfg(docsrs,test)' --check-cfg 'cfg(feature, values("bug_missing_auth", "bug_no_ttl", "bug_overflow", "bug_reinit", "bug_self_transfer", "bug_temp_nonce", "bug_zero_amount"))' -C metadata=5763f149b77c10de -C extra-filename=-f790cf1d5da483ca --out-dir /private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps -C incremental=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/incremental -L dependency=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps --extern arbitrary=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps/libarbitrary-b15fe09805a10503.rlib --extern proptest=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps/libproptest-ebc82c2f62035854.rlib --extern proptest_arbitrary_interop=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps/libproptest_arbitrary_interop-8fcd0e348bdb6c2d.rlib --extern soroban_sdk=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps/libsoroban_sdk-e62747f56c1fb4bb.rlib --extern soroban_vault=/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps/libsoroban_vault-89a10c6dc4b3cd63.rlib`
+warning: `soroban-vault` (lib test) generated 3 warnings (3 duplicates)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.37s
+  Executable `/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps/soroban_vault-bce8593a16df1a94`
+  Executable `/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps/proptest_ai-f790cf1d5da483ca`
+  Executable `/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps/proptest_baseline-3e562011cbd3d845`
+
+*** result: Success
+
+*** /Users/igorfambonatti/.rustup/toolchains/stable-aarch64-apple-darwin/bin/cargo test --verbose --package=soroban-vault@0.1.0 --test proptest_ai
+       Fresh unicode-ident v1.0.24
+       Fresh version_check v0.9.5
+       Fresh cfg-if v1.0.4
+       Fresh typenum v1.20.1
+       Fresh memchr v2.8.2
+       Fresh itoa v1.0.18
+       Fresh autocfg v1.5.1
+       Fresh subtle v2.6.1
+       Fresh proc-macro2 v1.0.106
+       Fresh const-oid v0.9.6
+       Fresh strsim v0.11.1
+       Fresh ident_case v1.0.1
+       Fresh quote v1.0.45
+       Fresh serde_core v1.0.228
+       Fresh zmij v1.0.21
+       Fresh semver v1.0.28
+       Fresh dyn-clone v1.0.20
+       Fresh data-encoding v2.11.0
+       Fresh syn v2.0.117
+       Fresh serde_json v1.0.150
+       Fresh getrandom v0.2.17
+       Fresh zerocopy v0.8.52
+       Fresh num-traits v0.2.19
+       Fresh once_cell v1.21.4
+       Fresh escape-bytes v0.1.1
+       Fresh ethnum v1.5.3
+       Fresh rustc_version v0.4.1
+       Fresh serde_derive v1.0.228
+       Fresh zeroize_derive v1.5.0
+       Fresh rand_core v0.6.4
+       Fresh darling_core v0.23.0
+       Fresh ppv-lite86 v0.2.21
+       Fresh libc v0.2.186
+       Fresh cfg_eval v0.1.2
+       Fresh paste v1.0.15
+       Fresh enum-ordinalize-derive v4.3.2
+       Fresh num-integer v0.1.46
+       Fresh ark-serialize-derive v0.5.0
+       Fresh serde v1.0.228
+       Fresh zeroize v1.9.0
+       Fresh darling_macro v0.23.0
+       Fresh cpufeatures v0.2.17
+       Fresh rand_chacha v0.3.1
+       Fresh ff v0.13.1
+       Fresh enum-ordinalize v4.3.2
+       Fresh num-bigint v0.4.6
+       Fresh hashbrown v0.17.1
+       Fresh arrayvec v0.7.6
+       Fresh equivalent v1.0.2
+       Fresh either v1.16.0
+       Fresh generic-array v0.14.9
+       Fresh crate-git-revision v0.0.6
+       Fresh darling v0.23.0
+       Fresh schemars v0.8.22
+       Fresh hex v0.4.3
+       Fresh rand v0.8.6
+       Fresh der v0.7.10
+       Fresh base16ct v0.2.0
+       Fresh indexmap v2.14.0
+       Fresh group v0.13.0
+       Fresh educe v0.6.0
+       Fresh ark-ff-macros v0.5.0
+       Fresh itertools v0.13.0
+       Fresh block-buffer v0.10.4
+       Fresh crypto-common v0.1.6
+       Fresh serde_with_macros v3.21.0
+       Fresh ark-std v0.5.0
+       Fresh crypto-bigint v0.5.5
+       Fresh sec1 v0.7.3
+       Fresh ark-ff-asm v0.5.0
+       Fresh fnv v1.0.7
+       Fresh base64 v0.22.1
+       Fresh allocator-api2 v0.2.21
+       Fresh wasmparser v0.116.1
+       Fresh digest v0.10.7
+       Fresh hashbrown v0.15.5
+       Fresh ahash v0.8.12
+       Fresh derive_arbitrary v1.3.2
+       Fresh thiserror-impl v1.0.69
+       Fresh num-derive v0.4.2
+       Fresh downcast-rs v1.2.1
+       Fresh stellar-strkey v0.0.13
+       Fresh ark-serialize v0.5.0
+       Fresh sha2 v0.10.9
+       Fresh signature v2.2.0
+       Fresh elliptic-curve v0.13.8
+       Fresh hmac v0.12.1
+       Fresh arbitrary v1.3.2
+       Fresh libm v0.2.16
+       Fresh indexmap-nostd v0.4.0
+       Fresh static_assertions v1.1.0
+       Fresh serde_with v3.21.0
+       Fresh ark-ff v0.5.0
+       Fresh rfc6979 v0.4.0
+       Fresh wasmparser-nostd v0.100.2
+       Fresh getrandom v0.3.4
+       Fresh wasmi_core v0.13.0
+       Fresh thiserror v1.0.69
+       Fresh spin v0.9.8
+       Fresh wasmi_arena v0.4.1
+       Fresh smallvec v1.15.2
+       Fresh ed25519 v2.2.3
+       Fresh soroban-env-macros v26.1.3
+       Fresh ark-poly v0.5.0
+       Fresh ecdsa v0.16.9
+       Fresh rand_core v0.9.5
+       Fresh soroban-wasmi v0.31.1-soroban.20.0.1
+       Fresh primeorder v0.13.6
+       Fresh stellar-xdr v26.0.1
+       Fresh curve25519-dalek v4.1.3
+       Fresh darling_core v0.20.11
+       Fresh keccak v0.1.6
+       Fresh ark-ec v0.5.0
+       Fresh errno v0.3.14
+       Fresh byteorder v1.5.0
+       Fresh bitflags v2.13.1
+       Fresh ed25519-dalek v2.2.0
+       Fresh prettyplease v0.2.37
+       Fresh k256 v0.13.4
+       Fresh p256 v0.13.2
+       Fresh getrandom v0.4.3
+       Fresh sha3 v0.10.9
+       Fresh darling_macro v0.20.11
+       Fresh ark-bn254 v0.5.0
+       Fresh hash32 v0.3.1
+       Fresh ark-bls12-381 v0.5.0
+       Fresh rustix v1.1.4
+       Fresh soroban-spec v26.1.0
+       Fresh soroban-builtin-sdk-macros v26.1.3
+       Fresh fastrand v2.5.0
+       Fresh dtor-proc-macro v0.0.6
+       Fresh stable_deref_trait v1.2.1
+       Fresh hex-literal v0.4.1
+       Fresh soroban-env-common v26.1.3
+       Fresh darling v0.20.11
+       Fresh soroban-spec-rust v26.1.0
+       Fresh soroban-env-host v26.1.3
+       Fresh dtor v0.1.1
+       Fresh heapless v0.8.0
+       Fresh tempfile v3.27.0
+       Fresh macro-string v0.1.4
+       Fresh wait-timeout v0.2.1
+       Fresh ctor-proc-macro v0.0.6
+       Fresh quick-error v1.2.3
+       Fresh bit-vec v0.8.0
+       Fresh heck v0.5.0
+       Fresh rand_chacha v0.9.0
+       Fresh rand_xorshift v0.4.0
+       Fresh ctor v0.5.0
+       Fresh stellar-strkey v0.0.16
+       Fresh rusty-fork v0.3.1
+       Fresh soroban-sdk-macros v26.1.0
+       Fresh soroban-ledger-snapshot v26.1.0
+       Fresh bit-set v0.8.0
+       Fresh rand v0.9.5
+       Fresh bytes-lit v0.0.5
+       Fresh visibility v0.1.1
+       Fresh regex-syntax v0.8.11
+       Fresh unarray v0.1.4
+       Fresh soroban-sdk v26.1.0
+       Fresh proptest v1.11.0
+warning: unused variable: `env`
+   --> 04-prototype-development/contracts/soroban-vault/src/lib.rs:392:20
+    |
+392 |     fn checked_mul(env: &Env, a: i128, b: i128) -> i128 {
+    |                    ^^^ help: if this is intentional, prefix it with an underscore: `_env`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `a`
+   --> 04-prototype-development/contracts/soroban-vault/src/lib.rs:392:31
+    |
+392 |     fn checked_mul(env: &Env, a: i128, b: i128) -> i128 {
+    |                               ^ help: if this is intentional, prefix it with an underscore: `_a`
+
+warning: unused variable: `b`
+   --> 04-prototype-development/contracts/soroban-vault/src/lib.rs:392:40
+    |
+392 |     fn checked_mul(env: &Env, a: i128, b: i128) -> i128 {
+    |                                        ^ help: if this is intentional, prefix it with an underscore: `_b`
+
+       Fresh proptest-arbitrary-interop v0.1.0
+warning: `soroban-vault` (lib) generated 3 warnings (run `cargo fix --lib -p soroban-vault` to apply 3 suggestions)
+       Fresh soroban-vault v0.1.0 (/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/04-prototype-development/contracts/soroban-vault)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.12s
+     Running `/private/var/folders/bw/48pkqypd3pd7_c8l3ckzlmdw0000gp/T/cargo-mutants-stellar-studies-cFKarV.tmp/target/debug/deps/proptest_ai-f790cf1d5da483ca`
+
+running 11 tests
+test prop_sequence_state_invariants ... FAILED
+test prop_i8_transfer_shares ... FAILED
+test prop_i5_no_auth_cannot_decrease_balance ... ok
+test prop_n3_views_are_pure ... ok
+test prop_i10_balance_ttl_on_first_write ... ok
+test prop_i9_reinitialize_rejected ... ok
+test prop_n1_instance_ttl ... ok
+test prop_i12_pause_semantics ... ok
+test prop_i4_admin_custody ... ok
+test prop_exact_share_accounting ... FAILED
+test prop_i11_temporary_tier_non_interference ... ok
+
+failures:
+
+---- prop_sequence_state_invariants stdout ----
+proptest: FileFailurePersistence::SourceParallel set, but failed to find lib.rs or main.rs
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.1.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.2.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.3.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.4.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.5.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.6.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.7.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.8.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.9.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.10.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.11.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.12.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.13.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.14.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.15.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.16.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.17.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.18.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.19.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.20.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.21.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.22.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.23.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.24.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.25.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.26.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.27.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.28.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.29.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.30.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.31.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.32.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.33.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.34.json".
+Writing test snapshot file for test "prop_sequence_state_invariants" to "test_snapshots/prop_sequence_state_invariants.35.json".
+
+thread 'prop_sequence_state_invariants' (3123588) panicked at 04-prototype-development/contracts/soroban-vault/tests/proptest_ai.rs:505:1:
+Test failed: withdraw at step 1: paid out -1, harness expected 1 (shares = 1, A0 = 1, T0 = 1) at 04-prototype-development/contracts/soroban-vault/tests/proptest_ai.rs:654.
+minimal failing input: ops = [
+    Deposit {
+        actor: 0,
+        amount: 1,
+    },
+    Withdraw {
+        actor: 0,
+        shares: 1,
+    },
+]
+	successes: 0
+	local rejects: 0
+	global rejects: 0
+
+
+---- prop_i8_transfer_shares stdout ----
+proptest: FileFailurePersistence::SourceParallel set, but failed to find lib.rs or main.rs
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:274053
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, 861507]
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.1.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:274053
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, 861507]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.2.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:274053
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAK3IM, 861507]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.3.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:274053
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.4.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:274053
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.5.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:137027
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.6.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:68514
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.7.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:34257
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.8.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:17129
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.9.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:8565
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.10.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:4283
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.11.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:2142
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.12.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1071
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.13.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:536
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.14.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:268
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.15.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:134
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.16.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:67
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.17.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:34
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.18.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:17
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.19.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:9
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.20.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:5
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.21.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:3
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.22.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:2
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.23.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 861507]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.24.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 430754]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 430754]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.25.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 215377]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 215377]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.26.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 107689]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 107689]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.27.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 53845]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 53845]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.28.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 26923]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 26923]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.29.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 13462]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 13462]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.30.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 6731]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 6731]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.31.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 3366]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 3366]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.32.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1683]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1683]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.33.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 842]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 842]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.34.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 421]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 421]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.35.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 211]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 211]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.36.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 106]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 106]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.37.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 53]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 53]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.38.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 27]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 27]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.39.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 14]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 14]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.40.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 7]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 7]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.41.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 4]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 4]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.42.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 2]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 2]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.43.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.44.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.45.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.46.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.47.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.48.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.49.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.50.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.51.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.52.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.53.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.54.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.55.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.56.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.57.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.58.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.59.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.60.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.61.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.62.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.63.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.64.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.65.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.66.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.67.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.68.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at /Users/igorfambonatti/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/soroban-env-host-26.1.3/src/host.rs:907:9:
+HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+
+Writing test snapshot file for test "prop_i8_transfer_shares" to "test_snapshots/prop_i8_transfer_shares.69.json".
+
+thread 'prop_i8_transfer_shares' (3123584) panicked at 04-prototype-development/contracts/soroban-vault/tests/proptest_ai.rs:1084:1:
+Test failed: HostError: Error(Contract, #7)
+
+Event log (newest first):
+   0: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   1: [Diagnostic Event] topics:[error, Error(Contract, #7)], data:["contract call failed", deposit, [CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]]
+   2: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"caught error from function"
+   3: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:"escalating error to panic"
+   4: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[error, Error(Contract, #7)], data:["failing with contract error", 7]
+   5: [Failed Diagnostic Event (not emitted)] contract:CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, topics:[fn_return, balance], data:1
+   6: [Failed Diagnostic Event (not emitted)] contract:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, topics:[fn_call, CBEPDNVYXQGWB5YUBXKJWYJA7OXTZW5LFLNO5JRRGE6Z6C5OSUZPCCEL, balance], data:CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M
+   7: [Diagnostic Event] topics:[fn_call, CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHK3M, deposit], data:[CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4, 1]
+.
+minimal failing input: seeder = 0, (from, to) = (
+    0,
+    0,
+), seed = 1, seed2 = 1, shares = 1
+	successes: 0
+	local rejects: 0
+	global rejects: 0
+
+
+---- prop_exact_share_accounting stdout ----
+proptest: FileFailurePersistence::SourceParallel set, but failed to find lib.rs or main.rs
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.1.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.2.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.3.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.4.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.5.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.6.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.7.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.8.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.9.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.10.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.11.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.12.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.13.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.14.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.15.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.16.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.17.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.18.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.19.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.20.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.21.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.22.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.23.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.24.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.25.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.26.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.27.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.28.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.29.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.30.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.31.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.32.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.33.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.34.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.35.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.36.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.37.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.38.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.39.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.40.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.41.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.42.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.43.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.44.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.45.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.46.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.47.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.48.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.49.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.50.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.51.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.52.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.53.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.54.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.55.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.56.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.57.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.58.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.59.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.60.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.61.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.62.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.63.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.64.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.65.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.66.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.67.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.68.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.69.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.70.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.71.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.72.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.73.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.74.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.75.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.76.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.77.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.78.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.79.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.80.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.81.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.82.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.83.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.84.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.85.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.86.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.87.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.88.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.89.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.90.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.91.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.92.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.93.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.94.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.95.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.96.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.97.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.98.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.99.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.100.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.101.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.102.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.103.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.104.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.105.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.106.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.107.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.108.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.109.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.110.json".
+Writing test snapshot file for test "prop_exact_share_accounting" to "test_snapshots/prop_exact_share_accounting.111.json".
+
+thread 'prop_exact_share_accounting' (3123578) panicked at 04-prototype-development/contracts/soroban-vault/tests/proptest_ai.rs:885:1:
+Test failed: deposit(1) aborted with ZeroShares but the harness predicted 1 shares (T0 = 1, A0 = 1) at 04-prototype-development/contracts/soroban-vault/tests/proptest_ai.rs:973.
+minimal failing input: seeder = 0, depositor = 0, d1 = 1, d2 = 1, donation = 0, w = 1
+	successes: 0
+	local rejects: 0
+	global rejects: 0
+
+
+
+failures:
+    prop_exact_share_accounting
+    prop_i8_transfer_shares
+    prop_sequence_state_invariants
+
+test result: FAILED. 8 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 34.38s
+
+error: test failed, to rerun pass `-p soroban-vault --test proptest_ai`
+
+*** result: Failure(101)

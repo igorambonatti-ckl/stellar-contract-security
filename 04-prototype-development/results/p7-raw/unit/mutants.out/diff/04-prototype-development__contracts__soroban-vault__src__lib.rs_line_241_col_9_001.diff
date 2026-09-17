@@ -1,0 +1,24 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::is_paused -> bool with false
+@@ -233,20 +233,17 @@
+         Self::balance_internal(&env, &who)
+     }
+ 
+     pub fn admin(env: Env) -> Address {
+         Self::admin_address(&env)
+     }
+ 
+     pub fn is_paused(env: Env) -> bool {
+-        env.storage()
+-            .instance()
+-            .get(&DataKey::Paused)
+-            .unwrap_or(false)
++        false /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     /// Ledger of the address's last vault operation.
+     ///
+     /// **Non-authoritative.** Lives in temporary storage and may vanish at any
+     /// time; nothing in this contract is gated on it (I11).
+     pub fn last_activity(env: Env, who: Address) -> Option<u32> {
+         env.storage().temporary().get(&DataKey::LastActivity(who))

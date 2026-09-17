@@ -1,0 +1,21 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace == with != in Vault::transfer_shares
+@@ -191,17 +191,17 @@
+         if from_balance < shares {
+             panic_with_error!(&env, VaultError::InsufficientBalance);
+         }
+ 
+         // I8 — a self-transfer must be a no-op. Handling it by reading both
+         // balances and writing both back would duplicate the shares, which is
+         // the `bug_self_transfer` seed (scenario S17).
+         #[cfg(not(feature = "bug_self_transfer"))]
+-        if from == to {
++        if from != /* ~ changed by cargo-mutants ~ */ to {
+             Self::touch(&env, &from);
+             return;
+         }
+ 
+         let to_balance = Self::balance_internal(&env, &to);
+         Self::set_balance(&env, &from, Self::checked_sub(&env, from_balance, shares));
+         Self::set_balance(&env, &to, Self::checked_add(&env, to_balance, shares));
+         Self::touch(&env, &from);

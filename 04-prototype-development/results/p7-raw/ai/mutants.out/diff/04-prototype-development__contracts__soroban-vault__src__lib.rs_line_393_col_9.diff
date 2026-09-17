@@ -1,0 +1,27 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::checked_mul -> i128 with 0
+@@ -385,23 +385,16 @@
+     }
+ 
+     fn checked_sub(env: &Env, a: i128, b: i128) -> i128 {
+         a.checked_sub(b)
+             .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))
+     }
+ 
+     fn checked_mul(env: &Env, a: i128, b: i128) -> i128 {
+-        #[cfg(feature = "bug_overflow")]
+-        {
+-            let _ = env;
+-            return a.wrapping_mul(b);
+-        }
+-        #[cfg(not(feature = "bug_overflow"))]
+-        a.checked_mul(b)
+-            .unwrap_or_else(|| panic_with_error!(env, VaultError::Overflow))
++        0 /* ~ changed by cargo-mutants ~ */
+     }
+ }
+ 
+ #[cfg(test)]
+ mod testkit;
+ mod test;
+ mod test_invariants;

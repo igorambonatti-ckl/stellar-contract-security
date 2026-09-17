@@ -1,0 +1,23 @@
+--- 04-prototype-development/contracts/soroban-vault/src/lib.rs
++++ replace Vault::set_admin with ()
+@@ -206,19 +206,17 @@
+         Self::set_balance(&env, &to, Self::checked_add(&env, to_balance, shares));
+         Self::touch(&env, &from);
+     }
+ 
+     // ── Admin ────────────────────────────────────────────────────────────────
+ 
+     /// Hand the admin role to `new_admin`. Only the current admin may do this (I4).
+     pub fn set_admin(env: Env, new_admin: Address) {
+-        Self::require_admin(&env);
+-        env.storage().instance().set(&DataKey::Admin, &new_admin);
+-        Self::bump_instance(&env);
++        () /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     /// Halt all state-mutating entry points (I12). Only the admin may do this (I4).
+     pub fn pause(env: Env) {
+         Self::require_admin(&env);
+         env.storage().instance().set(&DataKey::Paused, &true);
+         Self::bump_instance(&env);
+     }
