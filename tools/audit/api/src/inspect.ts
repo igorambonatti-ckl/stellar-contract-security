@@ -214,7 +214,8 @@ export async function inspectContract(inputPath: string): Promise<ContractInfo> 
     !/crate-type\s*=\s*\[[^\]]*"lib"/.test(manifestRaw);
   if (cdylibOnly) {
     warnings.push(
-      'crate-type é só "cdylib". Um harness de teste precisa de "lib" para linkar o crate.',
+      'crate-type é só "cdylib", que um teste de integração não linka. O pipeline ' +
+      'acrescenta "lib" ao Cargo.toml e restaura o original na limpeza.',
     );
   }
 

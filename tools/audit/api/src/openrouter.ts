@@ -39,7 +39,29 @@ export async function complete(
   }
 
   const model = opts.model || currentModel();
+  return chamar(key, model, opts, opts.maxTokens ?? 8000, 0);
+}
 
+/**
+ * Uma chamada, com uma única retentativa quando o orçamento acabou no meio.
+ *
+ * Um modelo de raciocínio gasta `max_tokens` pensando antes de escrever: a
+ * resposta volta com `finish_reason: "length"`, `content: null` e o texto todo
+ * no campo `reasoning`. Isso é indistinguível de "o modelo falhou" se ninguém
+ * olhar, e foi lido exatamente assim duas vezes neste projeto — uma vez virou
+ * "o deepseek não devolve JSON", outra "o glm não responde". Nos dois casos o
+ * teto era meu.
+ *
+ * A retentativa triplica o orçamento uma vez. Se ainda assim vier truncado, o
+ * erro diz o que aconteceu em vez de dizer "sem conteúdo".
+ */
+async function chamar(
+  key: string,
+  model: string,
+  opts: CompletionOptions,
+  maxTokens: number,
+  tentativa: number,
+): Promise<{ text: string; model: string; usage?: { entrada: number; saida: number } }> {
   const res = await fetch(ENDPOINT, {
     method: 'POST',
     headers: {
@@ -51,7 +73,7 @@ export async function complete(
     },
     body: JSON.stringify({
       model,
-      max_tokens: opts.maxTokens ?? 8000,
+      max_tokens: maxTokens,
       messages: [
         { role: 'system', content: opts.system },
         { role: 'user', content: opts.user },
@@ -68,10 +90,24 @@ export async function complete(
   }
 
   const json: any = await res.json();
-  const text: string | undefined = json?.choices?.[0]?.message?.content;
+  const escolha = json?.choices?.[0];
+  const text: string | undefined = escolha?.message?.content;
+
   if (!text) {
+    const truncado = escolha?.finish_reason === 'length';
+    const pensou = (escolha?.message?.reasoning ?? '').length;
+
+    if (truncado && tentativa === 0) {
+      return chamar(key, model, opts, Math.min(maxTokens * 3, 64000), 1);
+    }
     throw Object.assign(
-      new Error(`Resposta do OpenRouter sem conteúdo: ${JSON.stringify(json).slice(0, 400)}`),
+      new Error(
+        truncado
+          ? `O modelo consumiu os ${maxTokens} tokens de saída antes de responder` +
+            (pensou ? ` (${pensou} caracteres foram para o campo "reasoning")` : '') +
+            '. Não é falha do modelo — é o teto de max_tokens.'
+          : `Resposta do OpenRouter sem conteúdo: ${JSON.stringify(json).slice(0, 400)}`,
+      ),
       { status: 502 },
     );
   }

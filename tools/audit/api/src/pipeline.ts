@@ -12,6 +12,26 @@ import {
 } from './prompts.js';
 
 /**
+ * Acrescenta `"lib"` ao `crate-type` quando o crate é só `cdylib`.
+ *
+ * Devolve `true` se mexeu no arquivo. O manifesto original fica em
+ * `p.manifestoOriginal` para a limpeza restaurar — a ferramenta escreve no
+ * crate de outra pessoa, e o mínimo é desfazer.
+ */
+async function garantirCrateTypeLib(p: Pipeline, info: ContractInfo): Promise<boolean> {
+  const caminho = join(info.path, 'Cargo.toml');
+  const original = await readFile(caminho, 'utf8');
+
+  const m = /crate-type\s*=\s*\[([^\]]*)\]/.exec(original);
+  if (!m) return false;                       // sem crate-type: já é lib por padrão
+  if (/"lib"|"rlib"/.test(m[1])) return false; // já linkável
+
+  p.manifestoOriginal = { caminho, conteudo: original };
+  await writeFile(caminho, original.replace(m[0], `crate-type = ["lib",${m[1]}]`), 'utf8');
+  return true;
+}
+
+/**
  * Lê o catálogo de invariantes tolerando um objeto malformado.
  *
  * Motivo concreto: uma rodada inteira foi perdida porque o modelo escreveu
@@ -121,6 +141,8 @@ export interface Pipeline {
   invariants: Invariant[];
   harnessCode?: string;
   harnessPath?: string;
+  /** Manifesto original, quando a ferramenta precisou mexer no crate-type. */
+  manifestoOriginal?: { caminho: string; conteudo: string };
   rawProposal?: string;
   listeners: Set<Response>;
   cancelled: boolean;
@@ -279,6 +301,20 @@ async function run(p: Pipeline, runMutants: boolean) {
       data: info,
     });
     for (const w of info.warnings) log(p, `aviso: ${w}`);
+
+    // Um contrato Soroban de verdade é quase sempre `crate-type = ["cdylib"]`
+    // e nada mais — é o que o template da Stellar gera e o que está em todos os
+    // soroban-examples. Um teste de integração em `tests/` não linka um crate
+    // cdylib-only, então a ferramenta simplesmente não rodava neles: funcionava
+    // no contrato deste repositório porque eu mesmo o declarei como `lib`.
+    //
+    // A correção é aditiva e reversível: acrescenta `"lib"`, guarda o manifesto
+    // original e o devolve na limpeza. Fica registrado no log porque é uma
+    // escrita no crate de outra pessoa.
+    if (await garantirCrateTypeLib(p, info)) {
+      log(p, 'Cargo.toml: acrescentei "lib" a crate-type — um teste de integração ' +
+        'não linka um crate cdylib-only. O original volta na limpeza.');
+    }
     guard();
 
     // ── 2. Suíte existente, como baseline ───────────────────────────────────
@@ -382,18 +418,42 @@ async function run(p: Pipeline, runMutants: boolean) {
     const testes: { inv: Invariant; code: string }[] = [];
     let impossiveis = 0;
 
-    for (const inv of p.invariants) {
-      guard();
-      const r = await complete({
-        system: systemPrompt(),
-        user: generateOneTest(info, src, inv),
-        model: p.model,
-        maxTokens: 3000,
-      });
-      p.usage.entrada += r.usage?.entrada ?? 0;
-      p.usage.saida += r.usage?.saida ?? 0;
+    // As chamadas são independentes — uma invariante não sabe da outra — então
+    // serializá-las só multiplicava a latência por N. A ordem do arquivo final
+    // continua sendo a do catálogo: os resultados voltam indexados, não na
+    // ordem em que chegaram.
+    const gerados: (string | null)[] = new Array(p.invariants.length).fill(null);
+    const CONC = 4;
+    let proximo = 0;
 
-      const code = extractCode(r.text, 'rust').trim();
+    await Promise.all(Array.from({ length: Math.min(CONC, p.invariants.length) }, async () => {
+      for (;;) {
+        const i = proximo++;
+        if (i >= p.invariants.length) return;
+        guard();
+        const inv = p.invariants[i];
+        const r = await complete({
+          system: systemPrompt(),
+          user: generateOneTest(info, src, inv),
+          model: p.model,
+          maxTokens: 3000,
+        }).catch((e) => { log(p, `${inv.id}: !! ${e.message}`); return null; });
+        if (!r) continue;
+        p.usage.entrada += r.usage?.entrada ?? 0;
+        p.usage.saida += r.usage?.saida ?? 0;
+        gerados[i] = extractCode(r.text, 'rust').trim();
+        log(p, `${inv.id}: ${gerados[i]!.split('\n').length} linhas`);
+      }
+    }));
+
+    for (let i = 0; i < p.invariants.length; i++) {
+      const inv = p.invariants[i];
+      const code = gerados[i];
+      if (code === null) {
+        inv.verdict = 'descartada';
+        inv.verdictReason = 'A chamada ao modelo falhou para esta invariante.';
+        continue;
+      }
       if (/^\/\/\s*IMPOSSIVEL/i.test(code)) {
         inv.verdict = 'descartada';
         inv.verdictReason = code.replace(/^\/\/\s*IMPOSSIVEL:?\s*/i, '').trim() ||
@@ -403,7 +463,6 @@ async function run(p: Pipeline, runMutants: boolean) {
         continue;
       }
       testes.push({ inv, code });
-      log(p, `${inv.id}: ${code.split('\n').length} linhas`);
     }
 
     // Cada teste no seu próprio módulo. É o que permite que ele traga os
@@ -570,6 +629,22 @@ async function run(p: Pipeline, runMutants: boolean) {
     // própria, e isso é sobre o harness, não sobre o contrato.
     const orfas = falhos.filter((t) => !invariantForTest(t, p.invariants));
 
+    // O harness que fica no crate contém **só** o que passa no contrato como
+    // ele é. Um teste que já falha aqui falha contra qualquer versão do
+    // contrato, então deixá-lo no arquivo transforma toda execução futura em
+    // detecção falsa — foi o que quase aconteceu com a primeira medição de
+    // detecção, cujos números incluíam cinco testes vermelhos de nascença.
+    const sobreviventes = testes.filter((t) => t.inv.verdict !== 'descartada');
+    if (sobreviventes.length !== testes.length) {
+      await escrever(sobreviventes);
+      p.harnessCode = await readFile(p.harnessPath, 'utf8');
+      const rebuild = await exec(p, info.path, 'cargo',
+        ['test', '-p', info.crateName, '--test', 'audit_generated'], { PROPTEST_CASES: '64' });
+      log(p, rebuild.code === 0
+        ? `harness final: ${sobreviventes.length} testes, verde contra o contrato como ele é`
+        : '!! o harness final ainda falha — não use estes números como detecção');
+    }
+
     setStage(p, 'validar', {
       status: 'ok',
       finishedAt: Date.now(),
@@ -648,7 +723,11 @@ export function attachPipeline(p: Pipeline, res: Response) {
   res.on('close', () => p.listeners.delete(res));
 }
 
-/** Remove o harness gerado, para deixar o crate como estava. */
+/** Remove o harness gerado e desfaz o que a ferramenta escreveu no crate. */
 export async function cleanupHarness(p: Pipeline) {
   if (p.harnessPath) await rm(p.harnessPath, { force: true });
+  if (p.manifestoOriginal) {
+    await writeFile(p.manifestoOriginal.caminho, p.manifestoOriginal.conteudo, 'utf8');
+    p.manifestoOriginal = undefined;
+  }
 }

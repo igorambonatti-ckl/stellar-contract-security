@@ -112,234 +112,115 @@ export interface CuratedInvariant {
   observation: string;
 }
 
-export function generateHarness(
-  info: ContractInfo,
-  source: string,
-  invariants: CuratedInvariant[],
-): string {
-  const list = invariants
-    .map((i) => `### ${i.id} — ${i.class}\n\n${i.statement}\n\n*How to observe:* ${i.observation}`)
-    .join('\n\n');
-
-  return `${contractContext(info, source)}
-
-# Curated invariants
-
-A human has accepted these ${invariants.length} properties. Assert exactly these.
-
-${list}
-
-# Task
-
-Write a single Rust file for \`tests/audit_generated.rs\`.
-
-**It is an integration test of the crate \`${info.crateName}\`.** Import the
-contract from the crate directly:
-
-\`\`\`rust
-use ${info.crateName.replace(/-/g, '_')}::{/* Contract type, Client, error enum, DataKey */};
-\`\`\`
-
-**Do not use \`contractimport!\`.** It loads a \`.wasm\` from a build path that does
-not exist at test time, and the file will fail to compile with
-\`No such file or directory\`. The crate is a normal dependency of its own
-integration tests — link it, do not load bytecode.
-
-## Non-negotiable
-
-**1. Assert state, not liveness.** "The call did not panic" is not an oracle.
-Every property must read state back and compare it against an independently
-computed expectation. Where the only available assertion is "this must abort",
-use \`try_*\`, assert **which** error came back, and assert that state did **not**
-change. "Some error occurred" is not acceptable — it passes when the contract
-fails for an unrelated reason.
-
-**2. Principals come from a fixed pool.** A freshly generated \`Address\` cannot
-be authorized in the test host, so fuzzing raw address bytes collapses every
-access-control property into "an unknown caller is rejected". Register a small
-pool and fuzz an **index** into it.
-
-**3. Pin the ledger TTL floors** via \`env.ledger().with_mut(...)\` —
-\`min_persistent_entry_ttl\`, \`min_temp_entry_ttl\`, \`max_entry_ttl\`, and a known
-starting sequence. The host default of 4096 silently swallows small TTL
-operations and makes TTL properties pass for the wrong reason.
-
-**4. Generators must reach the interesting values.** Do not narrow every
-generator to a comfortable range to keep the correct contract passing. Where a
-property needs extreme operands, generate them and assert the *disjunction*:
-either the call aborts with the right error and leaves state untouched, or it
-succeeds and the relation holds.
-
-**5. Every property names the invariant it checks**, by ID, in a doc comment,
-and fails with a message saying what relation broke and with which values.
-
-## Environment
-
-\`soroban_sdk\` with \`testutils\`, and \`proptest\` are available as
-dev-dependencies. \`Env::default()\`, \`env.mock_all_auths()\`,
-\`env.set_auths(&[])\`, \`env.register(Contract, ())\`,
-\`env.register_stellar_asset_contract_v2(admin).address()\`.
-
-### The \`try_*\` signature — get this right
-
-The generated client gives you \`foo(..)\`, which panics on a contract error, and
-\`try_foo(..)\`, which does not. **\`try_foo\` returns a nested \`Result\`:**
-
-\`\`\`rust
-Result<Result<T, ConversionError>, Result<soroban_sdk::Error, InvokeError>>
-//     ^ Ok(Ok(value)) on success        ^ Err(Ok(e)) carries the error value
-\`\`\`
-
-Consequences, all of which are routine mistakes:
-
-- The failure channel carries **\`soroban_sdk::Error\`**, not the contract's own
-  error enum — unless the entry point *declares* a \`Result\` return type. This
-  contract's entry points return plain values and abort via \`panic_with_error!\`,
-  so expect \`soroban_sdk::Error\`.
-- Compare against a specific error with
-  \`e == soroban_sdk::Error::from_contract_error(MyError::Foo as u32)\`.
-- \`Result\` does not implement \`Display\`. In an assertion message use \`{:?}\`,
-  never \`{}\`.
-${
-  info.exampleTest
-    ? `
-### A test from this crate that already compiles
-
-Use it as the authority on the API surface — the client name, how the fixture is
-built, how errors are matched. Where it disagrees with your recollection of the
-SDK, **it is right and you are wrong**.
-
-\`\`\`rust
-${info.exampleTest.source}
-\`\`\`
-`
-    : ''
-}
-
-## Output
-
-1. The complete file in one \`\`\`rust block. No elisions, no \`todo!()\`.
-2. Then **"Assumptions I could not verify"** — anything guessed about the SDK
-   surface, so a human can check it before compiling.
-3. Then **"Invariants I could not express, and why."** An honest "cannot be
-   expressed through the public API" is more useful than a property that
-   silently checks something weaker.`;
-}
-
-export function prioritiseInputs(info: ContractInfo, source: string): string {
-  return `${contractContext(info, source)}
-
-# Task
-
-Produce the **input prior** for a fuzzing campaign against this contract: where
-the interesting values actually are.
-
-Uniform sampling over \`i128\` is close to useless — almost every draw is an
-absurd magnitude rejected by the first guard, so the fuzzer never reaches code
-that needs accumulated state.
-
-## Output format
-
-Return **only** JSON, no prose:
-
-\`\`\`json
-{
-  "literals": [
-    { "value": "0", "why": "exact boundary of the positivity guard" }
-  ],
-  "stateRelative": [
-    { "expr": "balance + 1", "why": "the InsufficientBalance edge, unreachable as a literal" }
-  ],
-  "pool": [
-    { "role": "admin", "why": "the only principal that passes the admin check" }
-  ],
-  "sequences": [
-    { "steps": ["initialize", "deposit(U1, 10^9)", "advance 1036801", "withdraw(U1, ...)"],
-      "builds": "what state this establishes",
-      "exposes": "what it would reveal" }
-  ],
-  "ledgerAdvances": [
-    { "value": "17280", "why": "exact temporary-tier expiry boundary" }
-  ]
-}
-\`\`\`
-
-Be concrete. "A large \`i128\`" is not actionable; \`2^100\` is. Where you want a
-*product* to land on a boundary, say which operands produce it. For ledger
-advances, probe each TTL threshold from both sides.`;
-}
-
 /**
- * Devolve os erros do compilador ao modelo.
+ * A técnica sem a qual a propriedade desta classe é vazia.
  *
- * Esta etapa existe porque errar a superfície do SDK é o modo de falha
- * dominante, e é barato de corrigir: no benchmark de referência, 16 dos 17
- * erros de compilação vinham de uma única suposição errada sobre a assinatura
- * gerada pelo cliente. O compilador é um revisor preciso e literal — devolver o
- * que ele disse costuma bastar.
+ * Isto não é estilo, e não é específico de nenhum contrato — é keyed pela
+ * *classe* da invariante, não pelo domínio. Cada bloco corresponde a uma forma
+ * de um teste ficar verde sem medir nada, observada contra bugs reais:
+ *
+ * - controle de acesso, sob `mock_all_auths()`, é vacuamente verdadeiro: um
+ *   contrato sem `require_auth` se comporta igual a um com;
+ * - aritmética com literais escolhidos a dedo nunca chega perto de um limite,
+ *   porque os valores que uma pessoa escolhe à mão são os confortáveis;
+ * - TTL sem avançar o ledger além da borda nunca observa a expiração.
+ *
+ * Nos três casos o teste compila, roda, fica verde e não mede nada — a única
+ * classe de erro que este projeto trata como grave.
  */
-export function fixHarness(
-  info: ContractInfo,
-  source: string,
-  code: string,
-  errors: string,
-): string {
-  return `The harness below does not compile. Fix it.
+function tecnicaPorClasse(c: string): string {
+  const k = (c || '').toLowerCase();
 
-# Contract source, for reference
+  if (/access control|auth|permission|owner|admin/.test(k)) {
+    return `## This is an access-control property — \`mock_all_auths()\` would void it
+
+\`env.mock_all_auths()\` makes **every** \`require_auth\` succeed. Under it, a
+contract that is missing an authorization check behaves exactly like one that
+has it, so the property is vacuously true and proves nothing.
+
+Assert the negative directly: with \`env.set_auths(&[])\` — no authorization
+available — call the entry point as a principal that should not be allowed, and
+assert it **fails**, and that state did not change. Then, separately, assert the
+authorized path still works. A test that only exercises the happy path is not an
+access-control test.`;
+  }
+
+  if (/arithmetic|overflow|precision|rounding|input validation|bounds/.test(k)) {
+    return `## This property needs a range, not a chosen literal
+
+A hand-picked pair of round numbers never approaches a boundary — the values a
+person picks by hand are the comfortable ones. Use \`proptest!\` and generate
+operands that actually reach the edges: \`0\`, \`1\`, \`i128::MAX\`, \`i128::MAX / 2\`,
+and values immediately above and below the contract's own guards.
+
+Do **not** narrow the generator to keep the correct contract green. Assert the
+**disjunction**: either the call aborts with the specific error it should and
+state is untouched, or it succeeds and the relation holds. Narrowing the range
+until everything passes is how a harness reports success without testing
+anything.`;
+  }
+
+  if (/ttl|archival|expiry|storage tier|temporary|persistent/.test(k)) {
+    return `## This property needs the ledger to actually move
+
+Pin the floors first with \`env.ledger().with_mut(...)\` —
+\`min_persistent_entry_ttl\`, \`min_temp_entry_ttl\`, \`max_entry_ttl\`, and a known
+\`sequence_number\`. The host default of 4096 silently swallows small TTL
+operations.
+
+Then **advance \`sequence_number\` past the cliff** and read back. A TTL property
+that never crosses an expiry boundary observes nothing. Probe both sides: one
+ledger before the cliff the entry must still be there; one after, it must be gone
+(temporary) or restorable (persistent).
+
+\`env.ledger().with_mut(|l| l.sequence_number += N)\` is how you move it. It does
+exist — do not claim otherwise and skip the check.
+
+### Reading a TTL from a test
+
+Storage is scoped to the contract, so a TTL read only works from inside its
+context:
 
 \`\`\`rust
-${source}
+let ttl = env.as_contract(&contract_id, || env.storage().instance().get_ttl());
+let ttl = env.as_contract(&contract_id, || env.storage().persistent().get_ttl(&key));
 \`\`\`
 
-# Current harness
+Without this, a property about \`extend_ttl\` has nothing to assert on and
+degrades into "the call did not panic", which is not an oracle. If the invariant
+is about an entry being bumped, read the TTL before and after and compare — do
+not settle for checking that the value is still readable.`;
+  }
 
-\`\`\`rust
-${code}
-\`\`\`
+  if (/conservation|supply|value|balance|accounting/.test(k)) {
+    return `## Sum both sides, across more than one actor
 
-# Compiler output
+A conservation law checked with one principal and one operation is satisfied by
+almost any implementation. Use at least two or three principals, run a sequence
+of operations, and assert the **total** before equals the total after, plus or
+minus exactly what moved. Include the contract's own holdings in the sum — a
+quantity that leaks into the contract itself still balances if you only sum the
+users.`;
+  }
 
-\`\`\`
-${errors}
-\`\`\`
-
-# Task
-
-Return the **complete corrected file** in one \`\`\`rust block. Not a diff, not a
-fragment — the whole file, ready to write over the old one.
-
-Rules:
-
-- The crate is \`${info.crateName}\`; import from \`${info.crateName.replace(/-/g, '_')}\`.
-  **Never** \`contractimport!\`.
-- If a method the compiler rejects does not exist, **do not invent a replacement
-  name**. Either use an API you are certain of, or delete that assertion and say
-  so in a comment on the line. A property that silently checks something weaker
-  is worse than a missing one.
-- Do not weaken an assertion just to make it compile. Where the only available
-  assertion is "this must abort", keep asserting **which** error came back.
-- Keep every property that already compiles unchanged.`;
+  return '';
 }
 
 /**
  * Um teste para **uma** invariante.
  *
- * Pedir um arquivo de 1200 linhas com 25 propriedades é tudo-ou-nada: um erro
+ * Pedir um arquivo com todas as propriedades de uma vez é tudo-ou-nada: um erro
  * em qualquer uma derruba o arquivo inteiro, e foi o que aconteceu com todos os
- * modelos testados — 43 a 59 erros por tentativa, em modelos que escrevem Rust
+ * modelos medidos — 43 a 59 erros por tentativa, em modelos que escrevem Rust
  * correto quando o escopo é pequeno.
- *
- * Um teste por invariante troca uma falha total por falhas isoladas: o que não
- * compila cai, o resto segue. Também casa com a etapa de validação, que já dá
- * veredito por invariante, e deixa cada chamada curta o bastante para caber
- * folgada no limite de saída de qualquer modelo.
  */
 export function generateOneTest(
   info: ContractInfo,
   source: string,
   inv: CuratedInvariant,
 ): string {
+  const slug = inv.id.toLowerCase().replace(/[^a-z0-9]/g, '');
+
   return `${contractContext(info, source)}
 ${
   info.exampleTest
@@ -354,49 +235,49 @@ ${inv.statement}
 
 *How to observe:* ${inv.observation}
 
+${tecnicaPorClasse(inv.class)}
+
 # Task
 
 Write **one** \`#[test]\` function that asserts this single invariant, plus any
 helper it needs. Nothing else.
 
-\`\`\`rust
-#[test]
-fn ${inv.id.toLowerCase().replace(/[^a-z0-9]/g, '')}_<descritivo>() {
-    // ...
-}
-\`\`\`
-
-The function name **must start with \`${inv.id.toLowerCase().replace(/[^a-z0-9]/g, '')}\`** — the
-pipeline matches a failing test back to its invariant by that prefix, and a test
-whose failure cannot be attributed is not a finding.
+The function name **must start with \`${slug}\`** — the pipeline matches a failing
+test back to its invariant by that prefix, and a test whose failure cannot be
+attributed is not a finding.
 
 ## Rules
 
-- **Assert state, not liveness.** Read state back and compare against a value you
-  computed yourself. Where the only assertion available is "this must abort", use
-  \`try_*\`, assert **which** error came back, and assert state did not change.
+- **Assert state, not liveness.** "The call did not panic" is not an oracle. Read
+  state back and compare against a value you computed yourself. Where the only
+  assertion available is "this must abort", use \`try_*\`, assert **which** error
+  came back, and assert state did not change.
 - \`try_foo\` returns \`Result<Result<T, _>, Result<soroban_sdk::Error, InvokeError>>\`.
-  The error side carries \`soroban_sdk::Error\`, not the contract's enum, unless the
-  entry point declares a \`Result\` return type. Compare with
+  The error side carries \`soroban_sdk::Error\`, not the contract's own enum, unless
+  the entry point declares a \`Result\` return type. Compare with
   \`soroban_sdk::Error::from_contract_error(MyError::Foo as u32)\`. \`Result\` has no
-  \`Display\` — use \`{:?}\` in messages.
+  \`Display\` — use \`{:?}\` in messages, never \`{}\`.
 - Principals come from addresses you register in the fixture, never from raw
-  fuzzed bytes: a generated \`Address\` cannot be authorized.
-- If the invariant touches TTL, pin the ledger floors with
-  \`env.ledger().with_mut(...)\` — the host default of 4096 swallows small TTL
-  operations and the property passes for the wrong reason.
-- Prefer a plain \`#[test]\` over \`proptest!\` unless the property genuinely needs
-  generated inputs.
+  fuzzed bytes: a generated \`Address\` cannot be authorized, so fuzzing address
+  bytes collapses every access-control property into "an unknown caller is
+  rejected".
+- Use \`proptest!\` whenever the property quantifies over a **range** of inputs —
+  any property about amounts, balances or ledger positions does. A plain
+  \`#[test]\` with hand-picked literals only proves the property at the literals
+  you picked. Reserve plain \`#[test]\` for properties about a fixed sequence of
+  calls.
 
 ## Output
 
 Return **only** the Rust code in one \`\`\`rust block: **your own \`use\` statements**,
 then the test function and any helper it needs. No prose.
 
-Your snippet is placed inside its own \`mod ${inv.id.toLowerCase()} { ... }\`, so import
-everything you use — \`soroban_sdk::testutils::{Address as _, Ledger as _}\`,
-\`use ${info.crateName.replace(/-/g, '_')}::*;\`, and anything else. Nothing is in scope
-that you do not import, and nothing you import can collide with another test.
+The pipeline wraps your snippet in \`mod ${slug} { ... }\` for you — **do not write
+a \`mod\` yourself**, or it ends up nested. Import everything you use:
+\`soroban_sdk::testutils::{Address as _, Ledger as _}\`,
+\`use ${info.crateName.replace(/-/g, '_')}::*;\`, and anything else. Nothing is in
+scope that you do not import, and nothing you import can collide with another
+test.
 
 If this invariant cannot be expressed through the public API, return exactly:
 
@@ -411,7 +292,7 @@ If this invariant cannot be expressed through the public API, return exactly:
  * A etapa de correção existia antes e não funcionava: o arquivo inteiro vinha
  * com 43 a 59 erros, e devolver tudo de uma vez pedia ao modelo que consertasse
  * um arquivo que ele já tinha demonstrado não saber escrever. Com um teste por
- * chamada o erro é curto, específico, e quase sempre sobre uma assinatura só.
+ * chamada o erro é curto e quase sempre sobre uma assinatura só.
  */
 export function fixOneTest(
   info: ContractInfo,

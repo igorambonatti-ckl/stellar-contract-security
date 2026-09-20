@@ -72,20 +72,36 @@ import os" 2>/dev/null || echo erro)
   # O harness ficou no crate. Para cada bug plantado, liga a feature e vê se
   # algum teste fica vermelho. Uma falha aqui é a evidência positiva: o harness
   # que o modelo escreveu, sem nunca ter visto o bug, o encontrou.
-  DETECTADOS=0; QUAIS=""
-  if [ -f "$HARNESS" ]; then
+  #
+  # O controle limpo vem primeiro e é eliminatório. Um teste que já falha
+  # contra o contrato correto falha contra qualquer versão dele, então um
+  # harness vermelho de nascença marca os sete bugs e não detectou nenhum. A
+  # primeira medição deste braço reportou 7/7 exatamente assim — com cinco
+  # testes que falhavam sozinhos. Sem esta porta, o número é indistinguível de
+  # uma detecção real.
+  DETECTADOS=0; QUAIS=""; SLUG=$(echo "$M" | tr '/' '_')
+  if [ ! -f "$HARNESS" ]; then
+    echo "    sem harness — nada a medir"
+  elif ! (cd "$VAULT" && PROPTEST_CASES=64 cargo test -p soroban-vault \
+          --test audit_generated > "$DETALHE/$SLUG.limpo.out" 2>&1); then
+    echo "    ✗✗ o harness falha contra o contrato LIMPO — detecção não medível"
+    QUAIS="baseline-vermelha"; DETECTADOS=-1
+  else
     for B in "${BUGS[@]}"; do
       if ! (cd "$VAULT" && PROPTEST_CASES=64 cargo test -p soroban-vault \
-            --features "$B" --test audit_generated > "$DETALHE/$B.out" 2>&1); then
+            --features "$B" --test audit_generated > "$DETALHE/$SLUG.$B.out" 2>&1); then
         DETECTADOS=$((DETECTADOS+1))
+        # Qual teste ficou vermelho — uma detecção que não se atribui a uma
+        # invariante não é uma detecção, é um harness instável.
+        QUEM=$(grep -oE '^\s{4}[a-z0-9_]+::[a-z0-9_]+$' "$DETALHE/$SLUG.$B.out" | tr -d ' ' | paste -sd, -)
         QUAIS="$QUAIS${QUAIS:+,}${B#bug_}"
-        echo "    ✓ pegou $B"
+        echo "    ✓ pegou $B  ← ${QUEM:-?}"
       else
         echo "    ✗ passou $B"
       fi
     done
-    cp "$HARNESS" "$DETALHE/$(echo "$M" | tr '/' '_').rs"
   fi
+  [ -f "$HARNESS" ] && cp "$HARNESS" "$DETALHE/$SLUG.rs"
 
   cat "$DETALHE/$(echo "$M" | tr '/' '_').json" \
     | MODELO="$M" STATUS="$S" SEG=$((FIM-INI)) DET="$DETECTADOS" QUAIS="$QUAIS" PRECOS="$precos" python3 -c "
