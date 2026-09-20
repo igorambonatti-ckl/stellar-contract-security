@@ -68,13 +68,18 @@ env.ledger().set_sequence_number(n);             // NOT \`set_sequence\`
 // found for struct Instance", which reads like the method does not exist.
 use soroban_sdk::testutils::storage::{Instance as _, Persistent as _, Temporary as _};
 
-// And they only work from inside the contract's own storage context:
+// EVERY env.storage() access from a test must be inside as_contract -- not
+// just the TTL ones. has(), get(), set(), all of them. Outside it the SDK
+// panics on a debug assertion whose message names storage.rs, not your code,
+// so it reads like an SDK bug rather than a missing wrapper. One unwrapped
+// has() in a rig turned every property red against the CORRECT contract and
+// cost a whole measurement round.
 env.as_contract(&id, || env.storage().instance().get_ttl());          // -> u32
 env.as_contract(&id, || env.storage().persistent().get_ttl(&key));    // -> u32
 env.as_contract(&id, || env.storage().temporary().get_ttl(&key));     // -> u32
 
-// Every entry of a tier, as a Map<Val, Val> — this is how a conservation law
-// sums over holders the test did not create:
+// Every entry of a tier, as an untyped Map<Val, Val> -- rarely what you want;
+// summing over the principals the rig created is simpler and typed:
 env.as_contract(&id, || env.storage().persistent().all());
 
 // A token to move around:
@@ -85,8 +90,13 @@ soroban_sdk::token::TokenClient::new(&env, &tok).balance(&who);
 
 ### Things that do not exist — do not reach for them
 
-- There is no \`iter()\` or \`keys()\` on storage. To walk every entry use
-  \`.all()\` from the testutils trait above, which returns a \`Map<Val, Val>\`.
+- There is no \`iter()\` or \`keys()\` on storage. \`.all()\` from the testutils trait
+  above is the only way to walk every entry, and it returns \`Map<Val, Val>\` —
+  untyped, so every key and value needs converting back before it means
+  anything. **Prefer summing over the principals the rig created**, which are
+  typed and always in scope. Reach for \`.all()\` only when the property is
+  genuinely about entries no test created, and expect to do the conversion
+  work.
 - **\`InvokeError\` has no \`to_contract_error()\`.** Compare the value instead:
   \`e == soroban_sdk::Error::from_contract_error(MyError::Foo as u32)\`.
 - There is no \`soroban_sdk::testutils::EnvExt\`. Everything you need on \`Env\` is
@@ -424,6 +434,40 @@ Import what you need, including \`use proptest::prelude::*;\` and
 }
 
 /**
+ * Os campos e métodos que o rig realmente expõe.
+ *
+ * Mandar o código do rig inteiro deveria bastar e não basta: numa medição, 9
+ * dos 12 trechos gerados falharam com `no field vault_id on type &Rig` — o
+ * campo se chama `id`, e o modelo escreveu o nome que lhe parecia natural
+ * mesmo tendo a definição à vista. Uma lista curta e explícita é mais difícil
+ * de ignorar que uma struct no meio de 150 linhas.
+ */
+function superficieDoRig(rig: string): string {
+  const campos: string[] = [];
+  const structo = /pub\s+struct\s+Rig\s*\{([\s\S]*?)\n\}/.exec(rig);
+  if (structo) {
+    for (const m of structo[1].matchAll(/pub\s+([a-z_][a-z0-9_]*)\s*:\s*([^,\n]+)/gi)) {
+      campos.push(`- \`r.${m[1]}\` — \`${m[2].trim().replace(/,$/, '')}\``);
+    }
+  }
+
+  const metodos: string[] = [];
+  for (const bloco of rig.matchAll(/impl\s+Rig\s*\{([\s\S]*?)\n\}/g)) {
+    for (const m of bloco[1].matchAll(/pub\s+fn\s+([a-z_][a-z0-9_]*)\s*\(([^)]*)\)\s*(->\s*[^{]+)?/gi)) {
+      metodos.push(`- \`r.${m[1]}(${m[2].replace(/&self,?\s*/, '').trim()})\`` +
+        (m[3] ? ` ${m[3].trim()}` : ''));
+    }
+  }
+
+  const partes = [
+    campos.length ? `**Fields**\n\n${campos.join('\n')}` : '',
+    metodos.length ? `**Methods**\n\n${metodos.join('\n')}` : '',
+  ].filter(Boolean);
+
+  return partes.length ? partes.join('\n\n') : '(the rig exposes no public surface — say so)';
+}
+
+/**
  * Uma invariante vira uma asserção sobre um estado que já existe.
  *
  * O contraste com o que havia antes é todo o ponto: pedia-se um teste completo,
@@ -450,6 +494,14 @@ a randomly generated sequence, so it sees many states, not one.
 ${rig}
 \`\`\`
 
+## What \`r\` gives you — these exact names, nothing else
+
+${superficieDoRig(rig)}
+
+Using any other field or method is a compile error, and a discarded property.
+Do not guess a name that "should" be there: if the invariant needs something
+absent from this list, say so instead of inventing it.
+
 # Invariant to assert
 
 **${inv.id}** — ${inv.class}
@@ -470,6 +522,9 @@ pub fn check(r: &rig::Rig) { ... }
 
 plus any helper it needs. Nothing else — no \`#[test]\`, no \`proptest!\`, no
 fixture. The pipeline wraps it.
+
+\`check\` is a **free function**, not a method. There is no \`self\` and no
+\`Self\` — writing either is a compile error and costs the property.
 
 ## Rules
 

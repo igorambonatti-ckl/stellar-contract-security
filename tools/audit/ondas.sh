@@ -80,8 +80,12 @@ import os" 2>/dev/null || echo erro)
   # testes que falhavam sozinhos. Sem esta porta, o número é indistinguível de
   # uma detecção real.
   DETECTADOS=0; QUAIS=""; SLUG=$(echo "$M" | tr '/' '_')
-  if [ ! -f "$HARNESS" ]; then
-    echo "    sem harness — nada a medir"
+  # Um harness vazio passa no controle limpo — não há o que falhar — e sai como
+  # "0/7", indistinguível de um harness que rodou e não achou nada. São coisas
+  # diferentes: um mediu e não encontrou, o outro não mediu.
+  if [ ! -f "$HARNESS" ] || ! grep -q "fn .*_sequencia" "$HARNESS"; then
+    echo "    harness sem nenhum teste — nada a medir"
+    QUAIS="sem-testes"; DETECTADOS=-1
   elif ! (cd "$VAULT" && PROPTEST_CASES=64 cargo test -p soroban-vault \
           --test audit_generated > "$DETALHE/$SLUG.limpo.out" 2>&1); then
     echo "    ✗✗ o harness falha contra o contrato LIMPO — detecção não medível"

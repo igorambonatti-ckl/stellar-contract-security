@@ -154,6 +154,46 @@ function consertarImports(p: Pipeline, crate: string, code: string, id: string):
 }
 
 /**
+ * Garante que o trecho define `check`, que é o que o driver chama.
+ *
+ * O erro mais comum das últimas medições não era sobre o contrato nem sobre o
+ * SDK: o modelo devolvia o **corpo** da asserção em vez da função, e o
+ * compilador dizia `cannot find function check` ou `expected item, found
+ * keyword if`. Dez de vinte trechos numa única onda.
+ *
+ * As três formas observadas têm conserto mecânico, então pedir ao modelo que
+ * acerte é gastar uma rodada de reparo com algo que dá para reescrever:
+ *
+ *  1. já tem `fn check` — passa direto;
+ *  2. tem uma função com a assinatura certa e outro nome — renomeia;
+ *  3. são só statements soltos — embrulha, deixando os `use` do lado de fora
+ *     porque eles precisam estar no topo do módulo.
+ *
+ * Não inventa asserção nenhuma: o corpo é exatamente o que o modelo escreveu.
+ */
+function normalizarCheck(p: Pipeline, code: string, id: string): string {
+  // Crases soltas sobram de fence aninhado e viram `unknown start of token`.
+  let out = code.split('\n').filter((l) => l.trim() !== '```' && l.trim() !== '`').join('\n');
+
+  if (/\bfn\s+check\s*\(/.test(out)) return out;
+
+  const outraFn = /\b(?:pub\s+)?fn\s+([a-z_][a-z0-9_]*)\s*\(\s*[a-z_]+\s*:\s*&\s*(?:rig::)?Rig\s*\)/i.exec(out);
+  if (outraFn) {
+    log(p, `${id}: a função se chamava \`${outraFn[1]}\`; renomeei para \`check\`, que é o que o driver chama`);
+    return out.replace(outraFn[0], outraFn[0].replace(`fn ${outraFn[1]}`, 'fn check'));
+  }
+
+  const linhas = out.split('\n');
+  const corte = linhas.findIndex((l) => l.trim() && !/^\s*(use\s|#!?\[|\/\/)/.test(l));
+  if (corte === -1) return out;
+
+  const imports = linhas.slice(0, corte).join('\n');
+  const corpo = linhas.slice(corte).join('\n');
+  log(p, `${id}: o trecho era o corpo da asserção, não a função; embrulhei em \`fn check\``);
+  return `${imports}\n\npub fn check(r: &rig::Rig) {\n${corpo}\n}\n`;
+}
+
+/**
  * Gera o rig e não devolve nada que não compile.
  *
  * O rig é a única peça que não pode ser descartada: toda asserção é escrita
@@ -238,22 +278,47 @@ async function construirRig(
   //
   // É verificável sem rodar nada, então não depende de o modelo lembrar: numa
   // medição ele aplicou a regra em dois entry points e esqueceu em três.
-  const crus = [...code.matchAll(/\b(?:c|client)\s*\.\s*([a-z_][a-z0-9_]*)\s*\(/gi)]
-    .map((m) => m[1])
-    .filter((n) => !n.startsWith('try_') && info.entryPoints.some((e) => e.name === n));
+  const queixas: string[] = [];
 
+  const crus = [...new Set(
+    [...code.matchAll(/\b(?:c|client)\s*\.\s*([a-z_][a-z0-9_]*)\s*\(/gi)]
+      .map((m) => m[1])
+      .filter((n) => !n.startsWith('try_') && info.entryPoints.some((e) => e.name === n)),
+  )];
   if (crus.length) {
-    const unicos = [...new Set(crus)];
-    log(p, `rig: ${unicos.join(', ')} chamado(s) sem try_ — um panic aqui mata a sequência; pedindo correção`);
+    queixas.push(
+      `In \`apply\`, these entry points are called **without** \`try_\`: ` +
+      `${crus.map((n) => `\`${n}\``).join(', ')}. The fuzzer generates arguments the contract ` +
+      'is right to refuse; a direct call panics on refusal, ends the sequence at its first ' +
+      'invalid step, and makes the test fail against the *correct* contract. Route every ' +
+      'entry-point call through `try_*` and discard the result with `let _ =`.',
+    );
+  }
+
+  // `env.storage()` fora de `as_contract` dispara um debug assert do SDK cuja
+  // mensagem aponta para `storage.rs`, não para o rig — lê-se como bug do SDK.
+  // Um `.has()` desembrulhado deixou todas as dezenove propriedades vermelhas
+  // contra o contrato correto e custou uma rodada inteira de medição.
+  const soltos = [...code.matchAll(/\.storage\s*\(\s*\)/g)]
+    .filter((m) => !/as_contract/.test(code.slice(Math.max(0, m.index - 300), m.index)));
+  if (soltos.length) {
+    queixas.push(
+      `There ${soltos.length === 1 ? 'is' : 'are'} ${soltos.length} \`env.storage()\` ` +
+      `access${soltos.length === 1 ? '' : 'es'} that ${soltos.length === 1 ? 'does' : 'do'} not ` +
+      'appear to be inside `env.as_contract(&id, || ...)`. Storage is scoped to the contract: ' +
+      'outside that closure the SDK panics on a debug assertion pointing at `storage.rs`, which ' +
+      'looks like an SDK bug rather than a missing wrapper. Wrap every one of them.',
+    );
+  }
+
+  if (queixas.length) {
+    log(p, `rig: ${queixas.length} problema(s) que compilam mas invalidam a medição; pedindo correção`);
     const fix = await complete({
       system: systemPrompt(),
-      user: `${code}\n\n---\n\nIn \`apply\`, these entry points are called **without** \`try_\`: ` +
-        `${unicos.map((n) => `\`${n}\``).join(', ')}.\n\n` +
-        'The fuzzer generates arguments the contract is right to refuse. A direct call panics ' +
-        'on refusal, which ends the operation sequence at its first invalid step and makes the ' +
-        'test fail against the *correct* contract — so every property gets discarded.\n\n' +
-        'Return the complete rig in one ```rust block with every entry-point call in `apply` ' +
-        'going through `try_*` and its result discarded with `let _ =`. Change nothing else.',
+      user: `This rig compiles, but has problems that would make every property fail against ` +
+        `the correct contract.\n\n\`\`\`rust\n${code}\n\`\`\`\n\n` +
+        queixas.map((q, i) => `${i + 1}. ${q}`).join('\n\n') +
+        '\n\nReturn the complete rig in one ```rust block with these fixed. Change nothing else.',
       model: p.model,
       maxTokens: 6000,
     }).catch(() => null);
@@ -266,10 +331,10 @@ async function construirRig(
       // Só aceita se ainda compilar: uma correção que quebra o rig é pior que
       // o problema que ela conserta.
       if ((await compila()).code === 0) {
-        log(p, 'rig: apply passa a usar try_ em todos os entry points');
+        log(p, 'rig: problemas corrigidos, e ainda compila');
         return candidato;
       }
-      log(p, '!! a correção do try_ quebrou o rig; fico com a versão que compila');
+      log(p, '!! a correção quebrou o rig; fico com a versão que compila, com os problemas');
       await escreverSo(code);
     }
   }
@@ -661,8 +726,11 @@ async function run(p: Pipeline, runMutants: boolean) {
         if (!r) continue;
         p.usage.entrada += r.usage?.entrada ?? 0;
         p.usage.saida += r.usage?.saida ?? 0;
-        gerados[i] = consertarImports(
-          p, info.crateName.replace(/-/g, '_'), extractCode(r.text, 'rust').trim(), inv.id);
+        const bruto = extractCode(r.text, 'rust').trim();
+        gerados[i] = /^\/\/\s*IMPOSSIVEL/i.test(bruto)
+          ? bruto
+          : normalizarCheck(p, consertarImports(
+              p, info.crateName.replace(/-/g, '_'), bruto, inv.id), inv.id);
         log(p, `${inv.id}: ${gerados[i]!.split('\n').length} linhas`);
       }
     }));
@@ -794,11 +862,12 @@ proptest! {
           // tentativas seguintes passam a consertar o erro que a correção
           // anterior criou — foi o que consumiu três rodadas em quatro
           // invariantes de uma medição, sem nunca voltar ao problema real.
-          if (!/\bfn\s+check\s*\(/.test(novo)) {
-            log(p, `${t.inv.id}: a correção perdeu \`fn check\`; descartando esta tentativa`);
+          const normalizado = normalizarCheck(p, novo, t.inv.id);
+          if (!/\bfn\s+check\s*\(/.test(normalizado)) {
+            log(p, `${t.inv.id}: a correção perdeu \`fn check\` e não dava para reconstruir`);
             break;
           }
-          t.code = novo;
+          t.code = normalizado;
           await escrever([t]);
           r = await compila();
           if (r.code === 0) {
