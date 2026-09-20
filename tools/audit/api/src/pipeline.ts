@@ -141,14 +141,66 @@ function consertarImports(p: Pipeline, crate: string, code: string, id: string):
     out = out.replace(/^\s*use\s+super::\*\s*;/gm, `use ${crate}::*;`);
     log(p, `${id}: troquei \`use super::*\` por \`use ${crate}::*\` — o código vive em tests/, não dentro do crate`);
   }
-  if (!new RegExp(`use\\s+${crate}\\b`).test(out)) {
+  // O glob especificamente, não "alguma coisa do crate": um
+  // `use soroban_vault::{Vault};` seletivo satisfaz a busca por caminho e ainda
+  // assim deixa `VaultClient` e `DataKey` fora de escopo.
+  if (!new RegExp(`use\\s+${crate}::\\*`).test(out)) {
     out = `use ${crate}::*;\n` + out;
-    log(p, `${id}: acrescentei \`use ${crate}::*\` — o trecho não importava o crate`);
+    log(p, `${id}: acrescentei \`use ${crate}::*\` — faltava o import geral do crate`);
   }
   if (!/use\s+soroban_sdk::/.test(out)) {
     out = 'use soroban_sdk::testutils::{Address as _, Ledger as _};\n'
         + 'use soroban_sdk::{Address, Env};\n' + out;
     log(p, `${id}: acrescentei os imports básicos do soroban_sdk`);
+  }
+  // Uma rodada de reparo largou o prelude do proptest e as duas seguintes
+  // gastaram-se em `cannot find macro proptest` — um erro que a correção
+  // anterior criou, não o que ela devia consertar.
+  if (/prop_oneof!|proptest!|Just\(|impl Strategy/.test(out) && !/use\s+proptest::/.test(out)) {
+    out = 'use proptest::prelude::*;\n' + out;
+    log(p, `${id}: acrescentei \`use proptest::prelude::*\` — o trecho usa proptest sem importá-lo`);
+  }
+  return out;
+}
+
+/**
+ * Reescreve acessos a campos do rig que não existem, quando há um único
+ * candidato óbvio.
+ *
+ * `no field vault_id on type &Rig` foi o erro mais teimoso das medições — oito
+ * ocorrências numa onda, com a lista de campos do rig explícita no prompt logo
+ * acima. O campo se chama `id`; o modelo escreve o nome que lhe parece natural
+ * para aquele contrato.
+ *
+ * A reescrita só acontece quando o nome **não existe** — ou seja, o código já
+ * seria erro de compilação — e quando exatamente um campo real é sufixo ou
+ * prefixo do nome inventado. Ambiguidade não se resolve por palpite: se dois
+ * campos casam, deixa o compilador reclamar, porque um palpite errado aqui não
+ * gera erro, gera um teste que lê a coisa errada e passa.
+ */
+function alinharCamposDoRig(p: Pipeline, code: string, rig: string, id: string): string {
+  const campos = new Set<string>();
+  const structo = /pub\s+struct\s+Rig\s*\{([\s\S]*?)\n\}/.exec(rig);
+  if (structo) {
+    for (const m of structo[1].matchAll(/pub\s+([a-z_][a-z0-9_]*)\s*:/gi)) campos.add(m[1]);
+  }
+  for (const bloco of rig.matchAll(/impl\s+Rig\s*\{([\s\S]*?)\n\}/g)) {
+    for (const m of bloco[1].matchAll(/pub\s+fn\s+([a-z_][a-z0-9_]*)\s*\(/gi)) campos.add(m[1]);
+  }
+  if (campos.size === 0) return code;
+
+  let out = code;
+  const inventados = new Set(
+    [...code.matchAll(/\br\s*\.\s*([a-z_][a-z0-9_]*)/gi)]
+      .map((m) => m[1])
+      .filter((n) => !campos.has(n)),
+  );
+
+  for (const nome of inventados) {
+    const candidatos = [...campos].filter((c) => nome.endsWith(c) || nome.startsWith(c));
+    if (candidatos.length !== 1) continue;
+    out = out.replace(new RegExp(`\\br\\s*\\.\\s*${nome}\\b`, 'g'), `r.${candidatos[0]}`);
+    log(p, `${id}: \`r.${nome}\` não existe no rig; era \`r.${candidatos[0]}\``);
   }
   return out;
 }
@@ -175,6 +227,15 @@ function normalizarCheck(p: Pipeline, code: string, id: string): string {
   // Crases soltas sobram de fence aninhado e viram `unknown start of token`.
   let out = code.split('\n').filter((l) => l.trim() !== '```' && l.trim() !== '`').join('\n');
 
+  // `fn check()` sem parâmetro compila sozinho e quebra no driver, que chama
+  // `check(&r)`. Reescrever a assinatura é mais barato que uma rodada de
+  // reparo, e o corpo não muda.
+  const semArg = /\b((?:pub\s+)?fn\s+check\s*)\(\s*\)/.exec(out);
+  if (semArg) {
+    log(p, `${id}: \`fn check()\` não recebia o rig; completei a assinatura`);
+    out = out.replace(semArg[0], `${semArg[1]}(r: &rig::Rig)`);
+  }
+
   if (/\bfn\s+check\s*\(/.test(out)) return out;
 
   const outraFn = /\b(?:pub\s+)?fn\s+([a-z_][a-z0-9_]*)\s*\(\s*[a-z_]+\s*:\s*&\s*(?:rig::)?Rig\s*\)/i.exec(out);
@@ -189,6 +250,18 @@ function normalizarCheck(p: Pipeline, code: string, id: string): string {
 
   const imports = linhas.slice(0, corte).join('\n');
   const corpo = linhas.slice(corte).join('\n');
+
+  // Embrulhar um corpo com chaves desbalanceadas move o desequilíbrio para o
+  // módulo e engole o `proptest!` que vem depois — o erro aparece a dezenas de
+  // linhas dali, dentro de uma macro, e não se parece nada com a causa.
+  // Melhor devolver como veio e deixar o compilador apontar o lugar certo.
+  const abre = (corpo.match(/\{/g) ?? []).length;
+  const fecha = (corpo.match(/\}/g) ?? []).length;
+  if (abre !== fecha) {
+    log(p, `${id}: o trecho tem chaves desbalanceadas; não embrulhei, para o erro apontar o lugar certo`);
+    return out;
+  }
+
   log(p, `${id}: o trecho era o corpo da asserção, não a função; embrulhei em \`fn check\``);
   return `${imports}\n\npub fn check(r: &rig::Rig) {\n${corpo}\n}\n`;
 }
@@ -217,55 +290,101 @@ async function construirRig(
     await writeFile(
       caminho,
       harnessHeader(info) + '\nmod rig {\n' + code + '\n}\n\n' +
-      '#[test]\nfn rig_monta() { let _ = rig::setup(); }\n',
+      // O teste do rig usa exatamente o driver que as asserções vão usar.
+      // Verificar só `setup()` deixava passar um `op_strategy(r: Rig)` que o
+      // driver chama sem argumento: o rig compilava sozinho, as quinze
+      // asserções eram geradas, e só então tudo caía junto.
+      'mod contrato_com_o_driver {\n' +
+      'use super::rig;\n' +
+      'use proptest::prelude::*;\n' +
+      'proptest! {\n' +
+      '    #![proptest_config(ProptestConfig::with_cases(1))]\n' +
+      '    #[test]\n' +
+      '    fn rig_dirige(ops in prop::collection::vec(rig::op_strategy(), 1..3)) {\n' +
+      '        let r = rig::setup();\n' +
+      '        for op in &ops { rig::apply(&r, op); }\n' +
+      '    }\n' +
+      '}\n}\n',
       'utf8',
     );
   };
   const compila = () => exec(p, info.path, 'cargo',
     ['test', '-p', info.crateName, '--test', 'audit_generated', '--no-run']);
 
-  const inicial = await complete({
-    system: systemPrompt(),
-    user: generateRig(info, src),
-    model: p.model,
-    maxTokens: 6000,
-  }).catch((e) => { log(p, `!! rig: ${e.message}`); return null; });
-  if (!inicial) return null;
-  p.usage.entrada += inicial.usage?.entrada ?? 0;
-  p.usage.saida += inicial.usage?.saida ?? 0;
-
   const crate = info.crateName.replace(/-/g, '_');
-  let code = consertarImports(p, crate, extractCode(inicial.text, 'rust').trim(), 'rig');
-  log(p, `rig: ${code.split('\n').length} linhas`);
 
-  await escreverSo(code);
-  let r = await compila();
+  // O rig tem que definir estas quatro coisas: é o que o driver chama e o que
+  // as asserções leem. Uma rodada de reparo devolveu um rig sem `setup`, e as
+  // duas seguintes gastaram-se em `cannot find function setup` — consertando o
+  // erro que a correção anterior criou, nunca o original.
+  const completo = (c: string) =>
+    /pub\s+struct\s+Rig\b/.test(c) && /pub\s+fn\s+setup\s*\(/.test(c) &&
+    /pub\s+fn\s+apply\s*\(/.test(c) && /pub\s+fn\s+op_strategy\s*\(/.test(c);
 
-  for (let tentativa = 1; tentativa <= 6 && r.code !== 0; tentativa++) {
-    const erros = soErros(r.output);
-    log(p, `rig: reparo ${tentativa} — ${erros.split('\n')[0].slice(0, 110)}`);
-    const fix = await complete({
+  let code = '';
+  let r: { code: number | null; output: string } = { code: 1, output: '' };
+
+  // Várias amostras, não uma. O rig compilava de primeira em algumas execuções
+  // e falhava em outras com o mesmo prompt e o mesmo modelo — é variância, e
+  // tratá-la como determinismo transformava metade das rodadas em zero. Uma
+  // geração nova custa uma chamada e escapa de um caminho ruim que nenhuma
+  // quantidade de reparo desfaz.
+  const AMOSTRAS = 3;
+  const REPAROS = 3;
+
+  for (let amostra = 1; amostra <= AMOSTRAS && r.code !== 0; amostra++) {
+    const inicial = await complete({
       system: systemPrompt(),
-      user: fixOneTest(
-        info,
-        { id: 'RIG', statement: 'the shared fixture and operation alphabet', class: 'rig', observation: '' },
-        code,
-        erros,
-      ),
+      user: generateRig(info, src),
       model: p.model,
       maxTokens: 6000,
     }).catch((e) => { log(p, `!! rig: ${e.message}`); return null; });
-    if (!fix) break;
-    p.usage.entrada += fix.usage?.entrada ?? 0;
-    p.usage.saida += fix.usage?.saida ?? 0;
+    if (!inicial) continue;
+    p.usage.entrada += inicial.usage?.entrada ?? 0;
+    p.usage.saida += inicial.usage?.saida ?? 0;
 
-    code = consertarImports(p, crate, extractCode(fix.text, 'rust').trim(), 'rig');
+    code = consertarImports(p, crate, extractCode(inicial.text, 'rust').trim(), 'rig');
+    log(p, `rig: amostra ${amostra}, ${code.split('\n').length} linhas`);
+
     await escreverSo(code);
     r = await compila();
+
+    for (let tentativa = 1; tentativa <= REPAROS && r.code !== 0; tentativa++) {
+      if (p.cancelled) return null;
+      const erros = soErros(r.output);
+      log(p, `rig: reparo ${tentativa} — ${erros.split('\n')[0].slice(0, 110)}`);
+      const fix = await complete({
+        system: systemPrompt(),
+        user: fixOneTest(
+          info,
+          { id: 'RIG', statement: 'the shared fixture and operation alphabet', class: 'rig', observation: '' },
+          code,
+          erros,
+        ),
+        model: p.model,
+        maxTokens: 6000,
+      }).catch((e) => { log(p, `!! rig: ${e.message}`); return null; });
+      if (!fix) break;
+      p.usage.entrada += fix.usage?.entrada ?? 0;
+      p.usage.saida += fix.usage?.saida ?? 0;
+
+      const candidato = consertarImports(p, crate, extractCode(fix.text, 'rust').trim(), 'rig');
+      if (!completo(candidato)) {
+        log(p, 'rig: a correção perdeu Rig/setup/apply/op_strategy; descartada');
+        break;
+      }
+      code = candidato;
+      await escreverSo(code);
+      r = await compila();
+    }
+
+    if (r.code !== 0 && amostra < AMOSTRAS) {
+      log(p, `rig: amostra ${amostra} não converge; gerando outra do zero`);
+    }
   }
 
   if (r.code !== 0) {
-    log(p, '!! o rig não compila depois de seis tentativas — nada pode ser asserido contra ele');
+    log(p, `!! o rig não compila em ${AMOSTRAS} amostras — nada pode ser asserido contra ele`);
     return null;
   }
   log(p, 'rig: compila');
@@ -729,8 +848,8 @@ async function run(p: Pipeline, runMutants: boolean) {
         const bruto = extractCode(r.text, 'rust').trim();
         gerados[i] = /^\/\/\s*IMPOSSIVEL/i.test(bruto)
           ? bruto
-          : normalizarCheck(p, consertarImports(
-              p, info.crateName.replace(/-/g, '_'), bruto, inv.id), inv.id);
+          : alinharCamposDoRig(p, normalizarCheck(p, consertarImports(
+              p, info.crateName.replace(/-/g, '_'), bruto, inv.id), inv.id), rigCode, inv.id);
         log(p, `${inv.id}: ${gerados[i]!.split('\n').length} linhas`);
       }
     }));
@@ -862,7 +981,8 @@ proptest! {
           // tentativas seguintes passam a consertar o erro que a correção
           // anterior criou — foi o que consumiu três rodadas em quatro
           // invariantes de uma medição, sem nunca voltar ao problema real.
-          const normalizado = normalizarCheck(p, novo, t.inv.id);
+          const normalizado = alinharCamposDoRig(
+            p, normalizarCheck(p, novo, t.inv.id), rigCode, t.inv.id);
           if (!/\bfn\s+check\s*\(/.test(normalizado)) {
             log(p, `${t.inv.id}: a correção perdeu \`fn check\` e não dava para reconstruir`);
             break;
@@ -910,6 +1030,21 @@ proptest! {
         status: 'falhou',
         finishedAt: Date.now(),
         detail: 'nenhum teste gerado compila',
+      });
+      setStage(p, 'validar', { status: 'pulado', detail: 'nada para rodar' });
+      relatorio(p, { compilou: false, baselineOk });
+      return;
+    }
+
+    // Zero testes restantes não é "compilou": o arquivo passa a conter só o
+    // rig, o cargo fica verde, e a validação seguinte reportava "todas as 15
+    // sobrevivem ao contrato correto" sobre um arquivo sem nenhuma asserção.
+    if (testes.length === 0) {
+      setStage(p, 'compilar', {
+        status: 'falhou',
+        finishedAt: Date.now(),
+        detail: `nenhuma das ${p.invariants.length} asserções compila`,
+        data: { descartadosCompilacao, reparados },
       });
       setStage(p, 'validar', { status: 'pulado', detail: 'nada para rodar' });
       relatorio(p, { compilou: false, baselineOk });
