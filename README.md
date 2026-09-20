@@ -67,6 +67,12 @@ See it for yourself in about two minutes:
 ./04-prototype-development/scripts/demo.sh
 ```
 
+## Apresentação
+
+- **[`docs/deck/apresentacao.pdf`](docs/deck/apresentacao.pdf)** — 17 slides, 16:9, em português.
+- **[`docs/report/index.html`](docs/report/index.html)** — relatório de auditoria, tema claro e escuro.
+- **[`docs/deck/README.md`](docs/deck/README.md)** — roteiro de 20 min e os comandos de demo ao vivo.
+
 Supporting documents:
 
 - **[Presentation deck](docs/deck.md)** — the 20-minute version.
