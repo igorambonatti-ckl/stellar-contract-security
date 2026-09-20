@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Play, Square, Loader2, CheckCircle2, XCircle, MinusCircle, Circle,
-  ChevronDown, ChevronRight, Trash2,
+  ChevronDown, ChevronRight, Trash2, FolderOpen, Clock,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { Erro } from '../components/Erro';
@@ -33,8 +33,23 @@ function dur(s: Stage) {
   return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
 }
 
+/** Caminhos já auditados, para não ter que escolher de novo. */
+const RECENTES = 'auditoria:recentes';
+
+function lerRecentes(): string[] {
+  try { return JSON.parse(localStorage.getItem(RECENTES) ?? '[]'); } catch { return []; }
+}
+
+function guardarRecente(p: string) {
+  const lista = [p, ...lerRecentes().filter((x) => x !== p)].slice(0, 6);
+  localStorage.setItem(RECENTES, JSON.stringify(lista));
+  return lista;
+}
+
 export function Pipeline() {
   const [path, setPath] = useState('');
+  const [recentes, setRecentes] = useState<string[]>(lerRecentes);
+  const [escolhendo, setEscolhendo] = useState(false);
   const [stages, setStages] = useState<Stage[]>([]);
   const [log, setLog] = useState<string[]>([]);
   const [status, setStatus] = useState<'idle'|'rodando'|'concluido'|'falhou'|'cancelado'>('idle');
@@ -48,16 +63,35 @@ export function Pipeline() {
   useEffect(() => () => es.current?.close(), []);
   useEffect(() => { if (logAberto) fimLog.current?.scrollIntoView({ block: 'end' }); }, [log, logAberto]);
 
-  async function iniciar() {
+  async function escolherPasta() {
+    setEscolhendo(true); setErro(null);
+    try {
+      const res = await fetch('/api/pick-folder', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ startIn: path.trim() || undefined }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      // Cancelar devolve null e não é erro.
+      if (json.path) setPath(json.path);
+    } catch (e) {
+      setErro((e as Error).message);
+    } finally {
+      setEscolhendo(false);
+    }
+  }
+
+  async function iniciar(alvo = path) {
     setErro(null); setStages([]); setLog([]); setStatus('rodando'); setAberto({});
     try {
       const res = await fetch('/api/pipeline', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: path.trim(), hiddenFeatures: [] }),
+        body: JSON.stringify({ path: alvo.trim(), hiddenFeatures: [] }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       setId(json.id);
+      setRecentes(guardarRecente(alvo.trim()));
 
       const src = new EventSource(`/api/pipeline/${json.id}/stream`);
       es.current = src;
@@ -100,20 +134,44 @@ export function Pipeline() {
         </p>
       </header>
 
-      <div className="flex gap-2">
-        <input className="input font-mono text-sm" value={path} spellCheck={false}
-          placeholder="/caminho/para/o/crate"
-          onChange={(e) => setPath(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && path.trim() && status !== 'rodando' && iniciar()} />
-        {status === 'rodando' ? (
-          <button className="btn-outline shrink-0"
-            onClick={() => id && fetch(`/api/pipeline/${id}/cancel`, { method: 'POST' })}>
-            <Square className="w-4 h-4" /> Parar
+      <div className="flex flex-col gap-3">
+        <div className="flex gap-2">
+          <button className="btn-outline shrink-0" onClick={escolherPasta}
+            disabled={escolhendo || status === 'rodando'}>
+            {escolhendo ? <Loader2 className="w-4 h-4 animate-spin" /> : <FolderOpen className="w-4 h-4" />}
+            Escolher pasta
           </button>
-        ) : (
-          <button className="btn-primary shrink-0" onClick={iniciar} disabled={!path.trim()}>
-            <Play className="w-4 h-4" /> Auditar
-          </button>
+
+          <input className="input font-mono text-sm" value={path} spellCheck={false}
+            placeholder="ou cole o caminho do crate"
+            onChange={(e) => setPath(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && path.trim() && status !== 'rodando' && iniciar()} />
+
+          {status === 'rodando' ? (
+            <button className="btn-outline shrink-0"
+              onClick={() => id && fetch(`/api/pipeline/${id}/cancel`, { method: 'POST' })}>
+              <Square className="w-4 h-4" /> Parar
+            </button>
+          ) : (
+            <button className="btn-primary shrink-0" onClick={() => iniciar()} disabled={!path.trim()}>
+              <Play className="w-4 h-4" /> Auditar
+            </button>
+          )}
+        </div>
+
+        {recentes.length > 0 && status !== 'rodando' && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <Clock className="w-3.5 h-3.5 text-ink-muted shrink-0" />
+            {recentes.map((r) => (
+              <button key={r} onClick={() => { setPath(r); iniciar(r); }}
+                title={r}
+                className="font-mono text-xs px-2.5 py-1 rounded-md bg-surface-secondary border border-line
+                           text-ink-muted hover:text-brand-600 hover:border-brand-200 hover:bg-brand-50
+                           transition-colors max-w-[260px] truncate">
+                {r.split('/').slice(-2).join('/')}
+              </button>
+            ))}
+          </div>
         )}
       </div>
 

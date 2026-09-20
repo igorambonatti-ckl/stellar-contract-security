@@ -13,6 +13,26 @@ npm run dev
 
 Web em `localhost:5173`, API em `localhost:5174`. O Vite faz proxy de `/api`.
 
+## Escolher o contrato
+
+**Escolher pasta** abre o diálogo **nativo do sistema** — Finder no macOS,
+zenity no Linux, FolderBrowserDialog no Windows. Escolha a pasta e o caminho
+absoluto entra sozinho.
+
+Isto existe porque o seletor de arquivo do browser não resolve o problema: por
+segurança ele entrega `File` com nome relativo e nunca o caminho no disco, que é
+exatamente o que a API precisa para abrir o crate. Como a API roda local, na sua
+sessão, ela pode pedir o diálogo ao sistema operacional — é a única forma de
+transformar "clicar numa pasta" em caminho absoluto.
+
+Caminhos já auditados viram atalhos abaixo do campo; clicar num deles roda
+direto. Colar o caminho à mão continua funcionando.
+
+Uma varredura automática do disco foi tentada antes e descartada: além de lenta,
+ela confundia a raiz de um workspace com um crate, porque o `Cargo.toml` de
+workspace também declara `soroban-sdk` — e por isso parava antes de achar os
+contratos de verdade.
+
 ## O pipeline
 
 | # | Etapa | O que faz |

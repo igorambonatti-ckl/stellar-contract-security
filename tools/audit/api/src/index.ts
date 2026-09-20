@@ -11,6 +11,7 @@ import { startRun, getRun, listRuns, attach } from './runner.js';
 import {
   startPipeline, getPipeline, listPipelines, attachPipeline, cleanupHarness,
 } from './pipeline.js';
+import { pickFolder } from './picker.js';
 
 const app = express();
 app.use(cors());
@@ -24,6 +25,21 @@ app.get('/api/health', (_req, res) => {
     ok: true,
     ai: { configured: isConfigured(), model: isConfigured() ? currentModel() : null },
   });
+});
+
+// ── Seletor de pasta ────────────────────────────────────────────────────────
+
+/**
+ * Abre o diálogo nativo do sistema. Cancelar devolve `path: null`, não erro —
+ * desistir de escolher uma pasta é uma coisa normal de se fazer.
+ */
+app.post('/api/pick-folder', async (req, res, next) => {
+  try {
+    const picked = await pickFolder(req.body?.startIn);
+    res.json({ path: picked });
+  } catch (e) {
+    next(e);
+  }
 });
 
 app.post('/api/inspect', async (req, res, next) => {
