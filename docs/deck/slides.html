@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Fuzzing Assistido por IA para Contratos Soroban</title>
+<style>
+/* ── Tokens do design system ChainGuard / CKL ───────────────────────────── */
+:root{
+  --brand-50:#E8F0FE; --brand-100:#C5D8FC; --brand-300:#5A91F7;
+  --brand-400:#3578F5; --brand-500:#1B6EF3; --brand-600:#1452C4; --brand-900:#061A43;
+  --surface:#FFFFFF; --surface-2:#F5F7FA;
+  --ink:#0D1117; --ink-muted:#6B7280; --line:#E5E7EB;
+  --success:#22C55E; --danger:#EF4444; --warn:#F59E0B;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:#8A93A3;}
+body{font-family:var(--sans); color:var(--ink); -webkit-font-smoothing:antialiased;}
+
+/* ── Slide: 16:9 a 1280x720 ─────────────────────────────────────────────── */
+.slide{
+  position:relative; width:1280px; height:720px; overflow:hidden;
+  background:var(--surface); margin:20px auto; padding:64px 72px;
+  display:flex; flex-direction:column; gap:26px;
+  page-break-after:always; break-after:page;
+}
+.slide::after{
+  content:attr(data-n); position:absolute; right:40px; bottom:28px;
+  font-family:var(--mono); font-size:13px; color:var(--ink-muted);
+}
+.slide::before{
+  content:""; position:absolute; left:0; top:0; width:100%; height:5px;
+  background:var(--brand-500);
+}
+.slide.grid{
+  background-image:
+    linear-gradient(rgba(27,110,243,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(27,110,243,.045) 1px, transparent 1px);
+  background-size:40px 40px;
+}
+.slide.dark{background:var(--brand-900); color:#fff;}
+.slide.dark .eyebrow{color:var(--brand-300);}
+.slide.dark .lead{color:#C5D8FC;}
+.slide.dark::before{background:var(--brand-400);}
+.slide.dark::after{color:#5A91F7;}
+
+h1{font-size:54px; line-height:1.08; letter-spacing:-.025em; margin:0; font-weight:800;}
+h2{font-size:40px; line-height:1.12; letter-spacing:-.022em; margin:0; font-weight:750;}
+h3{font-size:23px; margin:0; font-weight:700; letter-spacing:-.01em;}
+p{margin:0;}
+.eyebrow{font-size:12px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-muted);}
+.lead{font-size:21px; line-height:1.5; color:var(--ink-muted); max-width:46ch;}
+.card .lead, .card p{max-width:none;}
+.big{font-size:30px; line-height:1.4; font-weight:600; max-width:30ch;}
+strong{font-weight:700; color:inherit;}
+.accent{color:var(--brand-500);}
+code,.mono{font-family:var(--mono); font-size:.9em;}
+
+.logo{display:flex; align-items:center; gap:4px; font-weight:800; font-size:20px;}
+.logo .br{color:var(--brand-500); font-family:var(--mono);}
+
+.spacer{flex:1;}
+.row{display:flex; gap:22px;}
+.row.eq > *{flex:1;}
+.center{justify-content:center; align-items:center; text-align:center;}
+
+/* Cartões e métricas */
+.card{background:var(--surface-2); border:1px solid var(--line); border-radius:14px; padding:22px 24px;}
+.card.accent{background:var(--brand-50); border-color:var(--brand-100);}
+.metric{display:flex; flex-direction:column; gap:6px;}
+.metric .n{font-family:var(--mono); font-weight:800; font-size:58px; line-height:1; letter-spacing:-.03em;}
+.metric .n.muted{color:var(--ink-muted);}
+.metric .n.hit{color:var(--brand-500);}
+.metric .lbl{font-size:14px; color:var(--ink-muted); font-weight:600;}
+.arrowbig{font-size:40px; color:var(--ink-muted); align-self:center;}
+
+.bar{height:9px; border-radius:99px; background:#E5E7EB; overflow:hidden;}
+.bar span{display:block; height:100%; background:var(--brand-500);}
+.bar span.muted{background:var(--ink-muted); opacity:.5;}
+
+table{border-collapse:collapse; width:100%; font-size:17px;}
+th,td{padding:10px 14px; text-align:left; border-bottom:1px solid var(--line);}
+th{font-size:11.5px; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-muted); background:var(--surface-2);}
+td.m{font-family:var(--mono); font-size:15px;}
+tr.tot td{font-weight:800; background:var(--surface-2);}
+.pill{display:inline-block; font-size:12.5px; font-weight:800; padding:3px 10px; border-radius:6px; border:1px solid;}
+.pill.hit{color:var(--brand-600); background:var(--brand-50); border-color:var(--brand-100);}
+.pill.miss{color:var(--ink-muted); background:var(--surface-2); border-color:var(--line);}
+
+ul{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:14px;}
+li{display:grid; grid-template-columns:auto 1fr; gap:14px; align-items:start; font-size:19px; line-height:1.45;}
+li::before{content:""; width:7px; height:7px; border-radius:99px; background:var(--brand-500); margin-top:11px;}
+.slide.dark li::before{background:var(--brand-400);}
+
+blockquote{
+  margin:0; padding:18px 24px; border-left:4px solid var(--brand-500);
+  background:var(--surface-2); font-size:19px; line-height:1.5; border-radius:0 10px 10px 0;
+}
+.slide.dark blockquote{background:rgba(255,255,255,.06); border-left-color:var(--brand-400); color:#E8F0FE;}
+
+pre{
+  margin:0; padding:18px 22px; background:#0D1117; color:#C5D8FC;
+  border-radius:10px; font-family:var(--mono); font-size:15px; line-height:1.65;
+  white-space:pre; overflow:visible;
+}
+pre .c{color:#6B7280;}
+pre .g{color:#5A91F7;}
+
+/* ── Impressão ──────────────────────────────────────────────────────────── */
+@page{ size:1280px 720px; margin:0; }
+@media print{
+  html,body{background:#fff;}
+  .slide{margin:0; box-shadow:none; page-break-after:always;}
+  .slide:last-child{page-break-after:auto;}
+}
+</style>
+</head>
+<body>
+
+<!-- 01 — Capa -->
+<section class="slide dark grid" data-n="01">
+  <div class="logo"><span class="br">&lt;</span><span>stellar-studies</span><span class="br">&gt;</span></div>
+  <div class="spacer"></div>
+  <div class="eyebrow">Plano de Desenvolvimento Individual · Cheesecake Labs</div>
+  <h1>Fuzzing assistido por IA<br>para contratos Soroban</h1>
+  <p class="lead" style="max-width:56ch">
+    Um método de auditoria, e a evidência de que ele funciona — medida contra
+    sete bugs plantados, com resposta conhecida.
+  </p>
+  <div class="spacer"></div>
+  <p style="font-family:var(--mono); font-size:14px; color:#5A91F7;">Igor Ambonatti · Setembro de 2026</p>
+</section>
+
+<!-- 02 — A tese -->
+<section class="slide" data-n="02">
+  <div class="eyebrow">A tese</div>
+  <h2>A IA propõe.<br>O humano cura.<br><span class="accent">O fuzzer decide.</span></h2>
+  <div class="spacer"></div>
+  <p class="big">
+    Um modelo lê uma expressão e enumera como ela pode dar errado.
+    Ele <strong>não sabe dizer se aquele estado é alcançável</strong> — e vai
+    afirmar o caso impossível com mais confiança que o real.
+  </p>
+  <div class="spacer"></div>
+  <blockquote>
+    A execução é a única autoridade do ciclo que não pode ser convencida
+    de um falso positivo.
+  </blockquote>
+</section>
+
+<!-- 03 — O problema -->
+<section class="slide" data-n="03">
+  <div class="eyebrow">O problema</div>
+  <h2>Soroban não tem Echidna nem Foundry</h2>
+  <p class="lead">
+    O ecossistema Rust entrega a <em>máquina</em> — <code>cargo-fuzz</code>,
+    <code>proptest</code>, <code>cargo-mutants</code> — e deixa três trabalhos
+    com o desenvolvedor.
+  </p>
+  <div class="row eq" style="margin-top:8px">
+    <div class="card">
+      <h3>1 · Escrever o harness</h3>
+      <p class="lead" style="font-size:16px; margin-top:8px">
+        Boilerplate. Por função, por contrato.
+      </p>
+    </div>
+    <div class="card accent">
+      <h3>2 · Saber o que asserir</h3>
+      <p class="lead" style="font-size:16px; margin-top:8px; color:var(--brand-600)">
+        <strong>É aqui que programas de fuzzing morrem.</strong>
+      </p>
+    </div>
+    <div class="card">
+      <h3>3 · Escolher onde olhar</h3>
+      <p class="lead" style="font-size:16px; margin-top:8px">
+        Entrada aleatória desperdiça orçamento.
+      </p>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <blockquote>
+    Um fuzzer que só verifica “não deu panic” encontra bugs rasos. As
+    invariantes que valem precisam ser <strong>enunciadas</strong>.
+  </blockquote>
+</section>
+
+<!-- 04 — O experimento -->
+<section class="slide" data-n="04">
+  <div class="eyebrow">O experimento</div>
+  <h2>Dois braços, um contrato, sete bugs plantados</h2>
+  <p class="lead">
+    <code>soroban-vault</code>: 8 entry points, os três tiers de storage,
+    12 invariantes, 7 bugs atrás de features individuais. Cada seed foi
+    <strong>provado</strong> quebrar a invariante que alega, antes de qualquer fuzzing.
+  </p>
+  <div class="row eq" style="margin-top:10px">
+    <div class="card">
+      <div class="eyebrow">Braço de controle</div>
+      <h3 style="margin-top:10px">Escrito da documentação em uma hora</h3>
+      <p class="lead" style="font-size:16px; margin-top:10px">
+        Oráculo: <em>“a chamada não aborta”</em>.<br>
+        Escrito <strong>primeiro</strong>, antes de rodar qualquer prompt.
+      </p>
+    </div>
+    <div class="card accent">
+      <div class="eyebrow" style="color:var(--brand-600)">Braço assistido</div>
+      <h3 style="margin-top:10px">Invariantes propostas pela IA, curadas à mão</h3>
+      <p class="lead" style="font-size:16px; margin-top:10px; color:var(--brand-600)">
+        Oráculo: <em>lê o estado de volta</em> e compara com um cálculo independente.
+      </p>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <blockquote>
+    Mesmo motor, mesmo contrato, mesmo orçamento.
+    <strong>A única diferença é o oráculo.</strong>
+  </blockquote>
+</section>
+
+<!-- 05 — Resultado -->
+<section class="slide grid" data-n="05">
+  <div class="eyebrow">Resultado</div>
+  <h2>1 de 7 &nbsp;→&nbsp; <span class="accent">7 de 7</span></h2>
+  <div class="row eq" style="margin-top:14px">
+    <div class="card">
+      <div class="eyebrow">Bugs plantados detectados</div>
+      <div class="row" style="margin-top:14px; align-items:center">
+        <div class="metric"><span class="n muted">1/7</span><span class="lbl">controle</span></div>
+        <span class="arrowbig">→</span>
+        <div class="metric"><span class="n hit">7/7</span><span class="lbl">assistido</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="eyebrow">Escore de mutação</div>
+      <div class="row" style="margin-top:14px; align-items:center">
+        <div class="metric"><span class="n muted">34%</span><span class="lbl">controle</span></div>
+        <span class="arrowbig">→</span>
+        <div class="metric"><span class="n hit">98%</span><span class="lbl">assistido</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="eyebrow">Cobertura de regiões</div>
+      <div class="row" style="margin-top:14px; align-items:center">
+        <div class="metric"><span class="n muted" style="font-size:46px">85,8%</span><span class="lbl">controle</span></div>
+        <span class="arrowbig">→</span>
+        <div class="metric"><span class="n hit" style="font-size:46px">96,2%</span><span class="lbl">assistido</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <blockquote>
+    Mutação é um <strong>instrumento independente</strong>: o <code>cargo-mutants</code>
+    não sabe nada dos bugs plantados. A concordância entre os dois é o que responde
+    à objeção que um benchmark feito sob medida não consegue responder sozinho.
+  </blockquote>
+</section>
+
+<!-- 06 — Por que -->
+<section class="slide" data-n="06">
+  <div class="eyebrow">Por que a diferença existe</div>
+  <h2>Seis dos sete bugs são <span class="accent">silenciosos</span></h2>
+  <table style="margin-top:6px">
+    <thead><tr><th>Bug plantado</th><th>Controle</th><th>Assistido</th><th>O que acontece</th></tr></thead>
+    <tbody>
+      <tr><td class="m">bug_overflow</td><td><span class="pill miss">perdeu</span></td><td><span class="pill hit">pegou</span></td><td style="font-size:15px">Previu <code>Overflow</code>, veio <code>ZeroShares</code></td></tr>
+      <tr><td class="m">bug_missing_auth</td><td><span class="pill miss">perdeu</span></td><td><span class="pill hit">pegou</span></td><td style="font-size:15px">Autorização revogada não rejeitou</td></tr>
+      <tr><td class="m">bug_zero_amount</td><td><span class="pill miss">perdeu</span></td><td><span class="pill hit">pegou</span></td><td style="font-size:15px">Saque de zero teve sucesso</td></tr>
+      <tr><td class="m">bug_self_transfer</td><td><span class="pill miss">perdeu</span></td><td><span class="pill hit">pegou</span></td><td style="font-size:15px">Transferência para si duplicou saldo</td></tr>
+      <tr><td class="m">bug_no_ttl</td><td><span class="pill miss">perdeu</span></td><td><span class="pill hit">pegou</span></td><td style="font-size:15px">TTL da instância não estendido</td></tr>
+      <tr><td class="m">bug_temp_nonce</td><td><span class="pill hit">pegou</span></td><td><span class="pill hit">pegou</span></td><td style="font-size:15px">Único que faz o contrato <strong>abortar</strong></td></tr>
+      <tr><td class="m">bug_reinit</td><td><span class="pill miss">perdeu</span></td><td><span class="pill hit">pegou</span></td><td style="font-size:15px">Segundo <code>initialize</code> sobrescreveu o admin</td></tr>
+      <tr class="tot"><td>Total</td><td>1 / 7</td><td>7 / 7</td><td style="font-size:15px">Contrato limpo passa em todos os braços</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 07 — Fuzzing + IA -->
+<section class="slide" data-n="07">
+  <div class="eyebrow">Fuzzing guiado por cobertura</div>
+  <h2>A medição limpa do que a IA acrescenta ao fuzzer</h2>
+  <p class="lead">
+    Mesmo alvo, mesmo libFuzzer, mesmos 300 s por célula. A única variável é se
+    o <em>prior de entradas</em> gerado pela IA foi incorporado ao gerador.
+  </p>
+  <div class="row eq" style="margin-top:14px">
+    <div class="card">
+      <div class="eyebrow">Sem o prior de entradas</div>
+      <div class="metric" style="margin-top:12px"><span class="n muted">2/7</span><span class="lbl">operandos crus do fuzzer</span></div>
+      <div class="bar" style="margin-top:14px"><span class="muted" style="width:29%"></span></div>
+    </div>
+    <div class="card accent">
+      <div class="eyebrow" style="color:var(--brand-600)">Com o prior de entradas</div>
+      <div class="metric" style="margin-top:12px"><span class="n hit">7/7</span><span class="lbl">60% literais de fronteira · 25% relativos ao estado</span></div>
+      <div class="bar" style="margin-top:14px"><span style="width:100%"></span></div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <blockquote>
+    O prompt tinha sido escrito, executado e commitado — e <strong>nunca aberto</strong>.
+    Um prompt que não é integrado não produz valor e não deixa rastro da própria ausência.
+  </blockquote>
+</section>
+
+<!-- 08 — O que a IA acertou -->
+<section class="slide" data-n="08">
+  <div class="eyebrow">O que a IA acertou</div>
+  <h2>A contribuição foi o oráculo, não o harness</h2>
+  <div class="row" style="gap:32px; margin-top:8px">
+    <div style="flex:1">
+      <ul>
+        <li><span><strong>13 de 16</strong> propostas aproveitadas — 81% de yield.</span></li>
+        <li><span><strong>10 das 12</strong> invariantes de um catálogo que ela nunca viu, re-derivadas só da fonte.</span></li>
+        <li><span><strong>4 invariantes novas</strong> que o catálogo não continha.</span></li>
+        <li><span>As <strong>duas específicas de Soroban</strong> — gestão de TTL e autoridade lida de um tier que expira — derivadas da fonte, incluindo a semântica não óbvia do <code>extend_ttl</code>.</span></li>
+      </ul>
+    </div>
+    <div class="card" style="flex:0 0 420px">
+      <div class="eyebrow">O que ela não contribuiu</div>
+      <p class="lead" style="font-size:17px; margin-top:12px">
+        <strong>16 dos 17 erros de compilação</strong> vieram de uma única
+        suposição errada sobre o SDK.
+      </p>
+      <p class="lead" style="font-size:17px; margin-top:12px">
+        O compilador pegou tudo em segundos. Custo: zero.
+      </p>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <blockquote>
+    Não compre assistência de IA pela geração de código.
+    Compre pela <strong>enumeração de propriedades</strong> — e conte com consertar o código.
+  </blockquote>
+</section>
+
+<!-- 09 — A afirmação mais confiante -->
+<section class="slide" data-n="09">
+  <div class="eyebrow">O erro que mais ensina</div>
+  <h2>A afirmação mais confiante da IA estava <span style="color:var(--danger)">errada</span></h2>
+  <blockquote style="border-left-color:var(--danger); font-size:20px">
+    “o alvo de truncamento de maior valor do arquivo” — <code>withdraw</code> pode
+    queimar shares e pagar zero.
+  </blockquote>
+  <p class="lead">
+    Específica, citou as linhas certas, e enunciada com mais confiança que
+    qualquer outra coisa que ela produziu.
+  </p>
+  <div class="card" style="margin-top:6px">
+    <h3>É inalcançável.</h3>
+    <p class="lead" style="font-size:17px; margin-top:10px">
+      <code>assets ≥ total_shares</code> vale em todo estado alcançável, por indução
+      sobre os quatro mutadores. Com isso, o pagamento nunca é zero.
+    </p>
+  </div>
+  <div class="spacer"></div>
+  <blockquote>
+    Ela analisou <strong>uma expressão localmente</strong> e nunca perguntou
+    quais estados são alcançáveis. É onde o checkpoint humano tem que ficar.
+  </blockquote>
+</section>
+
+<!-- 10 — ...e virou invariante -->
+<section class="slide dark" data-n="10">
+  <div class="eyebrow">O ciclo funcionando</div>
+  <h2>A hipótese refutada virou invariante</h2>
+  <div class="spacer"></div>
+  <p class="big" style="color:#fff; max-width:34ch">
+    A afirmação foi rejeitada. Mas a <strong>razão de ela ser falsa</strong> —
+    <code style="color:#5A91F7">assets ≥ total_shares</code> — virou a invariante N2,
+    hoje asserida em toda execução.
+  </p>
+  <div class="spacer"></div>
+  <blockquote>
+    IA propõe → humano cura → fuzzer decide → volta para a IA.<br>
+    <strong>Refutações são achados.</strong>
+  </blockquote>
+</section>
+
+<!-- 11 — A surpresa -->
+<section class="slide" data-n="11">
+  <div class="eyebrow">O resultado que ninguém planejou</div>
+  <h2>A cobertura de detecção superou a de invariantes</h2>
+  <p class="lead">
+    <code>bug_zero_amount</code> tem como alvo a invariante <strong>I7 — que o modelo
+    perdeu</strong> e que não está no conjunto curado.
+  </p>
+  <div class="card accent" style="margin-top:6px">
+    <h3 style="color:var(--brand-600)">O braço assistido pega mesmo assim. Em três propriedades diferentes.</h3>
+    <p class="lead" style="font-size:17px; margin-top:10px; color:var(--brand-600)">
+      Porque o harness prevê a <strong>razão exata da rejeição</strong> para toda entrada —
+      então um guard que para de rejeitar é pego, tenha alguém escrito a invariante ou não.
+    </p>
+  </div>
+  <div class="spacer"></div>
+  <blockquote>
+    O argumento mais forte do projeto para investir em <strong>oráculo de erro exato</strong>
+    em vez de alongar a lista de invariantes.
+  </blockquote>
+</section>
+
+<!-- 12 — Soroban-specific -->
+<section class="slide" data-n="12">
+  <div class="eyebrow">O que é específico de Stellar</div>
+  <h2>Taxonomias de bug do EVM não se portam</h2>
+  <div class="row eq" style="margin-top:8px">
+    <div class="card">
+      <div class="eyebrow">Menos aplicável que no EVM</div>
+      <h3 style="margin-top:10px">Overflow de inteiro</h3>
+      <p class="lead" style="font-size:16px; margin-top:10px">
+        <code>overflow-checks</code> vem ligado no template Soroban: aritmética
+        ingênua <strong>aborta em vez de dar wrap</strong>. O bug clássico teve que
+        ser plantado com <code>wrapping_mul</code> explícito para existir.
+      </p>
+    </div>
+    <div class="card accent">
+      <div class="eyebrow" style="color:var(--brand-600)">Sem análogo no EVM</div>
+      <h3 style="margin-top:10px">TTL e tier de storage</h3>
+      <p class="lead" style="font-size:16px; margin-top:10px; color:var(--brand-600)">
+        Entrada persistente escrita sem estender TTL; autoridade lida de um tier
+        que expira silenciosamente. <strong>Ausentes de todo checklist derivado do EVM</strong> —
+        e é onde mora o risco real de Soroban.
+      </p>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <blockquote>
+    O protocolo 23 auto-restaura entradas persistentes arquivadas. O perigo deixou
+    de ser <em>perda de dado</em> e passou a ser <strong>custo de rent inesperado</strong>.
+  </blockquote>
+</section>
+
+<!-- 13 — Achado negativo -->
+<section class="slide" data-n="13">
+  <div class="eyebrow">Achado negativo · questão aberta respondida</div>
+  <h2>Bug de TTL não é verificável em caixa-preta</h2>
+  <p class="lead" style="max-width:76ch; font-size:19px">
+    Propus dois oráculos “agnósticos de contrato” usando os contadores de recurso do Soroban.
+    Os dois estavam errados — e só descobri porque <strong>medi em vez de supor</strong>.
+  </p>
+  <pre style="font-size:16px"><span class="c">// contrato LIMPO, depois do TTL decair</span>
+deposit   write_entries 7   persist_bumps <span class="g">6</span>
+
+<span class="c">// bug_no_ttl — remove TODOS os extend_ttl do contrato</span>
+deposit   write_entries 8   persist_bumps <span class="g">6</span>   <span class="c">&lt;- idêntico</span></pre>
+  <p class="lead" style="max-width:76ch; font-size:19px">
+    O <strong>host</strong> cobra rent ao escrever uma entrada que iria expirar, o contrato
+    tendo pedido ou não. O contador mede o host, não o contrato.
+  </p>
+  <div class="spacer"></div>
+  <blockquote>
+    Detectar <code>extend_ttl</code> faltando exige ler o TTL da entrada → exige a
+    chave de storage → exige <strong>ter lido o contrato</strong>.
+  </blockquote>
+</section>
+
+<!-- 14 — Confiabilidade -->
+<section class="slide" data-n="14">
+  <div class="eyebrow">Confiabilidade</div>
+  <h2>Seis erros de medição, e o que pegou cada um</h2>
+  <table style="margin-top:4px">
+    <thead><tr><th>O que estava errado</th><th>Pego por</th><th>O que teria sido publicado</th></tr></thead>
+    <tbody>
+      <tr><td style="font-size:15px"><code>--features</code> aceito e ignorado pela ferramenta</td><td style="font-size:15px">Contradição entre camadas</td><td style="font-size:15px">“o braço de IA perdeu um bug”</td></tr>
+      <tr><td style="font-size:15px">Alvo quebrando o contrato <strong>limpo</strong></td><td style="font-size:15px">Controle de contrato limpo</td><td style="font-size:15px">8/8, nenhuma atribuível</td></tr>
+      <tr><td style="font-size:15px">Asserção nomeando a propriedade errada</td><td style="font-size:15px">Ler texto já marcado verde</td><td style="font-size:15px">Hipótese já refutada, ressuscitada</td></tr>
+      <tr><td style="font-size:15px">Oráculo pulando o próprio overflow</td><td style="font-size:15px">Rastrear qual asserção pegou</td><td style="font-size:15px">Detecção perdida como skip</td></tr>
+      <tr><td style="font-size:15px">Ledger de curadoria fechando 15 de 16</td><td style="font-size:15px">O mesmo rastreio</td><td style="font-size:15px">Yield 75% em vez de 81%</td></tr>
+      <tr><td style="font-size:15px">Script sem bit de execução no git</td><td style="font-size:15px">Gate de clone limpo</td><td style="font-size:15px">Demo que só roda numa máquina</td></tr>
+    </tbody>
+  </table>
+  <blockquote style="font-size:17px">
+    Cinco foram pegos por um gate definido de antemão. O sexto não —
+    <strong>nada exigia reler o texto de uma asserção que já estava verde.</strong>
+  </blockquote>
+</section>
+
+<!-- 15 — Limitações -->
+<section class="slide" data-n="15">
+  <div class="eyebrow">Honestidade</div>
+  <h2>O que estes números <span style="color:var(--danger)">não</span> mostram</h2>
+  <ul style="margin-top:8px">
+    <li><span><strong>Não é medição de produtividade.</strong> Os dois braços foram escritos pela IA, então o relógio compara um modelo com ele mesmo. A afirmação que este trabalho <em>não</em> pode fazer é “IA deixa o dev mais rápido”.</span></li>
+    <li><span><strong>Não é resultado estatístico.</strong> Um contrato, um modelo, uma rodada por braço. Sem estimativa de variância.</span></li>
+    <li><span><strong>Não é livre de viés de benchmark.</strong> O contrato foi construído em torno do catálogo de invariantes, então o modelo lê um contrato cuja forma já implica as propriedades.</span></li>
+    <li><span><strong>Duas propriedades de controle de acesso são mais fracas que o enunciado.</strong> “Só o titular autorizou” é testado como “ninguém autorizou” — sinalizado pelo próprio modelo no harness dele.</span></li>
+  </ul>
+</section>
+
+<!-- 16 — O que fica -->
+<section class="slide dark grid" data-n="16">
+  <div class="eyebrow">O que fica</div>
+  <h2>Um método, e a metade reutilizável dele</h2>
+  <div class="row eq" style="margin-top:14px">
+    <div class="card" style="background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.14)">
+      <h3 style="color:#fff"><code>soroban-fuzzkit</code></h3>
+      <p class="lead" style="font-size:16px; margin-top:10px; color:#C5D8FC">
+        Política de operandos, pool de principais com os slots de aliasing, sondagem
+        de cliffs de TTL, atribuição de erro. 40 testes, não menciona contrato nenhum.
+      </p>
+    </div>
+    <div class="card" style="background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.14)">
+      <h3 style="color:#fff"><code>AUDITING.md</code></h3>
+      <p class="lead" style="font-size:16px; margin-top:10px; color:#C5D8FC">
+        O que remover antes de mostrar o fonte a um modelo, por que o controle de
+        contrato limpo roda primeiro, como separar achado real de achado fabricado.
+      </p>
+    </div>
+  </div>
+  <div class="spacer" style="max-height:40px"></div>
+  <pre style="background:rgba(0,0,0,.35)"><span class="c"># reproduz em ~2 minutos, de um clone limpo</span>
+git clone &lt;repo&gt; &amp;&amp; cd stellar-studies
+cargo test
+./04-prototype-development/scripts/demo.sh</pre>
+</section>
+
+<!-- 17 — Encerramento -->
+<section class="slide" data-n="17">
+  <div class="spacer"></div>
+  <div class="eyebrow">Em uma frase</div>
+  <p class="big" style="font-size:34px; max-width:40ch; line-height:1.35">
+    A IA não ajudou escrevendo o harness — ela errou o SDK e o compilador
+    corrigiu em segundos.
+  </p>
+  <p class="big" style="font-size:34px; max-width:40ch; line-height:1.35; margin-top:18px">
+    Ela ajudou <span class="accent">sabendo o que asserir</span>, o que levou a
+    detecção de 1 em 7 para 7 em 7 — e a única coisa sobre a qual ela estava
+    mais confiante era a única coisa falsa.
+  </p>
+  <div class="spacer"></div>
+  <div class="logo"><span class="br">&lt;</span><span>stellar-studies</span><span class="br">&gt;</span></div>
+</section>
+
+</body>
+</html>
