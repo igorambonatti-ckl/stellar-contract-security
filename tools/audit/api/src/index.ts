@@ -11,7 +11,7 @@ import { startRun, getRun, listRuns, attach } from './runner.js';
 import {
   startPipeline, getPipeline, listPipelines, attachPipeline, cleanupHarness,
 } from './pipeline.js';
-import { pickFolder } from './picker.js';
+import { pickContract, resolveCrateRoot } from './picker.js';
 
 const app = express();
 app.use(cors());
@@ -30,13 +30,15 @@ app.get('/api/health', (_req, res) => {
 // ── Seletor de pasta ────────────────────────────────────────────────────────
 
 /**
- * Abre o diálogo nativo do sistema. Cancelar devolve `path: null`, não erro —
- * desistir de escolher uma pasta é uma coisa normal de se fazer.
+ * Abre o diálogo nativo do sistema e devolve a **raiz do crate**.
+ *
+ * O usuário escolhe o arquivo do contrato, que é como ele pensa nele; a API
+ * sobe a árvore até o Cargo.toml, que é do que o cargo precisa. Cancelar
+ * devolve `path: null` e não é erro.
  */
-app.post('/api/pick-folder', async (req, res, next) => {
+app.post('/api/pick-contract', async (req, res, next) => {
   try {
-    const picked = await pickFolder(req.body?.startIn);
-    res.json({ path: picked });
+    res.json({ path: await pickContract(req.body?.startIn) });
   } catch (e) {
     next(e);
   }
@@ -48,7 +50,7 @@ app.post('/api/inspect', async (req, res, next) => {
     if (typeof path !== 'string' || !path.trim()) {
       return res.status(400).json({ error: 'Informe o caminho do crate.' });
     }
-    res.json(await inspectContract(path.trim()));
+    res.json(await inspectContract(await resolveCrateRoot(path.trim())));
   } catch (e) {
     next(e);
   }
@@ -267,9 +269,11 @@ app.post('/api/pipeline', async (req, res, next) => {
     if (typeof path !== 'string' || !path.trim()) {
       return res.status(400).json({ error: 'Informe o caminho do crate.' });
     }
-    // Falha cedo se o caminho não presta, em vez de dentro do pipeline.
-    await inspectContract(path.trim());
-    const p = startPipeline({ path: path.trim(), hiddenFeatures, runMutants });
+    // Aceita arquivo ou pasta: sobe até a raiz do crate antes de qualquer coisa.
+    const raiz = await resolveCrateRoot(path.trim());
+    // Falha cedo se não for um contrato, em vez de dentro do pipeline.
+    await inspectContract(raiz);
+    const p = startPipeline({ path: raiz, hiddenFeatures, runMutants });
     res.json({ id: p.id });
   } catch (e) {
     next(e);

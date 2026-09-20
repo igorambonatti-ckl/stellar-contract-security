@@ -15,23 +15,34 @@ Web em `localhost:5173`, API em `localhost:5174`. O Vite faz proxy de `/api`.
 
 ## Escolher o contrato
 
-**Escolher pasta** abre o diálogo **nativo do sistema** — Finder no macOS,
-zenity no Linux, FolderBrowserDialog no Windows. Escolha a pasta e o caminho
-absoluto entra sozinho.
+**Escolher contrato** abre o diálogo **nativo do sistema** — Finder no macOS,
+zenity no Linux, OpenFileDialog no Windows. Escolha o `src/lib.rs` do contrato,
+que é como se pensa nele.
+
+A ferramenta então **sobe a árvore até a raiz do crate**, porque é disso que o
+`cargo` precisa: o `Cargo.toml` com dependências e features, e a árvore `src/`.
+Não existe compilar um `.rs` solto. Apontar a pasta do crate também funciona —
+os dois caminhos chegam no mesmo lugar.
+
+A subida procura um `Cargo.toml` com seção `[package]`. O `Cargo.toml` da raiz
+de um workspace só tem `[workspace]`, e parar nele daria o diretório errado:
+
+```
+$ escolher .../soroban-vault/src/lib.rs   -> crate soroban-vault, 11 entry points
+$ escolher .../stellar-studies/Cargo.toml -> "Nenhum crate encontrado"
+```
 
 Isto existe porque o seletor de arquivo do browser não resolve o problema: por
 segurança ele entrega `File` com nome relativo e nunca o caminho no disco, que é
-exatamente o que a API precisa para abrir o crate. Como a API roda local, na sua
-sessão, ela pode pedir o diálogo ao sistema operacional — é a única forma de
-transformar "clicar numa pasta" em caminho absoluto.
+exatamente o que a API precisa. Como a API roda local, na sua sessão, ela pode
+pedir o diálogo ao sistema operacional.
 
-Caminhos já auditados viram atalhos abaixo do campo; clicar num deles roda
-direto. Colar o caminho à mão continua funcionando.
+Contratos já auditados viram atalhos abaixo do campo; clicar num deles roda
+direto. Colar o caminho à mão continua funcionando, arquivo ou pasta.
 
 Uma varredura automática do disco foi tentada antes e descartada: além de lenta,
-ela confundia a raiz de um workspace com um crate, porque o `Cargo.toml` de
-workspace também declara `soroban-sdk` — e por isso parava antes de achar os
-contratos de verdade.
+ela confundia a raiz de um workspace com um crate — pelo mesmo motivo acima — e
+parava antes de achar os contratos de verdade.
 
 ## O pipeline
 

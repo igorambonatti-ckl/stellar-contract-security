@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Play, Square, Loader2, CheckCircle2, XCircle, MinusCircle, Circle,
-  ChevronDown, ChevronRight, Trash2, FolderOpen, Clock,
+  ChevronDown, ChevronRight, Trash2, FileCode2, Clock,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { Erro } from '../components/Erro';
@@ -63,10 +63,10 @@ export function Pipeline() {
   useEffect(() => () => es.current?.close(), []);
   useEffect(() => { if (logAberto) fimLog.current?.scrollIntoView({ block: 'end' }); }, [log, logAberto]);
 
-  async function escolherPasta() {
+  async function escolherContrato() {
     setEscolhendo(true); setErro(null);
     try {
-      const res = await fetch('/api/pick-folder', {
+      const res = await fetch('/api/pick-contract', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ startIn: path.trim() || undefined }),
       });
@@ -136,14 +136,14 @@ export function Pipeline() {
 
       <div className="flex flex-col gap-3">
         <div className="flex gap-2">
-          <button className="btn-outline shrink-0" onClick={escolherPasta}
+          <button className="btn-outline shrink-0" onClick={escolherContrato}
             disabled={escolhendo || status === 'rodando'}>
-            {escolhendo ? <Loader2 className="w-4 h-4 animate-spin" /> : <FolderOpen className="w-4 h-4" />}
-            Escolher pasta
+            {escolhendo ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileCode2 className="w-4 h-4" />}
+            Escolher contrato
           </button>
 
           <input className="input font-mono text-sm" value={path} spellCheck={false}
-            placeholder="ou cole o caminho do crate"
+            placeholder="ou cole o caminho do contrato ou do crate"
             onChange={(e) => setPath(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && path.trim() && status !== 'rodando' && iniciar()} />
 
