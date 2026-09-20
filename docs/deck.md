@@ -284,15 +284,17 @@ So Soroban's own oracles only exist over the deployed artifact:
 | | Question it answers |
 |---|---|
 | **R1** resource ceilings | can this call actually be submitted on-chain? |
-| **R2** rent on write | did a persistent write pay to keep its entry alive? |
 
-**R2 is the one an auditor wants**, because it needs no knowledge of the storage layout. Reading a
-TTL means knowing which key to read, which means having read the contract. The rent counter is
-measured from the invocation itself.
+And a bigger finding, which is negative. The oracle this arm was *built* for — detect a missing
+`extend_ttl` from the invocation's resource counters, needing no knowledge of the storage layout —
+**does not exist.** Two candidates, both refuted by measurement:
 
-And a negative result to inherit: `disk_read_entries` is **not** an archival detector — it also
-counts classic account balances, so any contract calling a token "reads from disk" while perfectly
-healthy. Written as an assertion, it failed on the clean build in 90 seconds.
+- `disk_read_entries` also counts classic account balances, so a healthy contract "reads from disk".
+- `persistent_entry_rent_bumps` measures the **host**: under a seed that removes every `extend_ttl`,
+  a decayed write bumps exactly as much rent as the correct contract.
+
+**TTL bugs cannot be checked black-box.** Every oracle that catches them names a storage key — which
+means having read the contract. On the most Soroban-specific bug class there is.
 
 ---
 

@@ -165,19 +165,25 @@ The bug classes with no EVM analogue, and where each is caught:
 | Hazard | Oracle | Layer |
 |---|---|---|
 | Persistent entry written without extending its TTL | entry TTL ≥ threshold after any write (**I10′**) | `proptest` |
-| …the same, **without reading any storage key** | a write must bump rent (**R2**) | WASM fuzz |
-| Instance TTL decaying while balances stay alive | instance TTL ≥ threshold after a bumping call (**N1**) | both |
+| Instance TTL decaying while balances stay alive | instance TTL ≥ threshold after a bumping call (**N1**) | `proptest`, fuzz |
 | Authority read from a tier that can silently expire | expiring every temporary entry changes no other observable (**I11**) | `proptest`, differential |
-| A call that cannot be submitted on-chain | resource ceilings (**R1**) | WASM fuzz |
+| A call that cannot be submitted on-chain | per-transaction resource ceilings (**R1**) | WASM fuzz |
 
-**R2 is the one an auditor should care about most**, because it needs no knowledge of the contract's
-storage layout. Reading a TTL requires knowing which key to read, which requires having read the
-contract; the rent counter is measured from the invocation itself.
+**And one hazard with no black-box oracle at all.** The obvious idea — detect a missing `extend_ttl`
+from the invocation's own resource counters, so you need no knowledge of the storage layout — was
+tried twice and refuted both times:
 
-And one negative result worth inheriting: **`disk_read_entries` is not an archival detector.** The
-counter also includes non-Soroban entries such as classic account balances, so any contract calling
-a Stellar Asset Contract "reads from disk" on a perfectly healthy invocation. Written as an
-assertion, it failed on the clean build in under 90 seconds.
+- `disk_read_entries` also counts non-Soroban entries such as classic account balances, so any
+  contract calling a token "reads from disk" while perfectly healthy. It failed on the clean
+  contract in under 90 seconds.
+- `persistent_entry_rent_bumps` measures the **host**, not the contract. Under a seed that removes
+  every `extend_ttl` call, a decayed write bumps exactly as much rent as the correct contract does,
+  because the host bumps rent when it writes an entry that would otherwise be archived. Measured,
+  not assumed — [`fuzz/tools/footprint.rs`](fuzz/tools/footprint.rs).
+
+So **TTL bugs cannot be checked black-box.** Both oracles that do catch them (I10′, N1) name a
+storage key, which means having read the contract. For an auditor that is a real constraint on the
+most Soroban-specific bug class there is, and it is worth knowing before promising otherwise.
 
 Conversely, one EVM habit to drop: `overflow-checks` is on in the Soroban project template, so naive
 `+` and `*` **abort rather than wrap**. The classic integer-overflow bug barely exists here and had

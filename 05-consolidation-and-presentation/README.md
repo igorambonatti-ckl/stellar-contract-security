@@ -145,21 +145,13 @@ over the **deployed WASM**. Two oracles live there and nowhere else:
 
 - **R1, resource ceilings.** A call that passes every test but exceeds the network's per-transaction
   limit cannot be submitted. The contract is correct and the function is dead. No application-logic
-  oracle can see this.
-- **R2, rent on write.** An invocation that wrote persistent state and bumped no rent left an entry
-  it is not paying to keep alive. Under protocol 23 the data survives via auto-restoration, so
-  *nothing observable breaks* — the only symptom is a cost somebody else pays later.
+  oracle can see this, and it only means anything over the deployed module.
 
-**R2 is the one that matters for auditing**, because it is contract-agnostic. Detecting a missing
-`extend_ttl` by reading the entry's TTL requires knowing which storage key to read, which requires
-having read the contract. The rent counter is measured from the invocation itself, so it applies to
-a contract you have not read — which is the situation an auditor is actually in.
-
-The counterpart is a negative result, and it cost 90 seconds to discover: **`disk_read_entries` is
-not an archival detector.** The obvious reasoning — live state is in memory, so a disk read means
-something was restored — ignores that the counter also includes non-Soroban entries such as classic
-account balances. Any contract calling a Stellar Asset Contract reads from disk on a perfectly
-healthy invocation. Written as an assertion, it failed on the clean build immediately.
+The second oracle this arm was built for **does not exist**, and finding that out is the more
+useful half. See §3, open question 5: both candidate resource-counter TTL oracles were written,
+looked sound, and were refuted by measurement. The consequence is that **TTL bugs cannot be checked
+black-box** — every oracle that catches them names a storage key, which means having read the
+contract.
 
 ### 2.5 EVM bug taxonomies do not port to Soroban
 
@@ -280,21 +272,35 @@ where `proptest`'s fixed case budget stops.
 
 ### Q5 — Does `cost_estimate()` make a better TTL oracle than storage reads?
 
-**Still open, and deliberately not pursued.** The hypothesis (from Spike A) was that the SDK's
-`write_entries` and `persistent_entry_rent_bumps` resource counters jump when a restoration occurs,
-making them a cheaper signal than reading TTLs.
+**Answered: no — neither candidate works.** (WASM arm —
+[`results/p6b-wasm-arm.md`](../04-prototype-development/results/p6b-wasm-arm.md) §3.)
 
-It was not tested because the direct approach turned out to be sufficient: `get_ttl()` inside
-`env.as_contract(..)` detects both I10′ and N1 cleanly, and `bug_no_ttl` is caught by four separate
-properties. Adding a second, less direct oracle for the same bug class would have cost budget
-without a measurable question attached.
+The appeal was real. Reading an entry's TTL requires knowing *which storage key to read*, which
+requires having read the contract; a counter-based oracle would need neither, and would therefore
+apply to a contract an auditor has not read. Two candidates, both refuted:
 
-**Why it might still matter:** a resource-counter oracle is *contract-agnostic* — it needs no
-knowledge of which storage keys exist — so it would apply to a contract the harness author has not
-read. That makes it interesting for the "fuzz an arbitrary contract" direction in §4, and useless
-for the case actually benchmarked here. Recorded as future work rather than as a gap.
+- **`disk_read_entries`** conflates archival restoration with ordinary reads. The SDK's own field
+  documentation says it counts *"restored Soroban ledger entries **and non-Soroban entries (such as
+  'classic' account balances)**"*, so any contract calling a Stellar Asset Contract reads from disk
+  while perfectly healthy. Written as an assertion, it failed on the clean contract in 90 seconds.
+- **`persistent_entry_rent_bumps`** measures the host, not the contract. Under `bug_no_ttl`, which
+  removes every `extend_ttl` call, a decayed `deposit` bumps **6** persistent entries — exactly what
+  the correct contract does. The host bumps rent when it writes an entry that would otherwise be
+  archived, whether or not the contract asked. Measured with
+  [`fuzz/tools/footprint.rs`](../04-prototype-development/fuzz/tools/footprint.rs).
 
----
+A tightened version of the second would also have been a **false positive on the correct contract**:
+`extend_ttl` is a no-op while the remaining TTL is above the threshold, so a correct contract
+routinely writes without paying rent — which the P1 spikes had established and this oracle ignored.
+
+**The consequence is the finding.** There is no contract-agnostic TTL oracle in the resource
+counters, so the most Soroban-specific bug class there is **cannot be checked black-box**. Both
+invariants that catch it here (I10′, N1) name a storage key.
+
+> The shape of the mistake, which recurred three times across the project: **a counter that
+> correlates with a property is not the property.** Each time the predicate was written from what
+> the counter was expected to do rather than from what it was measured doing, and each time the
+> measurement that would have corrected it was a ten-minute job.
 
 ## 4. Limitations and future work
 
@@ -318,7 +324,8 @@ These bound what the 1/7 → 7/7 result is allowed to mean.
 1. **Fuzz the deployed bytecode.** Load the `.wasm` into `Env` rather than linking the crate — the
    approach ChainGuard's `soroban-fuzzer` used. It loses coverage instrumentation and gains "this is
    what actually ships", and it closes L7. It also generalises to contracts the harness author did
-   not write, which is where Q5's contract-agnostic oracle becomes interesting.
+   not write. Note Q5 closes one door here: the resource counters cannot supply the TTL oracle such
+   a campaign would need, so a black-box arm would be blind to the TTL bug class.
 2. **Turn single observations into distributions** (L3). More contracts, more models, repeated runs
    with different seeds. Until then, no statistical claim is defensible.
 3. **A human-authored control arm** (L5). The only way to measure a real productivity delta is for a
