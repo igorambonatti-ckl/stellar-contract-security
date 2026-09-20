@@ -8,6 +8,9 @@ import { inspectContract, cleanView } from './inspect.js';
 import { complete, extractCode, isConfigured, currentModel } from './openrouter.js';
 import { systemPrompt, proposeInvariants, generateHarness, prioritiseInputs } from './prompts.js';
 import { startRun, getRun, listRuns, attach } from './runner.js';
+import {
+  startPipeline, getPipeline, listPipelines, attachPipeline, cleanupHarness,
+} from './pipeline.js';
 
 const app = express();
 app.use(cors());
@@ -187,8 +190,7 @@ app.post('/api/run/build-wasm', async (req, res, next) => {
         'rustc', '-p', info.crateName,
         '--target', 'wasm32v1-none', '--release', '--crate-type', 'cdylib',
       ],
-      run_in_background: undefined as never,
-    } as any);
+    });
     res.json({ id: run.id });
   } catch (e) {
     next(e);
@@ -234,6 +236,62 @@ app.post('/api/runs/:id/cancel', (req, res) => {
   if (!run) return res.status(404).json({ error: 'Execução não encontrada.' });
   run.kill();
   res.json({ ok: true });
+});
+
+// ── Pipeline ────────────────────────────────────────────────────────────────
+//
+// O fluxo automático: inspeciona, propõe, gera, compila, valida contra o
+// contrato como ele é, roda a suíte, reporta. A validação é a curadoria feita
+// por execução em vez de por um humano clicando — uma invariante que falha
+// contra o contrato correto é falso positivo e sai sozinha.
+
+app.post('/api/pipeline', async (req, res, next) => {
+  try {
+    const { path, hiddenFeatures = [], runMutants = false } = req.body ?? {};
+    if (typeof path !== 'string' || !path.trim()) {
+      return res.status(400).json({ error: 'Informe o caminho do crate.' });
+    }
+    // Falha cedo se o caminho não presta, em vez de dentro do pipeline.
+    await inspectContract(path.trim());
+    const p = startPipeline({ path: path.trim(), hiddenFeatures, runMutants });
+    res.json({ id: p.id });
+  } catch (e) {
+    next(e);
+  }
+});
+
+app.get('/api/pipeline', (_req, res) => res.json(listPipelines()));
+
+app.get('/api/pipeline/:id', (req, res) => {
+  const p = getPipeline(req.params.id);
+  if (!p) return res.status(404).json({ error: 'Pipeline não encontrado.' });
+  const { listeners: _l, cancel: _c, ...rest } = p;
+  res.json(rest);
+});
+
+app.get('/api/pipeline/:id/stream', (req, res) => {
+  const p = getPipeline(req.params.id);
+  if (!p) return res.status(404).json({ error: 'Pipeline não encontrado.' });
+  attachPipeline(p, res);
+});
+
+app.post('/api/pipeline/:id/cancel', (req, res) => {
+  const p = getPipeline(req.params.id);
+  if (!p) return res.status(404).json({ error: 'Pipeline não encontrado.' });
+  p.cancel();
+  res.json({ ok: true });
+});
+
+/** Apaga o harness gerado, deixando o crate como estava. */
+app.post('/api/pipeline/:id/cleanup', async (req, res, next) => {
+  try {
+    const p = getPipeline(req.params.id);
+    if (!p) return res.status(404).json({ error: 'Pipeline não encontrado.' });
+    await cleanupHarness(p);
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
 });
 
 // ── Erros ───────────────────────────────────────────────────────────────────

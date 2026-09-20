@@ -1,13 +1,7 @@
 # Ferramenta de auditoria Soroban
 
-React + API, rodando local. Aponte para **qualquer crate Soroban** no disco e o
-pipeline roda em cima dele: inspeção → IA propõe invariantes → **você cura** →
-IA gera o harness → compila e roda.
-
-É o loop desenhado no Tópico 3 §4.1, que até agora só existia como prompts
-soltos em arquivos markdown.
-
-## Subir
+React + API, rodando local. Aponte para **qualquer crate Soroban** no disco,
+clique em Auditar, e o pipeline roda sozinho até o relatório.
 
 ```bash
 cd tools/audit
@@ -17,62 +11,86 @@ cp api/.env.example api/.env     # e preencha OPENROUTER_API_KEY
 npm run dev
 ```
 
-Web em `localhost:5173`, API em `localhost:5174`. O Vite faz proxy de `/api`,
-então o browser não vê CORS nem troca de porta.
+Web em `localhost:5173`, API em `localhost:5174`. O Vite faz proxy de `/api`.
 
-**Sem a chave a ferramenta sobe e funciona** — inspeção e execução de cargo não
-dependem de IA. As duas etapas que dependem retornam 503 com instrução explícita
-em vez de falhar em silêncio, e a UI mostra `IA desligada` na barra.
+## O pipeline
 
-## O fluxo
-
-| Etapa | O que faz | Quem decide |
+| # | Etapa | O que faz |
 |---|---|---|
-| **1 · Contrato** | Lê o `Cargo.toml`, acha o arquivo com `#[contract]`, extrai entry points de dentro dos blocos `#[contractimpl]`, detecta tiers de storage e `extend_ttl` | — |
-| **2 · Invariantes** | O modelo propõe; você aceita ou rejeita uma a uma | **humano** |
-| **3 · Harness** | Gera o teste a partir **das invariantes aceitas**, não da proposta inteira, e escreve em `tests/audit_generated.rs` | — |
-| **4 · Execução** | Roda `cargo test` / `cargo mutants` com streaming ao vivo | **humano** |
+| 1 | **Inspecionar** | Lê o `Cargo.toml`, acha o arquivo com `#[contract]`, extrai entry points por brace-matching dos blocos `#[contractimpl]`, detecta tiers de storage e `extend_ttl` |
+| 2 | **Propor** | A IA lê o contrato e devolve invariantes em JSON, com a suposição que cada uma assume |
+| 3 | **Gerar** | A IA escreve o harness a partir das invariantes, em `tests/audit_generated.rs` |
+| 4 | **Compilar** | `cargo test --no-run`. Se não compila, o pipeline segue — a suíte existente ainda diz algo |
+| 5 | **Validar** | Roda o harness **contra o contrato como ele é** |
+| 6 | **Suíte** | Roda a suíte que já existia |
+| 7 | **Relatório** | Propostas, mantidas, descartadas, yield |
 
-A etapa 2 é o produto. Uma proposta que não vale é pior que uma ausente — queima
-tempo de curadoria e vira alarme falso. A ferramenta mostra o yield (aceitas /
-propostas) porque esse número é a medida de precisão do modelo.
+## A etapa 5 é o produto
+
+Uma invariante que falha contra o contrato **correto** é falso positivo. Ou a
+propriedade não vale, ou o harness a implementou errado — nos dois casos
+reportá-la seria acusar bug onde não há evidência.
+
+Então a validação descarta essas sozinha, casando o nome do teste que falhou com
+o ID da invariante que ele cita. **A curadoria é feita por execução, não por
+alguém clicando.**
+
+Isso importa porque não é hipotético: no benchmark deste repositório, 3 de 16
+propostas do modelo estavam erradas — incluindo a que ele enunciou com mais
+confiança que todas as outras. Sem esta etapa, as três entrariam no relatório
+como achados.
+
+O relatório distingue as duas coisas:
+
+- **descartada** — a invariante falhou contra o contrato correto
+- **falha órfã** — um teste falhou sem citar invariante nenhuma, então é sobre o
+  harness e não sobre o contrato
+
+## Sem chave
+
+A ferramenta sobe e funciona: inspeção e execução de cargo não dependem de IA.
+A etapa 2 falha com a instrução exata em vez de degradar em silêncio, e a barra
+mostra `IA desligada`. Uma lista de invariantes vazia reportada como resultado
+seria a classe de resposta errada e quieta que este projeto passou o tempo
+perseguindo.
 
 ## Esconder features do modelo
 
-O fonte pode conter as respostas. Se o crate tem features que escondem caminhos
-conhecidos — bugs plantados, ramos de debug — marque na etapa 1 e a API resolve
-os `cfg` antes de enviar ao modelo.
+`POST /api/pipeline` aceita `hiddenFeatures`. O fonte pode conter as respostas —
+bugs plantados, ramos de debug — e a API resolve os `cfg` antes de enviar.
 
 **É uma transformação textual, não um compilador.** O fluxo de referência
-verifica o resultado substituindo-o pelo fonte real e re-rodando a suíte. Confira
-antes de confiar.
+verifica o resultado substituindo-o pelo fonte real e re-rodando a suíte.
 
 ## Endpoints
 
 ```
-GET  /api/health              chave presente? qual modelo?
-POST /api/inspect             { path } -> ContractInfo
-POST /api/clean-view          { path, hiddenFeatures } -> o fonte como o modelo verá
-POST /api/ai/invariants       { path, hiddenFeatures } -> proposta + saída bruta
-POST /api/ai/inputs           { path } -> prior de entradas
-POST /api/ai/harness          { path, invariants } -> código, escrito em tests/
-POST /api/run/test            { path, testTarget? } -> { id }
-POST /api/run/mutants         { path } -> { id }
-GET  /api/runs/:id/stream     SSE, com replay do que já saiu
-POST /api/runs/:id/cancel
+GET  /api/health                  chave presente? qual modelo?
+POST /api/pipeline                { path, hiddenFeatures?, runMutants? } -> { id }
+GET  /api/pipeline/:id/stream     SSE: snapshot, stage, log, done
+GET  /api/pipeline/:id            estado completo
+POST /api/pipeline/:id/cancel
+POST /api/pipeline/:id/cleanup    apaga o harness gerado do crate
+
+POST /api/inspect                 as etapas soltas, para uso manual
+POST /api/clean-view
+POST /api/ai/invariants | /ai/inputs | /ai/harness
+POST /api/run/test | /run/mutants
+GET  /api/runs/:id/stream
 ```
 
-A saída bruta do modelo vem junto da versão estruturada em toda chamada de IA.
-Se o JSON não parsear, a UI mostra o texto cru em vez de engolir o erro.
+O SSE faz replay: abrir a página no meio da execução mostra tudo que já passou.
 
 ## Limites, explícitos
 
-- **Não roda `cargo-fuzz`.** Precisaria gerar um crate de fuzz e o alvo; a
-  ferramenta cobre `cargo test` e `cargo mutants`. O pipeline de fuzzing
-  guiado por cobertura está em `04-prototype-development/scripts/`.
-- **Não valida o harness gerado antes de escrever.** Ele vai para
-  `tests/audit_generated.rs` e o `cargo` é o juiz — que é o desenho, mas
-  significa que o arquivo pode não compilar de primeira. Esperado: no benchmark
-  deste projeto, 16 de 17 erros de compilação vieram de uma única suposição
-  errada sobre o SDK.
-- **Escreve dentro do crate que você apontou.** Confira o caminho.
+- **Não roda `cargo-fuzz`.** Precisaria gerar o crate de fuzz e o alvo. O
+  pipeline guiado por cobertura está em `04-prototype-development/scripts/`.
+- **Escreve dentro do crate que você apontou**, em `tests/audit_generated.rs`.
+  O botão de limpeza apaga.
+- **A validação casa teste com invariante por nome.** Se o harness gerado não
+  citar o ID da invariante no nome do teste, a falha vira órfã em vez de
+  descartar a propriedade certa. O prompt pede o ID no nome; modelos às vezes
+  não obedecem.
+- **Um harness que não compila não invalida o pipeline** — ele segue para a
+  suíte existente e reporta. Esperado: no benchmark deste projeto, 16 de 17
+  erros de compilação vieram de uma única suposição errada sobre o SDK.
