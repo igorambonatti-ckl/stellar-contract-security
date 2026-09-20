@@ -63,10 +63,19 @@ env.ledger().with_mut(|l| {
 });
 env.ledger().set_sequence_number(n);             // NOT \`set_sequence\`
 
-// TTL is readable numerically, but only from inside the contract's context:
-env.as_contract(&id, || env.storage().instance().get_ttl());
-env.as_contract(&id, || env.storage().persistent().get_ttl(&key));
-env.as_contract(&id, || env.storage().temporary().get_ttl(&key));
+// TTL and whole-storage reads come from **traits**, not inherent methods. The
+// import is mandatory — without it the compiler says "no method named get_ttl
+// found for struct Instance", which reads like the method does not exist.
+use soroban_sdk::testutils::storage::{Instance as _, Persistent as _, Temporary as _};
+
+// And they only work from inside the contract's own storage context:
+env.as_contract(&id, || env.storage().instance().get_ttl());          // -> u32
+env.as_contract(&id, || env.storage().persistent().get_ttl(&key));    // -> u32
+env.as_contract(&id, || env.storage().temporary().get_ttl(&key));     // -> u32
+
+// Every entry of a tier, as a Map<Val, Val> — this is how a conservation law
+// sums over holders the test did not create:
+env.as_contract(&id, || env.storage().persistent().all());
 
 // A token to move around:
 let tok = env.register_stellar_asset_contract_v2(admin.clone()).address();
@@ -74,13 +83,14 @@ soroban_sdk::token::StellarAssetClient::new(&env, &tok).mint(&who, &amount);
 soroban_sdk::token::TokenClient::new(&env, &tok).balance(&who);
 \`\`\`
 
-### Two things that do not exist — do not reach for them
+### Things that do not exist — do not reach for them
 
-- **Storage is not enumerable.** There is no \`iter()\`, no \`keys()\`, no way to
-  walk every entry. A property like "the total equals the sum over all holders"
-  must sum over the principals **your test created**, which it knows.
+- There is no \`iter()\` or \`keys()\` on storage. To walk every entry use
+  \`.all()\` from the testutils trait above, which returns a \`Map<Val, Val>\`.
 - **\`InvokeError\` has no \`to_contract_error()\`.** Compare the value instead:
   \`e == soroban_sdk::Error::from_contract_error(MyError::Foo as u32)\`.
+- There is no \`soroban_sdk::testutils::EnvExt\`. Everything you need on \`Env\` is
+  in \`soroban_sdk::testutils::{Address, Ledger}\` plus the storage traits above.
 
 ### Protocol 23 changed what is falsifiable
 
@@ -127,6 +137,16 @@ ${API_TESTE}
 Produce the **invariant catalogue** a fuzzing harness for this contract should
 assert: the properties that must hold for every possible sequence of calls, for
 any inputs, at any ledger sequence.
+
+## How these will be checked
+
+Each invariant becomes a function \`check(&Rig)\` that a property-based test calls
+**after every operation** of a randomly generated sequence of calls. So write
+properties as **predicates over observable state**, true in every reachable
+state — not as scenarios ("deposit 100, then withdraw 50, then assert").
+
+A property that only holds under a precondition is still welcome: state the
+precondition, and the check will read the state and skip when it does not apply.
 
 ## What counts as a good invariant
 
@@ -179,6 +199,307 @@ export interface CuratedInvariant {
   statement: string;
   class: string;
   observation: string;
+}
+
+/**
+ * Um rig completo para um contrato inventado, como referência de forma.
+ *
+ * Duas coisas justificam gastar tanto prompt nisto.
+ *
+ * A primeira é que o rig é ponto único de falha: se ele não compila, nenhuma
+ * invariante chega a ser testada. Na primeira medição desta arquitetura ele
+ * morreu em quatro tentativas de reparo e o resultado foi zero.
+ *
+ * A segunda é que um dos erros não é adivinhável. O cliente gerado
+ * (`FooClient<'a>`) **empresta** o `Env`, então uma struct com os dois é
+ * auto-referencial e Rust recusa. A saída — guardar o `Env` e o `Address`, e
+ * construir o cliente sob demanda — é óbvia depois de vista e custa uma rodada
+ * inteira antes disso. O mesmo vale para `prop::sample::select`, que aceita
+ * `Vec` e recusa array.
+ *
+ * O contrato do exemplo é fictício de propósito: mostra a forma sem sugerir
+ * nada sobre o contrato em auditoria.
+ */
+const RIG_EXEMPLO = `### A complete rig for a different contract, as a shape reference
+
+This is for an imaginary \`Bank\` contract with \`open\`, \`credit\`, \`debit\` and an
+admin-only \`freeze\`. Copy the **shape**, not the operations.
+
+\`\`\`rust
+use proptest::prelude::*;
+use soroban_sdk::testutils::{Address as _, Ledger as _};
+use soroban_sdk::{Address, Env};
+use soroban_sdk::token::{StellarAssetClient, TokenClient};
+use my_bank::*;
+
+pub struct Rig {
+    pub env: Env,
+    pub id: Address,          // the contract
+    pub token: Address,
+    pub admin: Address,
+    pub users: Vec<Address>,  // index into this; never generate an Address
+}
+
+// The generated client borrows the Env, so a struct holding both would be
+// self-referential and will not compile. Hold the ids, build clients on demand.
+impl Rig {
+    pub fn client(&self) -> BankClient<'_> { BankClient::new(&self.env, &self.id) }
+    pub fn token(&self) -> TokenClient<'_> { TokenClient::new(&self.env, &self.token) }
+    pub fn sac(&self) -> StellarAssetClient<'_> { StellarAssetClient::new(&self.env, &self.token) }
+}
+
+pub fn setup() -> Rig {
+    let env = Env::default();
+    env.mock_all_auths();
+    env.ledger().with_mut(|l| {
+        l.sequence_number = 1000;
+        l.timestamp = 1000;
+        l.min_persistent_entry_ttl = 100;
+        l.min_temp_entry_ttl = 16;
+        l.max_entry_ttl = 1_000_000;
+    });
+
+    let admin = Address::generate(&env);
+    let token = env.register_stellar_asset_contract_v2(admin.clone()).address();
+    let id = env.register(Bank, ());
+
+    let mut users: Vec<Address> = (0..3).map(|_| Address::generate(&env)).collect();
+    users.push(id.clone());   // the contract itself is a reachable principal
+
+    let sac = StellarAssetClient::new(&env, &token);
+    for u in &users { sac.mint(u, &1_000_000_000i128); }
+
+    BankClient::new(&env, &id).initialize(&admin, &token);
+    Rig { env, id, token, admin, users }
+}
+
+#[derive(Debug, Clone)]
+pub enum Op {
+    Credit { who: usize, amount: i128 },
+    Debit  { who: usize, amount: i128 },
+    Freeze { who: usize },
+    Advance(u32),
+}
+
+pub fn apply(r: &Rig, op: &Op) {
+    let c = r.client();
+    // try_* everywhere: the fuzzer will produce arguments the contract is right
+    // to refuse, and a panic here would end the sequence before it got deep.
+    match op {
+        Op::Credit { who, amount } => { let _ = c.try_credit(&r.users[who % r.users.len()], amount); }
+        Op::Debit  { who, amount } => { let _ = c.try_debit(&r.users[who % r.users.len()], amount); }
+        Op::Freeze { who }         => { let _ = c.try_freeze(&r.users[who % r.users.len()]); }
+        Op::Advance(n)             => {
+            let s = r.env.ledger().sequence();
+            r.env.ledger().set_sequence_number(s.saturating_add(*n));
+        }
+    }
+}
+
+fn amount() -> impl Strategy<Value = i128> {
+    prop_oneof![
+        6 => 1i128..10_000i128,          // deep sequences need values that work
+        2 => Just(0i128),                // the boundary of every positivity guard
+        1 => Just(1i128),
+        1 => Just(i128::MAX),
+        1 => Just(i128::MAX / 2),
+    ]
+}
+
+pub fn op_strategy() -> impl Strategy<Value = Op> {
+    prop_oneof![
+        4 => (0usize..4, amount()).prop_map(|(who, amount)| Op::Credit { who, amount }),
+        4 => (0usize..4, amount()).prop_map(|(who, amount)| Op::Debit  { who, amount }),
+        1 => (0usize..4).prop_map(|who| Op::Freeze { who }),
+        // Ledger jumps land on and just past TTL cliffs, not uniformly.
+        2 => prop_oneof![Just(1u32), Just(15), Just(17), Just(99), Just(101), Just(1_000)]
+                 .prop_map(Op::Advance),
+    ]
+}
+\`\`\`
+
+Two shapes that cost a compile if you get them wrong:
+
+- \`prop::sample::select\` takes a \`Vec\`, not an array. \`select(vec![0usize, 1, 2])\`.
+- \`TokenClient\` and \`StellarAssetClient\` live in \`soroban_sdk::token\`, not at the
+  crate root.
+`;
+
+/**
+ * O rig: fixture, operações, e como sortear uma sequência delas.
+ *
+ * Existe porque a decomposição anterior — um teste independente por invariante,
+ * cada um montando o próprio cenário à mão — media quase nada. Quatro rodadas
+ * de medição contra sete bugs conhecidos deram 2/7, depois 1/7, depois 0/7,
+ * *piorando* conforme o prompt melhorava. A causa não era o prompt: um cenário
+ * único escolhido pelo modelo só encontra um bug se acertar o gatilho de
+ * primeira, e os valores que alguém escolhe à mão são os confortáveis.
+ *
+ * O braço de referência deste projeto chegou a 7/7 fazendo o oposto: uma
+ * sequência de operações sorteada, com todas as invariantes verificadas depois
+ * de **cada** operação. Cada propriedade passa então a ver todo estado que o
+ * fuzzer alcança, em vez de um só.
+ *
+ * Separar o rig da asserção também encolhe o que se pede por invariante: em vez
+ * de um teste inteiro com fixture, uma função sobre um estado que já existe.
+ * Menos superfície para errar é mais teste compilando.
+ */
+export function generateRig(info: ContractInfo, source: string): string {
+  const crate = info.crateName.replace(/-/g, '_');
+  const eps = info.entryPoints
+    .map((e) => `- \`${e.signature}\`${e.requiresAuth ? '  (calls require_auth)' : ''}`)
+    .join('\n');
+
+  return `${contractContext(info, source)}
+
+${API_TESTE}
+
+# Task
+
+Write the **rig**: the shared fixture and the operation alphabet that a
+property-based test will drive this contract with. Not the properties — those
+come separately, and they will be written against what you define here.
+
+## Entry points
+
+${eps || '(none detected — say so and return a minimal rig)'}
+
+${RIG_EXEMPLO}
+
+## What to produce, exactly these four items
+
+\`\`\`rust
+pub struct Rig { /* env, client, token client, the principals, whatever a property needs to read */ }
+
+/// Builds a contract in a usable initial state: registers it, sets ledger
+/// floors, creates the principals, funds them, and runs whatever
+/// initialization the contract requires before other calls are legal.
+pub fn setup() -> Rig { ... }
+
+/// One call to the contract. Cover every state-mutating entry point above,
+/// plus advancing the ledger, because ledger position is an input.
+#[derive(Debug, Clone)]
+pub enum Op { ... }
+
+/// Executes one operation. **Must not panic on a legitimate rejection** — use
+/// \`try_*\` and swallow contract errors, because the fuzzer will generate
+/// arguments the contract is right to refuse, and a panic there would end the
+/// sequence before it got interesting.
+pub fn apply(r: &Rig, op: &Op) { ... }
+
+/// Where the interesting values are.
+pub fn op_strategy() -> impl Strategy<Value = Op> { ... }
+\`\`\`
+
+## Rules that decide whether this finds anything
+
+**Principals are indices into a fixed pool**, never generated inside the
+strategy: a freshly generated \`Address\` cannot be authorized, so fuzzing
+address bytes collapses every access-control property into "an unknown caller
+is rejected". Put at least three principals in \`Rig\`, and include the
+**contract's own address** as a reachable choice — a contract's "principals are
+not contracts" assumption is exactly the kind that goes untested.
+
+**Amounts must reach the edges.** Do not restrict the strategy to a comfortable
+range. Weight it: mostly small values so sequences get deep, but with real
+probability of \`0\`, \`1\`, \`i128::MAX\`, \`i128::MAX / 2\`, and of a value derived
+from live state (a holder's exact balance, and that balance plus one) — the
+interesting boundary usually cannot be written as a literal.
+
+**Ledger movement is an operation.** Include an \`Op\` that advances
+\`sequence_number\`, with jumps that land on and just past TTL boundaries, not a
+uniform small step.
+
+**\`setup()\` must leave the contract usable.** If it requires initialization
+before anything else is legal, do it in \`setup\`. A rig whose every operation
+bounces off "not initialized" produces a green test that exercised nothing.
+
+## Output
+
+One \`\`\`rust block: your \`use\` statements, then the four items. The block is
+placed in a module named \`rig\`, so do **not** write a \`mod\` yourself. No prose.
+
+Import what you need, including \`use proptest::prelude::*;\` and
+\`use ${crate}::*;\`.`;
+}
+
+/**
+ * Uma invariante vira uma asserção sobre um estado que já existe.
+ *
+ * O contraste com o que havia antes é todo o ponto: pedia-se um teste completo,
+ * com fixture, cenário e asserção, e o modelo errava a fixture. Aqui a fixture
+ * é dada, o estado é dado, e o que resta é a única parte que exige entender a
+ * propriedade.
+ */
+export function generateCheck(
+  info: ContractInfo,
+  source: string,
+  inv: CuratedInvariant,
+  rig: string,
+): string {
+  const slug = inv.id.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  return `${contractContext(info, source)}
+
+# The rig this property runs against
+
+This already exists and compiles. \`check\` is called after **every** operation of
+a randomly generated sequence, so it sees many states, not one.
+
+\`\`\`rust
+${rig}
+\`\`\`
+
+# Invariant to assert
+
+**${inv.id}** — ${inv.class}
+
+${inv.statement}
+
+*How to observe:* ${inv.observation}
+
+${tecnicaPorClasse(inv.class)}
+
+# Task
+
+Write **one** function, exactly this signature:
+
+\`\`\`rust
+pub fn check(r: &rig::Rig) { ... }
+\`\`\`
+
+plus any helper it needs. Nothing else — no \`#[test]\`, no \`proptest!\`, no
+fixture. The pipeline wraps it.
+
+## Rules
+
+- **It must hold after every operation**, including the ones that were rejected.
+  If the property only holds in some states, guard it: read the state, return
+  early when the precondition does not apply, and assert when it does. A
+  \`check\` that asserts unconditionally something only true sometimes fails
+  against the correct contract and gets thrown away.
+- **Compare against a value you computed yourself**, not against another read of
+  the same thing. "The contract agrees with itself" holds in every buggy
+  contract too.
+- **Do not call state-mutating entry points.** \`check\` observes; the rig acts.
+  A check that deposits changes the state the next check will see.
+- Failure message must name the invariant and print the values that broke the
+  relation — a failure nobody can read is a failure nobody will fix.
+- \`Rig\` fields are what you have. If the property needs something the rig does
+  not expose, say so rather than inventing a field.
+
+## Output
+
+One \`\`\`rust block: \`use\` statements, then \`pub fn check\`. It is placed in
+\`mod ${slug}\`, which already has \`use super::rig;\` in scope — but import
+everything else you use, including \`use ${info.crateName.replace(/-/g, '_')}::*;\`.
+
+If this invariant cannot be observed through the rig and the public API, return
+exactly:
+
+\`\`\`rust
+// IMPOSSIVEL: <reason>
+\`\`\``;
 }
 
 /**
@@ -276,89 +597,6 @@ users.`;
 }
 
 /**
- * Um teste para **uma** invariante.
- *
- * Pedir um arquivo com todas as propriedades de uma vez é tudo-ou-nada: um erro
- * em qualquer uma derruba o arquivo inteiro, e foi o que aconteceu com todos os
- * modelos medidos — 43 a 59 erros por tentativa, em modelos que escrevem Rust
- * correto quando o escopo é pequeno.
- */
-export function generateOneTest(
-  info: ContractInfo,
-  source: string,
-  inv: CuratedInvariant,
-): string {
-  const slug = inv.id.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-  return `${contractContext(info, source)}
-
-${API_TESTE}
-${
-  info.exampleTest
-    ? `## A test from this crate that already compiles\n\nThis is the authority on the API surface — the client name, how the fixture is\nbuilt, how errors are matched. Where it disagrees with your recollection of the\nSDK, **it is right and you are wrong**. Copy its fixture setup.\n\n\`\`\`rust\n${info.exampleTest.source}\n\`\`\`\n`
-    : ''
-}
-# Invariant to test
-
-**${inv.id}** — ${inv.class}
-
-${inv.statement}
-
-*How to observe:* ${inv.observation}
-
-${tecnicaPorClasse(inv.class)}
-
-# Task
-
-Write **one** \`#[test]\` function that asserts this single invariant, plus any
-helper it needs. Nothing else.
-
-The function name **must start with \`${slug}\`** — the pipeline matches a failing
-test back to its invariant by that prefix, and a test whose failure cannot be
-attributed is not a finding.
-
-## Rules
-
-- **Assert state, not liveness.** "The call did not panic" is not an oracle. Read
-  state back and compare against a value you computed yourself. Where the only
-  assertion available is "this must abort", use \`try_*\`, assert **which** error
-  came back, and assert state did not change.
-- \`try_foo\` returns \`Result<Result<T, _>, Result<soroban_sdk::Error, InvokeError>>\`.
-  The error side carries \`soroban_sdk::Error\`, not the contract's own enum, unless
-  the entry point declares a \`Result\` return type. Compare with
-  \`soroban_sdk::Error::from_contract_error(MyError::Foo as u32)\`. \`Result\` has no
-  \`Display\` — use \`{:?}\` in messages, never \`{}\`.
-- Principals come from addresses you register in the fixture, never from raw
-  fuzzed bytes: a generated \`Address\` cannot be authorized, so fuzzing address
-  bytes collapses every access-control property into "an unknown caller is
-  rejected".
-- Use \`proptest!\` whenever the property quantifies over a **range** of inputs —
-  any property about amounts, balances or ledger positions does. A plain
-  \`#[test]\` with hand-picked literals only proves the property at the literals
-  you picked. Reserve plain \`#[test]\` for properties about a fixed sequence of
-  calls. When you use \`proptest!\`, import it — \`use proptest::prelude::*;\` —
-  and put the \`#[test]\`-generating macro at module level, not inside a function.
-
-## Output
-
-Return **only** the Rust code in one \`\`\`rust block: **your own \`use\` statements**,
-then the test function and any helper it needs. No prose.
-
-The pipeline wraps your snippet in \`mod ${slug} { ... }\` for you — **do not write
-a \`mod\` yourself**, or it ends up nested. Import everything you use:
-\`soroban_sdk::testutils::{Address as _, Ledger as _}\`,
-\`use ${info.crateName.replace(/-/g, '_')}::*;\`, and anything else. Nothing is in
-scope that you do not import, and nothing you import can collide with another
-test.
-
-If this invariant cannot be expressed through the public API, return exactly:
-
-\`\`\`rust
-// IMPOSSIVEL: <reason>
-\`\`\``;
-}
-
-/**
  * Devolve ao modelo os erros de **um** teste.
  *
  * A etapa de correção existia antes e não funcionava: o arquivo inteiro vinha
@@ -397,7 +635,8 @@ ${API_TESTE}
 Return the **complete corrected snippet** in one \`\`\`rust block — \`use\` statements
 plus the test, ready to drop into its own \`mod\`. No prose, no diff.
 
-- The function name must still start with \`${inv.id.toLowerCase().replace(/[^a-z0-9]/g, '')}\`.
+- Keep the same signature the snippet already has — the pipeline calls it by
+  name, and renaming it detaches the property from its invariant.
 - Import from \`${info.crateName.replace(/-/g, '_')}\`. **Never** \`contractimport!\`.
 - If the compiler says a method does not exist, **do not invent another name for
   it**. Use an API you are certain of, or drop that assertion and say so in a
@@ -461,7 +700,7 @@ There are exactly two possibilities, and they lead to opposite places:
 Decide which, from the failure output and the contract source.
 
 - If (1): return the corrected snippet in one \`\`\`rust block, \`use\` statements
-  included, function name still starting with \`${inv.id.toLowerCase().replace(/[^a-z0-9]/g, '')}\`.
+  included, keeping the \`pub fn check(r: &rig::Rig)\` signature.
   **Do not weaken the assertion to make it pass** — that turns a failing test
   into a test that measures nothing, which is worse than deleting it.
 - If (2): return exactly \`// FALSA: <why the property does not hold>\` and nothing

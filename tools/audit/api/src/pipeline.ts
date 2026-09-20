@@ -7,7 +7,8 @@ import type { Response } from 'express';
 import { inspectContract, cleanView, contractSource, type ContractInfo } from './inspect.js';
 import { complete, extractCode, isConfigured } from './openrouter.js';
 import {
-  systemPrompt, proposeInvariants, generateOneTest, fixOneTest, fixFailingTest, harnessHeader,
+  systemPrompt, proposeInvariants, generateRig, generateCheck, fixOneTest, fixFailingTest,
+  harnessHeader,
   type CuratedInvariant,
 } from './prompts.js';
 
@@ -122,6 +123,161 @@ function soErros(output: string): string {
 }
 
 /**
+ * Conserta o que a referência de API não alcança: os imports.
+ *
+ * Um crate cujo único teste é um `#[cfg(test)] mod` inline usa `use super::*;`,
+ * e o modelo copia isso fielmente — foi o que aconteceu no timelock, onde 10 de
+ * 15 trechos morreram com "cannot find type `Address`". Num teste de integração
+ * em `tests/`, `super` é o módulo irmão, não o crate. O exemplo que a ferramenta
+ * dava ao modelo não se aplicava ao arquivo que ela pedia que ele escrevesse.
+ *
+ * As transformações são determinísticas e anunciadas. Não inventam API: só
+ * reescrevem um caminho de import comprovadamente errado, e acrescentam o
+ * mínimo quando não há nenhum.
+ */
+function consertarImports(p: Pipeline, crate: string, code: string, id: string): string {
+  let out = code;
+  if (/^\s*use\s+super::\*\s*;/m.test(out)) {
+    out = out.replace(/^\s*use\s+super::\*\s*;/gm, `use ${crate}::*;`);
+    log(p, `${id}: troquei \`use super::*\` por \`use ${crate}::*\` — o código vive em tests/, não dentro do crate`);
+  }
+  if (!new RegExp(`use\\s+${crate}\\b`).test(out)) {
+    out = `use ${crate}::*;\n` + out;
+    log(p, `${id}: acrescentei \`use ${crate}::*\` — o trecho não importava o crate`);
+  }
+  if (!/use\s+soroban_sdk::/.test(out)) {
+    out = 'use soroban_sdk::testutils::{Address as _, Ledger as _};\n'
+        + 'use soroban_sdk::{Address, Env};\n' + out;
+    log(p, `${id}: acrescentei os imports básicos do soroban_sdk`);
+  }
+  return out;
+}
+
+/**
+ * Gera o rig e não devolve nada que não compile.
+ *
+ * O rig é a única peça que não pode ser descartada: toda asserção é escrita
+ * contra ele. Por isso ganha mais tentativas de reparo que um teste comum, e
+ * por isso é compilado antes de qualquer invariante ser gerada — descobrir que
+ * ele está quebrado depois de quinze chamadas ao modelo custaria as quinze.
+ *
+ * O `#[test]` mínimo existe só para o cargo não podar `setup`/`apply` como
+ * código morto e deixar de reportar os erros dentro deles.
+ */
+async function construirRig(
+  p: Pipeline,
+  info: ContractInfo,
+  src: string,
+): Promise<string | null> {
+  const testsDir = join(info.path, 'tests');
+  await mkdir(testsDir, { recursive: true });
+  const caminho = join(testsDir, 'audit_generated.rs');
+
+  const escreverSo = async (code: string) => {
+    await writeFile(
+      caminho,
+      harnessHeader(info) + '\nmod rig {\n' + code + '\n}\n\n' +
+      '#[test]\nfn rig_monta() { let _ = rig::setup(); }\n',
+      'utf8',
+    );
+  };
+  const compila = () => exec(p, info.path, 'cargo',
+    ['test', '-p', info.crateName, '--test', 'audit_generated', '--no-run']);
+
+  const inicial = await complete({
+    system: systemPrompt(),
+    user: generateRig(info, src),
+    model: p.model,
+    maxTokens: 6000,
+  }).catch((e) => { log(p, `!! rig: ${e.message}`); return null; });
+  if (!inicial) return null;
+  p.usage.entrada += inicial.usage?.entrada ?? 0;
+  p.usage.saida += inicial.usage?.saida ?? 0;
+
+  const crate = info.crateName.replace(/-/g, '_');
+  let code = consertarImports(p, crate, extractCode(inicial.text, 'rust').trim(), 'rig');
+  log(p, `rig: ${code.split('\n').length} linhas`);
+
+  await escreverSo(code);
+  let r = await compila();
+
+  for (let tentativa = 1; tentativa <= 6 && r.code !== 0; tentativa++) {
+    const erros = soErros(r.output);
+    log(p, `rig: reparo ${tentativa} — ${erros.split('\n')[0].slice(0, 110)}`);
+    const fix = await complete({
+      system: systemPrompt(),
+      user: fixOneTest(
+        info,
+        { id: 'RIG', statement: 'the shared fixture and operation alphabet', class: 'rig', observation: '' },
+        code,
+        erros,
+      ),
+      model: p.model,
+      maxTokens: 6000,
+    }).catch((e) => { log(p, `!! rig: ${e.message}`); return null; });
+    if (!fix) break;
+    p.usage.entrada += fix.usage?.entrada ?? 0;
+    p.usage.saida += fix.usage?.saida ?? 0;
+
+    code = consertarImports(p, crate, extractCode(fix.text, 'rust').trim(), 'rig');
+    await escreverSo(code);
+    r = await compila();
+  }
+
+  if (r.code !== 0) {
+    log(p, '!! o rig não compila depois de seis tentativas — nada pode ser asserido contra ele');
+    return null;
+  }
+  log(p, 'rig: compila');
+
+  // Compilar não basta: um `apply` que chama o cliente sem `try_` dá panic na
+  // primeira rejeição legítima, e o fuzzer produz argumentos que o contrato
+  // está certo em recusar. A sequência morre no primeiro passo inválido, o
+  // teste fica vermelho contra o contrato *correto*, e toda invariante é
+  // descartada — um rig que compila e invalida tudo.
+  //
+  // É verificável sem rodar nada, então não depende de o modelo lembrar: numa
+  // medição ele aplicou a regra em dois entry points e esqueceu em três.
+  const crus = [...code.matchAll(/\b(?:c|client)\s*\.\s*([a-z_][a-z0-9_]*)\s*\(/gi)]
+    .map((m) => m[1])
+    .filter((n) => !n.startsWith('try_') && info.entryPoints.some((e) => e.name === n));
+
+  if (crus.length) {
+    const unicos = [...new Set(crus)];
+    log(p, `rig: ${unicos.join(', ')} chamado(s) sem try_ — um panic aqui mata a sequência; pedindo correção`);
+    const fix = await complete({
+      system: systemPrompt(),
+      user: `${code}\n\n---\n\nIn \`apply\`, these entry points are called **without** \`try_\`: ` +
+        `${unicos.map((n) => `\`${n}\``).join(', ')}.\n\n` +
+        'The fuzzer generates arguments the contract is right to refuse. A direct call panics ' +
+        'on refusal, which ends the operation sequence at its first invalid step and makes the ' +
+        'test fail against the *correct* contract — so every property gets discarded.\n\n' +
+        'Return the complete rig in one ```rust block with every entry-point call in `apply` ' +
+        'going through `try_*` and its result discarded with `let _ =`. Change nothing else.',
+      model: p.model,
+      maxTokens: 6000,
+    }).catch(() => null);
+
+    if (fix) {
+      p.usage.entrada += fix.usage?.entrada ?? 0;
+      p.usage.saida += fix.usage?.saida ?? 0;
+      const candidato = consertarImports(p, crate, extractCode(fix.text, 'rust').trim(), 'rig');
+      await escreverSo(candidato);
+      // Só aceita se ainda compilar: uma correção que quebra o rig é pior que
+      // o problema que ela conserta.
+      if ((await compila()).code === 0) {
+        log(p, 'rig: apply passa a usar try_ em todos os entry points');
+        return candidato;
+      }
+      log(p, '!! a correção do try_ quebrou o rig; fico com a versão que compila');
+      await escreverSo(code);
+    }
+  }
+
+  return code;
+}
+
+/**
  * O bloco de saída de um teste que falhou, e só ele.
  *
  * O cargo imprime o stdout de cada teste sob um cabeçalho `---- nome stdout ----`.
@@ -179,6 +335,8 @@ export interface Pipeline {
   invariants: Invariant[];
   harnessCode?: string;
   harnessPath?: string;
+  /** O rig gerado: fixture, operações e estratégia. */
+  rigCode?: string;
   /** Manifesto original, quando a ferramenta precisou mexer no crate-type. */
   manifestoOriginal?: { caminho: string; conteudo: string };
   rawProposal?: string;
@@ -444,12 +602,20 @@ async function run(p: Pipeline, runMutants: boolean) {
     });
     guard();
 
-    // ── 3. Um teste por invariante ──────────────────────────────────────────
+    // ── 3. Rig, depois uma asserção por invariante ──────────────────────────
     //
-    // Não um arquivo com tudo. Pedir 1200 linhas de Rust numa tacada é
-    // tudo-ou-nada: um erro em qualquer propriedade derruba o arquivo inteiro,
-    // e foi o que aconteceu com todos os modelos medidos — 43 a 59 erros por
-    // tentativa, em modelos que escrevem Rust correto quando o escopo é curto.
+    // A decomposição anterior — um teste completo e independente por
+    // invariante — media quase nada: 2/7, depois 1/7, depois 0/7 contra sete
+    // bugs conhecidos, *piorando* conforme o prompt melhorava. Cada teste
+    // montava um cenário único escolhido pelo modelo, e um cenário único só
+    // encontra um bug se acertar o gatilho de primeira.
+    //
+    // Agora há um rig: fixture, alfabeto de operações, e uma estratégia que
+    // sorteia sequências. Cada invariante vira uma `check(&Rig)` chamada depois
+    // de **cada** operação, então toda propriedade vê todo estado que o fuzzer
+    // alcança. É o que o braço de referência deste projeto fez para chegar a
+    // 7/7, e é a metade "fuzzing" de um projeto sobre fuzzing com IA, que a
+    // decomposição tinha silenciosamente removido.
     setStage(p, 'gerar', { status: 'rodando', startedAt: Date.now() });
 
     const testes: { inv: Invariant; code: string }[] = [];
@@ -463,6 +629,23 @@ async function run(p: Pipeline, runMutants: boolean) {
     const CONC = 4;
     let proximo = 0;
 
+    // O rig vem antes de tudo e é compilado sozinho: se ele não compilar,
+    // nenhuma asserção escrita contra ele compila, e gerar quinze delas antes
+    // de descobrir isso gastaria quinze chamadas para nada.
+    const rigCode = await construirRig(p, info, src);
+    if (!rigCode) {
+      setStage(p, 'gerar', {
+        status: 'falhou',
+        finishedAt: Date.now(),
+        detail: 'o rig não compila — sem fixture não há o que asserir',
+      });
+      setStage(p, 'compilar', { status: 'pulado' });
+      setStage(p, 'validar', { status: 'pulado' });
+      relatorio(p, { compilou: false, baselineOk });
+      return;
+    }
+    p.rigCode = rigCode;
+
     await Promise.all(Array.from({ length: Math.min(CONC, p.invariants.length) }, async () => {
       for (;;) {
         const i = proximo++;
@@ -471,14 +654,15 @@ async function run(p: Pipeline, runMutants: boolean) {
         const inv = p.invariants[i];
         const r = await complete({
           system: systemPrompt(),
-          user: generateOneTest(info, src, inv),
+          user: generateCheck(info, src, inv, rigCode),
           model: p.model,
           maxTokens: 3000,
         }).catch((e) => { log(p, `${inv.id}: !! ${e.message}`); return null; });
         if (!r) continue;
         p.usage.entrada += r.usage?.entrada ?? 0;
         p.usage.saida += r.usage?.saida ?? 0;
-        gerados[i] = extractCode(r.text, 'rust').trim();
+        gerados[i] = consertarImports(
+          p, info.crateName.replace(/-/g, '_'), extractCode(r.text, 'rust').trim(), inv.id);
         log(p, `${inv.id}: ${gerados[i]!.split('\n').length} linhas`);
       }
     }));
@@ -502,16 +686,48 @@ async function run(p: Pipeline, runMutants: boolean) {
       testes.push({ inv, code });
     }
 
-    // Cada teste no seu próprio módulo. É o que permite que ele traga os
-    // próprios `use`: num arquivo único, dois testes que importam `Address`
-    // colidem, e o cabeçalho fixo que existia antes só servia para os testes
-    // que por acaso precisavam exatamente daqueles imports — os outros não
-    // compilavam por falta de símbolo, não por erro de lógica.
+    // O driver é escrito aqui, não pelo modelo.
+    //
+    // Ele é a parte que decide se a coisa encontra algo — sequência sorteada,
+    // check depois de cada operação, inclusive no estado inicial — e é idêntico
+    // para toda invariante. Deixar o modelo reescrevê-lo quinze vezes seria
+    // quinze oportunidades de escrever uma versão que só confere no fim.
+    //
+    // Um teste por invariante, e não um teste que confere todas, porque uma
+    // falha tem que ser atribuível: `i7::i7_sequencia` diz qual propriedade
+    // quebrou, `sequencia` não diz nada.
     const escrever = async (items: { inv: Invariant; code: string }[]) => {
-      const corpo = items
-        .map((t) => `mod ${t.inv.id.toLowerCase().replace(/[^a-z0-9_]/g, '')} {\n${t.code}\n}`)
-        .join('\n\n');
-      await writeFile(p.harnessPath!, harnessHeader(info) + '\n' + corpo + '\n', 'utf8');
+      const corpo = items.map((t) => {
+        const slug = t.inv.id.toLowerCase().replace(/[^a-z0-9_]/g, '');
+        // `use super::rig;` é adicionado aqui; se o modelo também o escreveu,
+        // o import duplicado é erro de compilação.
+        const limpo = t.code.replace(/^\s*use\s+super::rig\s*;\s*$/gm, '');
+        return `mod ${slug} {
+use super::rig;
+use proptest::prelude::*;
+
+${limpo}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(64))]
+    #[test]
+    fn ${slug}_sequencia(ops in prop::collection::vec(rig::op_strategy(), 1..12)) {
+        let r = rig::setup();
+        check(&r);                       // vale já no estado inicial
+        for op in &ops {
+            rig::apply(&r, op);
+            check(&r);                   // e depois de cada operação
+        }
+    }
+}
+}`;
+      }).join('\n\n');
+
+      await writeFile(
+        p.harnessPath!,
+        harnessHeader(info) + '\nmod rig {\n' + rigCode + '\n}\n\n' + corpo + '\n',
+        'utf8',
+      );
     };
 
     const testsDir = join(info.path, 'tests');
@@ -571,6 +787,15 @@ async function run(p: Pipeline, runMutants: boolean) {
           const novo = extractCode(fix.text, 'rust').trim();
           if (/^\/\/\s*IMPOSSIVEL/i.test(novo)) {
             log(p, `${t.inv.id}: o modelo desistiu — inexprimível contra a API real`);
+            break;
+          }
+          // O driver chama `check(&r)`. Uma correção que renomeia ou perde a
+          // função troca o erro original por `cannot find function check`, e as
+          // tentativas seguintes passam a consertar o erro que a correção
+          // anterior criou — foi o que consumiu três rodadas em quatro
+          // invariantes de uma medição, sem nunca voltar ao problema real.
+          if (!/\bfn\s+check\s*\(/.test(novo)) {
+            log(p, `${t.inv.id}: a correção perdeu \`fn check\`; descartando esta tentativa`);
             break;
           }
           t.code = novo;
