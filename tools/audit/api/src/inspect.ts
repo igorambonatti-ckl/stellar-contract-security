@@ -23,6 +23,8 @@ export interface ContractInfo {
   callsOtherContracts: boolean;
   loc: number;
   warnings: string[];
+  /** Um teste existente do crate, usado como referência da API real. */
+  exampleTest?: { file: string; source: string };
 }
 
 /** Strip block and line comments so they cannot fool the regexes below. */
@@ -112,6 +114,55 @@ async function findContractSource(dir: string): Promise<string | null> {
   return null;
 }
 
+/**
+ * Um teste que já existe no crate, para servir de referência de API.
+ *
+ * É o antídoto para o modo de falha dominante: o modelo escreve o harness
+ * chutando a superfície do SDK, erra a assinatura do cliente gerado, e o
+ * compilador só diz *que* está errado — nunca qual é a certa. Devolver o erro
+ * não resolve, e a prova é que o mesmo erro sobrevive a duas tentativas de
+ * correção.
+ *
+ * Um teste que compila mostra a assinatura real. Prefere `tests/` a `src/`
+ * porque um teste de integração usa exatamente a superfície pública que o
+ * harness vai usar; e prefere o menor, porque serve de exemplo e não de
+ * enciclopédia.
+ */
+async function findExampleTest(dir: string): Promise<{ file: string; source: string } | undefined> {
+  const candidatos: string[] = [];
+  for (const sub of ['tests', 'src']) {
+    try {
+      for (const f of await readdir(join(dir, sub))) {
+        if (f.endsWith('.rs') && /test/i.test(f)) candidatos.push(join(dir, sub, f));
+      }
+    } catch { /* sem o diretório */ }
+  }
+
+  const lidos = await Promise.all(
+    candidatos.map(async (f) => {
+      const source = await readFile(f, 'utf8').catch(() => '');
+      return { file: f, source };
+    }),
+  );
+
+  const uteis = lidos
+    // Precisa exercitar o contrato de verdade, não ser um módulo de helpers.
+    .filter((c) => /#\[test\]|proptest!/.test(c.source) && /Client::new|env\.register/.test(c.source))
+    .sort((a, b) => a.source.length - b.source.length);
+
+  const escolhido = uteis[0];
+  if (!escolhido) return undefined;
+
+  // Um arquivo enorme empurraria o fonte do contrato para fora da janela.
+  const MAX = 12000;
+  return {
+    file: escolhido.file,
+    source: escolhido.source.length > MAX
+      ? escolhido.source.slice(0, MAX) + '\n// ... (truncado)'
+      : escolhido.source,
+  };
+}
+
 export async function inspectContract(inputPath: string): Promise<ContractInfo> {
   const dir = resolve(inputPath);
   const warnings: string[] = [];
@@ -183,6 +234,7 @@ export async function inspectContract(inputPath: string): Promise<ContractInfo> 
     callsOtherContracts: /Client::new|token::/.test(clean),
     loc: src.split('\n').length,
     warnings,
+    exampleTest: await findExampleTest(dir),
   };
 }
 

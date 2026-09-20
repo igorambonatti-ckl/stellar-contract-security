@@ -265,7 +265,7 @@ app.post('/api/runs/:id/cancel', (req, res) => {
 
 app.post('/api/pipeline', async (req, res, next) => {
   try {
-    const { path, hiddenFeatures = [], runMutants = false } = req.body ?? {};
+    const { path, hiddenFeatures = [], runMutants = false, model } = req.body ?? {};
     if (typeof path !== 'string' || !path.trim()) {
       return res.status(400).json({ error: 'Informe o caminho do crate.' });
     }
@@ -273,7 +273,7 @@ app.post('/api/pipeline', async (req, res, next) => {
     const raiz = await resolveCrateRoot(path.trim());
     // Falha cedo se não for um contrato, em vez de dentro do pipeline.
     await inspectContract(raiz);
-    const p = startPipeline({ path: raiz, hiddenFeatures, runMutants });
+    const p = startPipeline({ path: raiz, hiddenFeatures, runMutants, model });
     res.json({ id: p.id });
   } catch (e) {
     next(e);

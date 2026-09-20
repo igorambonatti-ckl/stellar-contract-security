@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Play, Square, Loader2, CheckCircle2, XCircle, MinusCircle, Circle,
-  ChevronDown, ChevronRight, Trash2, FileCode2, Clock,
+  ChevronDown, ChevronRight, Trash2, FileCode2, Clock, EyeOff,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { Erro } from '../components/Erro';
@@ -50,6 +50,10 @@ export function Pipeline() {
   const [path, setPath] = useState('');
   const [recentes, setRecentes] = useState<string[]>(lerRecentes);
   const [escolhendo, setEscolhendo] = useState(false);
+  // Features do crate, lidas assim que um contrato é apontado, para dar chance
+  // de esconder do modelo as que carregam caminhos conhecidos.
+  const [features, setFeatures] = useState<string[]>([]);
+  const [escondidas, setEscondidas] = useState<string[]>([]);
   const [stages, setStages] = useState<Stage[]>([]);
   const [log, setLog] = useState<string[]>([]);
   const [status, setStatus] = useState<'idle'|'rodando'|'concluido'|'falhou'|'cancelado'>('idle');
@@ -73,7 +77,7 @@ export function Pipeline() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       // Cancelar devolve null e não é erro.
-      if (json.path) setPath(json.path);
+      if (json.path) { setPath(json.path); void lerFeatures(json.path); }
     } catch (e) {
       setErro((e as Error).message);
     } finally {
@@ -81,12 +85,26 @@ export function Pipeline() {
     }
   }
 
+  /** Inspeção barata só para descobrir as features antes de rodar. */
+  async function lerFeatures(alvo: string) {
+    setFeatures([]); setEscondidas([]);
+    try {
+      const res = await fetch('/api/inspect', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: alvo }),
+      });
+      if (!res.ok) return;
+      const info = await res.json();
+      setFeatures(info.features ?? []);
+    } catch { /* silencioso: é conveniência, o pipeline inspeciona de novo */ }
+  }
+
   async function iniciar(alvo = path) {
     setErro(null); setStages([]); setLog([]); setStatus('rodando'); setAberto({});
     try {
       const res = await fetch('/api/pipeline', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: alvo.trim(), hiddenFeatures: [] }),
+        body: JSON.stringify({ path: alvo.trim(), hiddenFeatures: escondidas }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
@@ -145,6 +163,7 @@ export function Pipeline() {
           <input className="input font-mono text-sm" value={path} spellCheck={false}
             placeholder="ou cole o caminho do contrato ou do crate"
             onChange={(e) => setPath(e.target.value)}
+            onBlur={(e) => e.target.value.trim() && lerFeatures(e.target.value.trim())}
             onKeyDown={(e) => e.key === 'Enter' && path.trim() && status !== 'rodando' && iniciar()} />
 
           {status === 'rodando' ? (
@@ -163,7 +182,7 @@ export function Pipeline() {
           <div className="flex items-center gap-2 flex-wrap">
             <Clock className="w-3.5 h-3.5 text-ink-muted shrink-0" />
             {recentes.map((r) => (
-              <button key={r} onClick={() => { setPath(r); iniciar(r); }}
+              <button key={r} onClick={() => { setPath(r); void lerFeatures(r); iniciar(r); }}
                 title={r}
                 className="font-mono text-xs px-2.5 py-1 rounded-md bg-surface-secondary border border-line
                            text-ink-muted hover:text-brand-600 hover:border-brand-200 hover:bg-brand-50
@@ -171,6 +190,45 @@ export function Pipeline() {
                 {r.split('/').slice(-2).join('/')}
               </button>
             ))}
+          </div>
+        )}
+
+        {features.length > 0 && status !== 'rodando' && (
+          <div className="card p-4 flex flex-col gap-3">
+            <div className="flex items-start gap-2">
+              <EyeOff className="w-4 h-4 text-ink-muted mt-0.5 shrink-0" />
+              <div>
+                <h2 className="text-sm font-bold text-ink">Esconder do modelo</h2>
+                <p className="text-xs text-ink-muted mt-1 leading-relaxed max-w-[70ch]">
+                  O fonte pode conter as respostas. Features que escondem caminhos conhecidos —
+                  bugs plantados, ramos de debug — vão para o modelo junto com o código, e aí ele
+                  escreve invariantes sobre os bugs em vez de sobre o contrato. Marque para
+                  resolver o <code className="font-mono">cfg</code> antes de enviar.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {features.map((f) => {
+                const on = escondidas.includes(f);
+                return (
+                  <button key={f}
+                    onClick={() => setEscondidas((xs) =>
+                      on ? xs.filter((x) => x !== f) : [...xs, f])}
+                    className={on
+                      ? 'tag-blue cursor-pointer'
+                      : 'inline-flex items-center px-3 py-1 rounded-md bg-surface-secondary text-ink-muted border border-line text-xs font-semibold hover:border-brand-200'}>
+                    {f}
+                  </button>
+                );
+              })}
+              {features.length > 1 && (
+                <button
+                  onClick={() => setEscondidas(escondidas.length === features.length ? [] : features)}
+                  className="text-xs text-ink-muted hover:text-brand-600 underline underline-offset-2 px-1">
+                  {escondidas.length === features.length ? 'nenhuma' : 'todas'}
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>

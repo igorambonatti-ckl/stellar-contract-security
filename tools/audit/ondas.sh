@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+# Ondas: roda a auditoria com vários modelos e mede o que importa de verdade.
+#
+#   ./ondas.sh <modelo> [modelo...]
+#
+# O benchmark anterior media "a invariante sobrevive ao contrato correto", que é
+# *ausência de falso positivo* — necessário, mas não é evidência positiva. Um
+# harness vazio tem yield perfeito por esse critério.
+#
+# A evidência positiva deste projeto já existe: os sete bugs plantados em P3,
+# cada um atrás de uma feature, cada um violando exatamente uma invariante. Se o
+# harness que um modelo barato escreveu pega N deles, isso é uma detecção
+# atribuível contra resposta conhecida — e é o mesmo número que o braço de
+# referência reporta (7/7 curado, 1/7 fuzzing cego).
+#
+# Uma onda = um modelo. Cada onda deixa a linha no TSV mesmo se falhar, porque
+# uma falha medida também é resultado.
+set -uo pipefail
+
+API=${API:-http://localhost:5174}
+RAIZ=$(cd "$(dirname "$0")" && pwd)
+VAULT=${VAULT:-/Users/igorfambonatti/dev/stellar-studies/04-prototype-development/contracts/soroban-vault}
+ALVO="$VAULT/src/lib.rs"
+HARNESS="$VAULT/tests/audit_generated.rs"
+
+BUGS=(bug_overflow bug_missing_auth bug_zero_amount bug_self_transfer
+      bug_no_ttl bug_temp_nonce bug_reinit)
+
+ESCONDER=$(printf '"%s",' "${BUGS[@]}" | sed 's/,$//')
+ESCONDER="[$ESCONDER]"
+
+OUT="$RAIZ/ondas.tsv"
+DETALHE="$RAIZ/ondas-detalhe"
+mkdir -p "$DETALHE"
+[ -f "$OUT" ] || printf 'modelo\tstatus\tpropostas\tcompilam\treparados\tdescartados\tmantidas\tdetectados\tquais\tseg\tusd\n' > "$OUT"
+
+precos=$(curl -s https://openrouter.ai/api/v1/models | python3 -c "
+import json,sys
+for m in json.load(sys.stdin)['data']:
+    p=m.get('pricing') or {}
+    try: print(m['id'], float(p['prompt'])*1e6, float(p['completion'])*1e6)
+    except: pass")
+
+for M in "$@"; do
+  echo "════════ onda: $M ════════"
+  rm -f "$HARNESS"
+  INI=$(date +%s)
+
+  ID=$(curl -s -X POST "$API/api/pipeline" -H 'Content-Type: application/json' \
+    -d "{\"path\":\"$ALVO\",\"hiddenFeatures\":$ESCONDER,\"model\":\"$M\"}" \
+    | python3 -c "import json,sys; print(json.load(sys.stdin).get('id',''))")
+
+  if [ -z "$ID" ]; then echo "  não iniciou"; continue; fi
+  echo "  pipeline $ID"
+
+  while :; do
+    sleep 15
+    S=$(curl -s "$API/api/pipeline/$ID" | python3 -c "
+import json,sys
+p=json.load(sys.stdin); print(p['status'])
+import os" 2>/dev/null || echo erro)
+    [ "$S" != "rodando" ] && break
+    if [ $(( $(date +%s) - INI )) -gt 2400 ]; then
+      curl -s -X POST "$API/api/pipeline/$ID/cancel" >/dev/null; S=timeout; break
+    fi
+  done
+  FIM=$(date +%s)
+
+  curl -s "$API/api/pipeline/$ID" > "$DETALHE/$(echo "$M" | tr '/' '_').json"
+
+  # ── O braço de detecção ────────────────────────────────────────────────────
+  # O harness ficou no crate. Para cada bug plantado, liga a feature e vê se
+  # algum teste fica vermelho. Uma falha aqui é a evidência positiva: o harness
+  # que o modelo escreveu, sem nunca ter visto o bug, o encontrou.
+  DETECTADOS=0; QUAIS=""
+  if [ -f "$HARNESS" ]; then
+    for B in "${BUGS[@]}"; do
+      if ! (cd "$VAULT" && PROPTEST_CASES=64 cargo test -p soroban-vault \
+            --features "$B" --test audit_generated > "$DETALHE/$B.out" 2>&1); then
+        DETECTADOS=$((DETECTADOS+1))
+        QUAIS="$QUAIS${QUAIS:+,}${B#bug_}"
+        echo "    ✓ pegou $B"
+      else
+        echo "    ✗ passou $B"
+      fi
+    done
+    cp "$HARNESS" "$DETALHE/$(echo "$M" | tr '/' '_').rs"
+  fi
+
+  cat "$DETALHE/$(echo "$M" | tr '/' '_').json" \
+    | MODELO="$M" STATUS="$S" SEG=$((FIM-INI)) DET="$DETECTADOS" QUAIS="$QUAIS" PRECOS="$precos" python3 -c "
+import json,sys,os
+d=json.load(sys.stdin)
+st={s['id']:s for s in d['stages']}
+def dat(k): return (st.get(k,{}).get('data') or {})
+rel=dat('relatorio')
+u=d.get('usage') or {}
+pin=pout=0.0
+for l in os.environ['PRECOS'].splitlines():
+    q=l.split()
+    if q and q[0]==os.environ['MODELO']: pin,pout=float(q[1]),float(q[2])
+usd=u.get('entrada',0)/1e6*pin+u.get('saida',0)/1e6*pout
+comp=st.get('compilar',{})
+n_comp=(comp.get('detail') or '').split(' ')[0] if comp.get('status')=='ok' else '0'
+print('\t'.join(str(x) for x in [
+  os.environ['MODELO'], os.environ['STATUS'], rel.get('propostas','-'), n_comp,
+  dat('compilar').get('reparados','-'), dat('compilar').get('descartadosCompilacao','-'),
+  rel.get('mantidas','-'), os.environ['DET']+'/7', os.environ['QUAIS'] or '-',
+  os.environ['SEG'], f'{usd:.4f}']))" >> "$OUT"
+
+  tail -1 "$OUT" | sed 's/^/  /'
+done
+
+echo
+column -t -s $'\t' "$OUT"

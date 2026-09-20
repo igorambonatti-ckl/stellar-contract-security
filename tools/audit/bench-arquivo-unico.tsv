@@ -1,0 +1,4 @@
+modelo	status	propostas	compilou	tentativas	mantidas	descartadas	segundos	tok_saida	usd
+deepseek/deepseek-v4-flash	falhou	0	nao	-	-	-	180	8000	0.0007
+qwen/qwen3-coder-next	concluido	14	nao	-	0	0	281	25405	0.0249
+minimax/minimax-m2	concluido	14	nao	-	0	0	221	28443	0.0383

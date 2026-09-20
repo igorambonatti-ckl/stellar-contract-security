@@ -131,8 +131,19 @@ ${list}
 
 # Task
 
-Write a single Rust file for \`tests/audit_generated.rs\` — an integration test,
-so it links the crate as an external dependency and may only use its public API.
+Write a single Rust file for \`tests/audit_generated.rs\`.
+
+**It is an integration test of the crate \`${info.crateName}\`.** Import the
+contract from the crate directly:
+
+\`\`\`rust
+use ${info.crateName.replace(/-/g, '_')}::{/* Contract type, Client, error enum, DataKey */};
+\`\`\`
+
+**Do not use \`contractimport!\`.** It loads a \`.wasm\` from a build path that does
+not exist at test time, and the file will fail to compile with
+\`No such file or directory\`. The crate is a normal dependency of its own
+integration tests — link it, do not load bytecode.
 
 ## Non-negotiable
 
@@ -168,6 +179,42 @@ and fails with a message saying what relation broke and with which values.
 dev-dependencies. \`Env::default()\`, \`env.mock_all_auths()\`,
 \`env.set_auths(&[])\`, \`env.register(Contract, ())\`,
 \`env.register_stellar_asset_contract_v2(admin).address()\`.
+
+### The \`try_*\` signature — get this right
+
+The generated client gives you \`foo(..)\`, which panics on a contract error, and
+\`try_foo(..)\`, which does not. **\`try_foo\` returns a nested \`Result\`:**
+
+\`\`\`rust
+Result<Result<T, ConversionError>, Result<soroban_sdk::Error, InvokeError>>
+//     ^ Ok(Ok(value)) on success        ^ Err(Ok(e)) carries the error value
+\`\`\`
+
+Consequences, all of which are routine mistakes:
+
+- The failure channel carries **\`soroban_sdk::Error\`**, not the contract's own
+  error enum — unless the entry point *declares* a \`Result\` return type. This
+  contract's entry points return plain values and abort via \`panic_with_error!\`,
+  so expect \`soroban_sdk::Error\`.
+- Compare against a specific error with
+  \`e == soroban_sdk::Error::from_contract_error(MyError::Foo as u32)\`.
+- \`Result\` does not implement \`Display\`. In an assertion message use \`{:?}\`,
+  never \`{}\`.
+${
+  info.exampleTest
+    ? `
+### A test from this crate that already compiles
+
+Use it as the authority on the API surface — the client name, how the fixture is
+built, how errors are matched. Where it disagrees with your recollection of the
+SDK, **it is right and you are wrong**.
+
+\`\`\`rust
+${info.exampleTest.source}
+\`\`\`
+`
+    : ''
+}
 
 ## Output
 
@@ -220,4 +267,204 @@ Return **only** JSON, no prose:
 Be concrete. "A large \`i128\`" is not actionable; \`2^100\` is. Where you want a
 *product* to land on a boundary, say which operands produce it. For ledger
 advances, probe each TTL threshold from both sides.`;
+}
+
+/**
+ * Devolve os erros do compilador ao modelo.
+ *
+ * Esta etapa existe porque errar a superfície do SDK é o modo de falha
+ * dominante, e é barato de corrigir: no benchmark de referência, 16 dos 17
+ * erros de compilação vinham de uma única suposição errada sobre a assinatura
+ * gerada pelo cliente. O compilador é um revisor preciso e literal — devolver o
+ * que ele disse costuma bastar.
+ */
+export function fixHarness(
+  info: ContractInfo,
+  source: string,
+  code: string,
+  errors: string,
+): string {
+  return `The harness below does not compile. Fix it.
+
+# Contract source, for reference
+
+\`\`\`rust
+${source}
+\`\`\`
+
+# Current harness
+
+\`\`\`rust
+${code}
+\`\`\`
+
+# Compiler output
+
+\`\`\`
+${errors}
+\`\`\`
+
+# Task
+
+Return the **complete corrected file** in one \`\`\`rust block. Not a diff, not a
+fragment — the whole file, ready to write over the old one.
+
+Rules:
+
+- The crate is \`${info.crateName}\`; import from \`${info.crateName.replace(/-/g, '_')}\`.
+  **Never** \`contractimport!\`.
+- If a method the compiler rejects does not exist, **do not invent a replacement
+  name**. Either use an API you are certain of, or delete that assertion and say
+  so in a comment on the line. A property that silently checks something weaker
+  is worse than a missing one.
+- Do not weaken an assertion just to make it compile. Where the only available
+  assertion is "this must abort", keep asserting **which** error came back.
+- Keep every property that already compiles unchanged.`;
+}
+
+/**
+ * Um teste para **uma** invariante.
+ *
+ * Pedir um arquivo de 1200 linhas com 25 propriedades é tudo-ou-nada: um erro
+ * em qualquer uma derruba o arquivo inteiro, e foi o que aconteceu com todos os
+ * modelos testados — 43 a 59 erros por tentativa, em modelos que escrevem Rust
+ * correto quando o escopo é pequeno.
+ *
+ * Um teste por invariante troca uma falha total por falhas isoladas: o que não
+ * compila cai, o resto segue. Também casa com a etapa de validação, que já dá
+ * veredito por invariante, e deixa cada chamada curta o bastante para caber
+ * folgada no limite de saída de qualquer modelo.
+ */
+export function generateOneTest(
+  info: ContractInfo,
+  source: string,
+  inv: CuratedInvariant,
+): string {
+  return `${contractContext(info, source)}
+${
+  info.exampleTest
+    ? `## A test from this crate that already compiles\n\nThis is the authority on the API surface — the client name, how the fixture is\nbuilt, how errors are matched. Where it disagrees with your recollection of the\nSDK, **it is right and you are wrong**. Copy its fixture setup.\n\n\`\`\`rust\n${info.exampleTest.source}\n\`\`\`\n`
+    : ''
+}
+# Invariant to test
+
+**${inv.id}** — ${inv.class}
+
+${inv.statement}
+
+*How to observe:* ${inv.observation}
+
+# Task
+
+Write **one** \`#[test]\` function that asserts this single invariant, plus any
+helper it needs. Nothing else.
+
+\`\`\`rust
+#[test]
+fn ${inv.id.toLowerCase().replace(/[^a-z0-9]/g, '')}_<descritivo>() {
+    // ...
+}
+\`\`\`
+
+The function name **must start with \`${inv.id.toLowerCase().replace(/[^a-z0-9]/g, '')}\`** — the
+pipeline matches a failing test back to its invariant by that prefix, and a test
+whose failure cannot be attributed is not a finding.
+
+## Rules
+
+- **Assert state, not liveness.** Read state back and compare against a value you
+  computed yourself. Where the only assertion available is "this must abort", use
+  \`try_*\`, assert **which** error came back, and assert state did not change.
+- \`try_foo\` returns \`Result<Result<T, _>, Result<soroban_sdk::Error, InvokeError>>\`.
+  The error side carries \`soroban_sdk::Error\`, not the contract's enum, unless the
+  entry point declares a \`Result\` return type. Compare with
+  \`soroban_sdk::Error::from_contract_error(MyError::Foo as u32)\`. \`Result\` has no
+  \`Display\` — use \`{:?}\` in messages.
+- Principals come from addresses you register in the fixture, never from raw
+  fuzzed bytes: a generated \`Address\` cannot be authorized.
+- If the invariant touches TTL, pin the ledger floors with
+  \`env.ledger().with_mut(...)\` — the host default of 4096 swallows small TTL
+  operations and the property passes for the wrong reason.
+- Prefer a plain \`#[test]\` over \`proptest!\` unless the property genuinely needs
+  generated inputs.
+
+## Output
+
+Return **only** the Rust code in one \`\`\`rust block: **your own \`use\` statements**,
+then the test function and any helper it needs. No prose.
+
+Your snippet is placed inside its own \`mod ${inv.id.toLowerCase()} { ... }\`, so import
+everything you use — \`soroban_sdk::testutils::{Address as _, Ledger as _}\`,
+\`use ${info.crateName.replace(/-/g, '_')}::*;\`, and anything else. Nothing is in scope
+that you do not import, and nothing you import can collide with another test.
+
+If this invariant cannot be expressed through the public API, return exactly:
+
+\`\`\`rust
+// IMPOSSIVEL: <reason>
+\`\`\``;
+}
+
+/**
+ * Devolve ao modelo os erros de **um** teste.
+ *
+ * A etapa de correção existia antes e não funcionava: o arquivo inteiro vinha
+ * com 43 a 59 erros, e devolver tudo de uma vez pedia ao modelo que consertasse
+ * um arquivo que ele já tinha demonstrado não saber escrever. Com um teste por
+ * chamada o erro é curto, específico, e quase sempre sobre uma assinatura só.
+ */
+export function fixOneTest(
+  info: ContractInfo,
+  inv: CuratedInvariant,
+  code: string,
+  errors: string,
+): string {
+  return `This test, for invariant **${inv.id}** (${inv.statement}), does not compile.
+
+# The test
+
+\`\`\`rust
+${code}
+\`\`\`
+
+# What the compiler said
+
+\`\`\`
+${errors}
+\`\`\`
+${
+  info.exampleTest
+    ? `\n# A test from this crate that *does* compile\n\nIt is the authority on the real API surface. Where it disagrees with your\nrecollection of the SDK, it is right and you are wrong.\n\n\`\`\`rust\n${info.exampleTest.source}\n\`\`\`\n`
+    : ''
+}
+# Task
+
+Return the **complete corrected snippet** in one \`\`\`rust block — \`use\` statements
+plus the test, ready to drop into its own \`mod\`. No prose, no diff.
+
+- The function name must still start with \`${inv.id.toLowerCase().replace(/[^a-z0-9]/g, '')}\`.
+- Import from \`${info.crateName.replace(/-/g, '_')}\`. **Never** \`contractimport!\`.
+- If the compiler says a method does not exist, **do not invent another name for
+  it**. Use an API you are certain of, or drop that assertion and say so in a
+  comment. A property that silently checks something weaker is worse than none.
+- Do not weaken an assertion to make it compile. "This must abort" still has to
+  say **which** error came back.
+
+If the invariant cannot be expressed against the real API, return exactly:
+
+\`\`\`rust
+// IMPOSSIVEL: <reason>
+\`\`\``;
+}
+
+/** Cabeçalho do arquivo: só os atributos. Cada teste traz os próprios imports. */
+export function harnessHeader(_info: ContractInfo): string {
+  return `//! Harness gerado pela auditoria assistida por IA.
+//!
+//! Um teste por invariante, cada um no seu próprio \`mod\` com os próprios
+//! imports: o nome do módulo é o ID da invariante, então uma falha é sempre
+//! atribuível, e dois testes não colidem por importar a mesma coisa.
+
+#![allow(unused_imports, unused_variables, dead_code, unused_mut)]
+`;
 }

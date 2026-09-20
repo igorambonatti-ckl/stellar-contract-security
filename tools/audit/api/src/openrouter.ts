@@ -25,7 +25,9 @@ export function currentModel(): string {
   return process.env.OPENROUTER_MODEL || 'anthropic/claude-sonnet-4.5';
 }
 
-export async function complete(opts: CompletionOptions): Promise<{ text: string; model: string }> {
+export async function complete(
+  opts: CompletionOptions,
+): Promise<{ text: string; model: string; usage?: { entrada: number; saida: number } }> {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) {
     throw Object.assign(
@@ -74,7 +76,12 @@ export async function complete(opts: CompletionOptions): Promise<{ text: string;
     );
   }
 
-  return { text, model };
+  const u = json?.usage;
+  return {
+    text,
+    model,
+    usage: u ? { entrada: u.prompt_tokens ?? 0, saida: u.completion_tokens ?? 0 } : undefined,
+  };
 }
 
 /**

@@ -6,7 +6,77 @@ import type { Response } from 'express';
 
 import { inspectContract, cleanView, type ContractInfo } from './inspect.js';
 import { complete, extractCode, isConfigured } from './openrouter.js';
-import { systemPrompt, proposeInvariants, generateHarness, type CuratedInvariant } from './prompts.js';
+import {
+  systemPrompt, proposeInvariants, generateOneTest, fixOneTest, harnessHeader,
+  type CuratedInvariant,
+} from './prompts.js';
+
+/**
+ * Lê o catálogo de invariantes tolerando um objeto malformado.
+ *
+ * Motivo concreto: uma rodada inteira foi perdida porque o modelo escreveu
+ * `"rationale": "..."` seguido de `;` em vez de nada, num objeto de quinze. O
+ * `JSON.parse` do array inteiro rejeita tudo, e quinze propriedades viraram
+ * zero por causa de um caractere.
+ *
+ * A recuperação é deliberadamente burra: separa os objetos de primeiro nível
+ * por contagem de chaves, tenta cada um, e **descarta** o que não parseia depois
+ * de uma limpeza mínima. Não tenta adivinhar o que o modelo queria dizer — um
+ * objeto inventado aqui viraria uma invariante que ninguém escreveu.
+ *
+ * Devolve também o que caiu, porque um descarte silencioso faria "13 propostas"
+ * parecer o catálogo completo.
+ */
+export function parseInvariants(text: string): { invs: any[]; perdidos: number } {
+  const body = extractCode(text, 'json').trim();
+  try {
+    const direto = JSON.parse(body);
+    if (Array.isArray(direto)) return { invs: direto, perdidos: 0 };
+  } catch { /* cai na recuperação */ }
+
+  const objetos: string[] = [];
+  let depth = 0, start = -1, inStr = false, esc = false;
+  for (let i = 0; i < body.length; i++) {
+    const c = body[i];
+    if (esc) { esc = false; continue; }
+    if (c === '\\') { esc = true; continue; }
+    if (c === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (c === '{') { if (depth++ === 0) start = i; }
+    else if (c === '}' && --depth === 0 && start >= 0) objetos.push(body.slice(start, i + 1));
+  }
+
+  const invs: any[] = [];
+  let perdidos = 0;
+  for (const o of objetos) {
+    // Pontuação perdida entre o fim de um valor e o fecho: `"x";` e `"x",}`.
+    const limpo = o.replace(/"\s*;\s*(\n\s*[}\]])/g, '"$1').replace(/,(\s*[}\]])/g, '$1');
+    try {
+      const v = JSON.parse(limpo);
+      if (v && typeof v.id === 'string' && typeof v.statement === 'string') invs.push(v);
+      else perdidos++;
+    } catch { perdidos++; }
+  }
+  return { invs, perdidos };
+}
+
+/**
+ * Só o diagnóstico, sem o progresso de build.
+ *
+ * A saída do cargo é dominada por `Compiling`/`Downloaded`, e mandar isso de
+ * volta ao modelo gasta contexto com ruído e enterra a única linha que importa.
+ */
+function soErros(output: string): string {
+  const linhas = output.split('\n');
+  const uteis: string[] = [];
+  let dentro = false;
+  for (const l of linhas) {
+    if (/^(error|warning)(\[E\d+\])?:/.test(l)) dentro = /^error/.test(l);
+    else if (/^\s*(Compiling|Downloaded|Finished|Checking|Updating|Blocking)\b/.test(l)) dentro = false;
+    if (dentro) uteis.push(l);
+  }
+  return (uteis.length ? uteis : linhas.filter((l) => /error/i.test(l))).join('\n').slice(0, 8000);
+}
 
 export type StageId =
   | 'inspecionar' | 'propor' | 'gerar' | 'compilar' | 'validar' | 'suite' | 'relatorio';
@@ -32,12 +102,18 @@ export interface Invariant extends CuratedInvariant {
   /** Preenchido pela etapa de validação. */
   verdict?: 'mantida' | 'descartada' | 'nao-testada';
   verdictReason?: string;
+  /** Diagnóstico do cargo, quando a invariante caiu por não compilar. */
+  compileError?: string;
 }
 
 export interface Pipeline {
   id: string;
   path: string;
   hiddenFeatures: string[];
+  /** Override do OPENROUTER_MODEL, para comparar modelos no mesmo contrato. */
+  model?: string;
+  /** Tokens gastos, para estimar custo por auditoria. */
+  usage: { entrada: number; saida: number };
   status: 'rodando' | 'concluido' | 'falhou' | 'cancelado';
   stages: Stage[];
   log: string[];
@@ -130,29 +206,46 @@ function failedTests(output: string): string[] {
   return [...out];
 }
 
-/** Casa um nome de teste com o ID da invariante que ele cita. */
+/**
+ * Casa um nome de teste com o ID da invariante que ele cita.
+ *
+ * Cada teste vive num `mod` cujo nome é o ID, então o caminho é `i12::i12_foo`
+ * e o primeiro segmento resolve sozinho. O fallback por prefixo ordena por ID
+ * mais longo primeiro — sem isso `i12_state_after` casa com `I1`, e uma falha
+ * atribuída à invariante errada é pior que uma falha sem atribuição.
+ */
 function invariantForTest(test: string, invs: Invariant[]): Invariant | undefined {
-  const lower = test.toLowerCase();
-  return invs.find((i) => lower.includes(i.id.toLowerCase().replace(/[^a-z0-9]/g, '')));
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const [head, ...rest] = test.split('::');
+  const exato = invs.find((i) => norm(i.id) === norm(head));
+  if (exato) return exato;
+
+  const leaf = (rest.pop() ?? head).toLowerCase();
+  return [...invs]
+    .sort((a, b) => b.id.length - a.id.length)
+    .find((i) => leaf.startsWith(norm(i.id)));
 }
 
 export function startPipeline(opts: {
   path: string;
   hiddenFeatures: string[];
   runMutants: boolean;
+  model?: string;
 }): Pipeline {
   const p: Pipeline = {
     id: randomUUID(),
     path: opts.path,
     hiddenFeatures: opts.hiddenFeatures,
+    model: opts.model,
+    usage: { entrada: 0, saida: 0 },
     status: 'rodando',
     stages: [
       { id: 'inspecionar', label: 'Inspecionar o contrato', status: 'pendente' },
+      { id: 'suite', label: 'Suíte existente, antes de tocar no crate', status: 'pendente' },
       { id: 'propor', label: 'IA propõe invariantes', status: 'pendente' },
-      { id: 'gerar', label: 'IA gera o harness', status: 'pendente' },
-      { id: 'compilar', label: 'Compilar', status: 'pendente' },
+      { id: 'gerar', label: 'IA escreve um teste por invariante', status: 'pendente' },
+      { id: 'compilar', label: 'Compilar, descartando o que não compila', status: 'pendente' },
       { id: 'validar', label: 'Validar contra o contrato como ele é', status: 'pendente' },
-      { id: 'suite', label: 'Rodar a suíte existente', status: 'pendente' },
       { id: 'relatorio', label: 'Relatório', status: 'pendente' },
     ],
     log: [],
@@ -188,6 +281,26 @@ async function run(p: Pipeline, runMutants: boolean) {
     for (const w of info.warnings) log(p, `aviso: ${w}`);
     guard();
 
+    // ── 2. Suíte existente, como baseline ───────────────────────────────────
+    //
+    // Antes de escrever qualquer coisa no crate. O arquivo gerado vai para
+    // tests/, então medir a suíte depois mediria o estrago da própria
+    // ferramenta — e foi o que aconteceu na primeira versão: o harness não
+    // compilava e a suíte do usuário aparecia vermelha por causa dele.
+    setStage(p, 'suite', { status: 'rodando', startedAt: Date.now() });
+    const baseline = await exec(p, info.path, 'cargo', ['test', '-p', info.crateName],
+      { PROPTEST_CASES: '32' });
+    const baselineOk = baseline.code === 0;
+    setStage(p, 'suite', {
+      status: baselineOk ? 'ok' : 'falhou',
+      finishedAt: Date.now(),
+      detail: baselineOk
+        ? 'verde — o que vier depois é atribuível'
+        : 'já falha antes da ferramenta tocar em nada; nada depois é atribuível',
+      data: { failed: failedTests(baseline.output) },
+    });
+    guard();
+
     if (!isConfigured()) {
       setStage(p, 'propor', {
         status: 'falhou',
@@ -201,23 +314,46 @@ async function run(p: Pipeline, runMutants: boolean) {
     // ── 2. Propor ───────────────────────────────────────────────────────────
     setStage(p, 'propor', { status: 'rodando', startedAt: Date.now() });
     const src = cleanView(await readFile(info.sourceFile, 'utf8'), p.hiddenFeatures);
+
+    // O teste de referência passa pelo mesmo filtro. Os testes de um crate
+    // costumam citar nos comentários exatamente o que a etapa de esconder
+    // features existe para não mostrar — mandar um deles cru anularia o
+    // cuidado tomado com o fonte.
+    if (info.exampleTest && p.hiddenFeatures.length) {
+      const limpo = cleanView(info.exampleTest.source, p.hiddenFeatures);
+      const alt = p.hiddenFeatures.join('|');
+      if (new RegExp(alt).test(limpo)) {
+        log(p, `teste de referência descartado: ainda cita ${p.hiddenFeatures.join(', ')}`);
+        info.exampleTest = undefined;
+      } else {
+        info.exampleTest = { ...info.exampleTest, source: limpo };
+      }
+    }
+
     log(p, `fonte enviada ao modelo: ${src.split('\n').length} linhas` +
-      (p.hiddenFeatures.length ? ` (features escondidas: ${p.hiddenFeatures.join(', ')})` : ''));
+      (p.hiddenFeatures.length ? ` (features escondidas: ${p.hiddenFeatures.join(', ')})` : '') +
+      (info.exampleTest ? ` · referência de API: ${info.exampleTest.file.split('/').pop()}` : ' · sem teste de referência'));
 
     const proposta = await complete({
       system: systemPrompt(),
       user: proposeInvariants(info, src),
-      maxTokens: 8000,
+      model: p.model,
+      // Folgado de propósito: a 8000 o JSON de um modelo verboso vinha
+      // truncado, e "0 propostas" parecia falha do modelo quando era corte meu.
+      maxTokens: 16000,
     });
+    p.usage.entrada += proposta.usage?.entrada ?? 0;
+    p.usage.saida += proposta.usage?.saida ?? 0;
     p.rawProposal = proposta.text;
 
-    try {
-      p.invariants = JSON.parse(extractCode(proposta.text, 'json').trim());
-    } catch (e) {
+    const { invs, perdidos } = parseInvariants(proposta.text);
+    if (perdidos) log(p, `aviso: ${perdidos} objeto(s) do catálogo vieram malformados e foram descartados`);
+
+    if (invs.length === 0) {
       setStage(p, 'propor', {
         status: 'falhou',
         finishedAt: Date.now(),
-        detail: `O modelo não devolveu JSON válido: ${(e as Error).message}`,
+        detail: 'O modelo não devolveu nenhuma invariante legível.',
         data: { raw: proposta.text },
       });
       p.status = 'falhou';
@@ -225,58 +361,180 @@ async function run(p: Pipeline, runMutants: boolean) {
       return;
     }
 
-    p.invariants = p.invariants.map((i) => ({ ...i, verdict: 'nao-testada' as const }));
+    p.invariants = invs.map((i) => ({ ...i, verdict: 'nao-testada' as const }));
     setStage(p, 'propor', {
       status: 'ok',
       finishedAt: Date.now(),
-      detail: `${p.invariants.length} propostas · ${proposta.model}`,
-      data: { invariants: p.invariants, raw: proposta.text },
+      detail: `${p.invariants.length} propostas · ${proposta.model}` +
+        (perdidos ? ` · ${perdidos} descartada(s) por JSON inválido` : ''),
+      data: { invariants: p.invariants, raw: proposta.text, perdidos },
     });
     guard();
 
-    // ── 3. Gerar harness ────────────────────────────────────────────────────
+    // ── 3. Um teste por invariante ──────────────────────────────────────────
+    //
+    // Não um arquivo com tudo. Pedir 1200 linhas de Rust numa tacada é
+    // tudo-ou-nada: um erro em qualquer propriedade derruba o arquivo inteiro,
+    // e foi o que aconteceu com todos os modelos medidos — 43 a 59 erros por
+    // tentativa, em modelos que escrevem Rust correto quando o escopo é curto.
     setStage(p, 'gerar', { status: 'rodando', startedAt: Date.now() });
-    const harness = await complete({
-      system: systemPrompt(),
-      user: generateHarness(info, src, p.invariants),
-      maxTokens: 16000,
-    });
-    p.harnessCode = extractCode(harness.text, 'rust');
+
+    const testes: { inv: Invariant; code: string }[] = [];
+    let impossiveis = 0;
+
+    for (const inv of p.invariants) {
+      guard();
+      const r = await complete({
+        system: systemPrompt(),
+        user: generateOneTest(info, src, inv),
+        model: p.model,
+        maxTokens: 3000,
+      });
+      p.usage.entrada += r.usage?.entrada ?? 0;
+      p.usage.saida += r.usage?.saida ?? 0;
+
+      const code = extractCode(r.text, 'rust').trim();
+      if (/^\/\/\s*IMPOSSIVEL/i.test(code)) {
+        inv.verdict = 'descartada';
+        inv.verdictReason = code.replace(/^\/\/\s*IMPOSSIVEL:?\s*/i, '').trim() ||
+          'o modelo declarou a invariante inexprimível pela API pública';
+        impossiveis++;
+        log(p, `${inv.id}: inexprimível — ${inv.verdictReason.slice(0, 90)}`);
+        continue;
+      }
+      testes.push({ inv, code });
+      log(p, `${inv.id}: ${code.split('\n').length} linhas`);
+    }
+
+    // Cada teste no seu próprio módulo. É o que permite que ele traga os
+    // próprios `use`: num arquivo único, dois testes que importam `Address`
+    // colidem, e o cabeçalho fixo que existia antes só servia para os testes
+    // que por acaso precisavam exatamente daqueles imports — os outros não
+    // compilavam por falta de símbolo, não por erro de lógica.
+    const escrever = async (items: { inv: Invariant; code: string }[]) => {
+      const corpo = items
+        .map((t) => `mod ${t.inv.id.toLowerCase().replace(/[^a-z0-9_]/g, '')} {\n${t.code}\n}`)
+        .join('\n\n');
+      await writeFile(p.harnessPath!, harnessHeader(info) + '\n' + corpo + '\n', 'utf8');
+    };
+
     const testsDir = join(info.path, 'tests');
     await mkdir(testsDir, { recursive: true });
     p.harnessPath = join(testsDir, 'audit_generated.rs');
-    await writeFile(p.harnessPath, p.harnessCode, 'utf8');
+    await escrever(testes);
+    p.harnessCode = await readFile(p.harnessPath, 'utf8');
 
     setStage(p, 'gerar', {
       status: 'ok',
       finishedAt: Date.now(),
-      detail: `${p.harnessCode.split('\n').length} linhas → tests/audit_generated.rs`,
-      data: { code: p.harnessCode, raw: harness.text, path: p.harnessPath },
+      detail: `${testes.length} testes` + (impossiveis ? `, ${impossiveis} inexprimível(eis)` : ''),
+      data: { code: p.harnessCode, path: p.harnessPath, impossiveis },
     });
     guard();
 
-    // ── 4. Compilar ─────────────────────────────────────────────────────────
+    // ── 4. Compilar, descartando o que não compila ──────────────────────────
+    //
+    // Um teste que não compila não vira achado nem vira evidência — ele sai, e
+    // os outros seguem. Bissecção: compila tudo; se falhar, tenta cada um
+    // sozinho para saber quais são os culpados. Custa N compilações no pior
+    // caso, e o pior caso é raro.
     setStage(p, 'compilar', { status: 'rodando', startedAt: Date.now() });
-    const build = await exec(p, info.path, 'cargo',
+    const compila = () => exec(p, info.path, 'cargo',
       ['test', '-p', info.crateName, '--test', 'audit_generated', '--no-run']);
-    guard();
+
+    let build = await compila();
+    let descartadosCompilacao = 0;
+    let reparados = 0;
+
+    if (build.code !== 0 && testes.length >= 1) {
+      log(p, '--- o conjunto não compila; isolando os testes culpados ---');
+      const bons: typeof testes = [];
+
+      for (const t of testes) {
+        guard();
+        await escrever([t]);
+        let r = await compila();
+
+        // Reparo com o erro do compilador na mão. Duas tentativas: no corpus
+        // deste projeto o erro típico é uma assinatura só, e o que não cede em
+        // duas rodadas não cede em cinco — insistir só queima token.
+        for (let tentativa = 1; tentativa <= 2 && r.code !== 0; tentativa++) {
+          guard();
+          const erros = soErros(r.output);
+          log(p, `${t.inv.id}: tentativa de reparo ${tentativa} — ${erros.split('\n')[0].slice(0, 100)}`);
+          const fix = await complete({
+            system: systemPrompt(),
+            user: fixOneTest(info, t.inv, t.code, erros),
+            model: p.model,
+            maxTokens: 3000,
+          }).catch((e) => { log(p, `!! reparo falhou: ${e.message}`); return null; });
+          if (!fix) break;
+          p.usage.entrada += fix.usage?.entrada ?? 0;
+          p.usage.saida += fix.usage?.saida ?? 0;
+
+          const novo = extractCode(fix.text, 'rust').trim();
+          if (/^\/\/\s*IMPOSSIVEL/i.test(novo)) {
+            log(p, `${t.inv.id}: o modelo desistiu — inexprimível contra a API real`);
+            break;
+          }
+          t.code = novo;
+          await escrever([t]);
+          r = await compila();
+          if (r.code === 0) {
+            reparados++;
+            log(p, `${t.inv.id}: compila após ${tentativa} reparo(s)`);
+          }
+        }
+
+        if (r.code === 0) {
+          bons.push(t);
+        } else {
+          t.inv.verdict = 'descartada';
+          t.inv.verdictReason =
+            'O teste gerado para esta invariante não compila, nem depois de duas ' +
+            'rodadas de correção com o erro do compilador. Sem um teste que rode, ' +
+            'a propriedade não foi verificada nem refutada — ela sai do relatório em ' +
+            'vez de entrar como achado sem evidência.';
+          t.inv.compileError = soErros(r.output).slice(0, 4000);
+          descartadosCompilacao++;
+          log(p, `${t.inv.id}: descartado, não compila`);
+        }
+      }
+
+      testes.length = 0;
+      testes.push(...bons);
+      await escrever(testes);
+      p.harnessCode = await readFile(p.harnessPath, 'utf8');
+      build = await compila();
+
+      // Cada um compila sozinho mas o conjunto não: colisão entre testes. Com
+      // um `mod` por teste isso não deveria acontecer, e se acontecer eu quero
+      // ver o erro no log em vez de perder tudo em silêncio.
+      if (build.code !== 0 && bons.length > 0) {
+        log(p, '!! cada teste compila sozinho mas o conjunto não — colisão entre módulos');
+      }
+    }
 
     if (build.code !== 0) {
-      const erros = (build.output.match(/^error(\[E\d+\])?:/gm) ?? []).length;
       setStage(p, 'compilar', {
         status: 'falhou',
         finishedAt: Date.now(),
-        detail: `${erros} erro(s) de compilação — o harness ficou em ${p.harnessPath}`,
-        data: { errors: erros },
+        detail: 'nenhum teste gerado compila',
       });
-      // Não é o fim do mundo nem do pipeline: seguimos para a suíte existente,
-      // que é a única parte cujo resultado ainda significa alguma coisa.
-      setStage(p, 'validar', { status: 'pulado', detail: 'o harness não compila' });
-      await suiteStage(p, info, runMutants);
-      relatorio(p, { compilou: false });
+      setStage(p, 'validar', { status: 'pulado', detail: 'nada para rodar' });
+      relatorio(p, { compilou: false, baselineOk });
       return;
     }
-    setStage(p, 'compilar', { status: 'ok', finishedAt: Date.now(), detail: 'harness compila' });
+
+    setStage(p, 'compilar', {
+      status: 'ok',
+      finishedAt: Date.now(),
+      detail: `${testes.length} compilam` +
+        (reparados ? `, ${reparados} após reparo` : '') +
+        (descartadosCompilacao ? `, ${descartadosCompilacao} descartado(s)` : ''),
+      data: { descartadosCompilacao, reparados },
+    });
+    guard();
 
     // ── 5. Validar contra o contrato como ele é ─────────────────────────────
     //
@@ -321,8 +579,13 @@ async function run(p: Pipeline, runMutants: boolean) {
       data: { falhos, descartadas, orfas },
     });
 
-    await suiteStage(p, info, runMutants);
-    relatorio(p, { compilou: true, descartadas, orfas });
+    if (runMutants && !p.cancelled) {
+      log(p, '--- cargo mutants ---');
+      await exec(p, info.path, 'cargo',
+        ['mutants', '-p', info.crateName, '--timeout', '120', '--', '--test', 'audit_generated'],
+        { PROPTEST_CASES: '32' });
+    }
+    relatorio(p, { compilou: true, baselineOk, descartadas, orfas });
   } catch (e: any) {
     if (e?.cancelled) {
       p.status = 'cancelado';
@@ -334,26 +597,6 @@ async function run(p: Pipeline, runMutants: boolean) {
     if (atual) setStage(p, atual.id, { status: 'falhou', detail: e?.message, finishedAt: Date.now() });
     p.status = 'falhou';
     emit(p, 'done', { status: p.status });
-  }
-}
-
-async function suiteStage(p: Pipeline, info: ContractInfo, runMutants: boolean) {
-  setStage(p, 'suite', { status: 'rodando', startedAt: Date.now() });
-  const r = await exec(p, info.path, 'cargo', ['test', '-p', info.crateName],
-    { PROPTEST_CASES: '64' });
-  const passou = r.code === 0;
-  setStage(p, 'suite', {
-    status: passou ? 'ok' : 'falhou',
-    finishedAt: Date.now(),
-    detail: passou ? 'suíte existente verde' : 'a suíte existente já falha — nada depois é atribuível',
-    data: { failed: failedTests(r.output) },
-  });
-
-  if (runMutants && !p.cancelled) {
-    log(p, '--- cargo mutants ---');
-    await exec(p, info.path, 'cargo',
-      ['mutants', '-p', info.crateName, '--timeout', '120', '--', '--test', 'audit_generated'],
-      { PROPTEST_CASES: '32' });
   }
 }
 
