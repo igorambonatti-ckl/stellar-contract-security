@@ -4,7 +4,7 @@ import cors from 'cors';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { inspectContract, cleanView } from './inspect.js';
+import { inspectContract, cleanView, contractSource } from './inspect.js';
 import { complete, extractCode, isConfigured, currentModel } from './openrouter.js';
 import {
   startPipeline, getPipeline, listPipelines, attachPipeline, cleanupHarness,
@@ -59,7 +59,7 @@ app.post('/api/clean-view', async (req, res, next) => {
   try {
     const { path, hiddenFeatures = [] } = req.body ?? {};
     const info = await inspectContract(path);
-    const src = await readFile(info.sourceFile, 'utf8');
+    const src = await contractSource(info);
     const view = cleanView(src, hiddenFeatures);
     res.json({
       source: view,

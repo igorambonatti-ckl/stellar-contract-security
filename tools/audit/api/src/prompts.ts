@@ -27,6 +27,73 @@ export function systemPrompt(): string {
   return SYSTEM;
 }
 
+/**
+ * A superfície do `Env` de teste, verificada.
+ *
+ * Existe porque o modo de falha dominante não é o modelo raciocinar mal sobre o
+ * contrato — é ele errar o nome de um método do SDK. Nas medições deste
+ * projeto, os erros de compilação que mataram os testes mais ambiciosos foram
+ * todos desta família: `set_sequence` em vez de `set_sequence_number`,
+ * `to_contract_error` que não existe, `Persistent::iter` que não existe, o
+ * caminho errado do `StellarAssetClient`.
+ *
+ * E o efeito é pior do que parece: um teste que não compila é descartado, e os
+ * testes que erram a API são justamente os que tentam fazer algo difícil. Sem
+ * esta seção o pipeline seleciona sistematicamente as propriedades triviais.
+ *
+ * Cada linha aqui foi verificada contra `soroban-sdk` 26.1 nos spikes de P1
+ * (`04-prototype-development/results/spikes.md`), não recordada.
+ */
+const API_TESTE = `## The test \`Env\` surface — verified, use these exact names
+
+\`\`\`rust
+let env = Env::default();
+let id  = env.register(MyContract, ());          // -> Address
+let c   = MyContractClient::new(&env, &id);
+
+env.mock_all_auths();                            // every require_auth passes
+env.set_auths(&[]);                              // no authorization available
+
+env.ledger().with_mut(|l| {
+    l.sequence_number = 100;
+    l.timestamp = 1000;
+    l.min_persistent_entry_ttl = 100;
+    l.min_temp_entry_ttl = 16;
+    l.max_entry_ttl = 1_000_000;
+});
+env.ledger().set_sequence_number(n);             // NOT \`set_sequence\`
+
+// TTL is readable numerically, but only from inside the contract's context:
+env.as_contract(&id, || env.storage().instance().get_ttl());
+env.as_contract(&id, || env.storage().persistent().get_ttl(&key));
+env.as_contract(&id, || env.storage().temporary().get_ttl(&key));
+
+// A token to move around:
+let tok = env.register_stellar_asset_contract_v2(admin.clone()).address();
+soroban_sdk::token::StellarAssetClient::new(&env, &tok).mint(&who, &amount);
+soroban_sdk::token::TokenClient::new(&env, &tok).balance(&who);
+\`\`\`
+
+### Two things that do not exist — do not reach for them
+
+- **Storage is not enumerable.** There is no \`iter()\`, no \`keys()\`, no way to
+  walk every entry. A property like "the total equals the sum over all holders"
+  must sum over the principals **your test created**, which it knows.
+- **\`InvokeError\` has no \`to_contract_error()\`.** Compare the value instead:
+  \`e == soroban_sdk::Error::from_contract_error(MyError::Foo as u32)\`.
+
+### Protocol 23 changed what is falsifiable
+
+Persistent entries whose TTL has lapsed are **automatically restored** by the
+host, and the test \`Env\` emulates that. So "a value written earlier is still
+readable later" is **always true**, with or without \`extend_ttl\` — an assertion
+that cannot fail and therefore cannot find anything.
+
+What is still falsifiable is the TTL **number**: a restored entry comes back at
+\`min_persistent_entry_ttl - 1\`, which is distinguishable from one that was
+properly extended. Assert the number, not the readability.
+`;
+
 function contractContext(info: ContractInfo, source: string): string {
   const tiers = Object.entries(info.tiers)
     .filter(([, used]) => used)
@@ -52,6 +119,8 @@ ${source}
 
 export function proposeInvariants(info: ContractInfo, source: string): string {
   return `${contractContext(info, source)}
+
+${API_TESTE}
 
 # Task
 
@@ -222,6 +291,8 @@ export function generateOneTest(
   const slug = inv.id.toLowerCase().replace(/[^a-z0-9]/g, '');
 
   return `${contractContext(info, source)}
+
+${API_TESTE}
 ${
   info.exampleTest
     ? `## A test from this crate that already compiles\n\nThis is the authority on the API surface — the client name, how the fixture is\nbuilt, how errors are matched. Where it disagrees with your recollection of the\nSDK, **it is right and you are wrong**. Copy its fixture setup.\n\n\`\`\`rust\n${info.exampleTest.source}\n\`\`\`\n`
@@ -265,7 +336,8 @@ attributed is not a finding.
   any property about amounts, balances or ledger positions does. A plain
   \`#[test]\` with hand-picked literals only proves the property at the literals
   you picked. Reserve plain \`#[test]\` for properties about a fixed sequence of
-  calls.
+  calls. When you use \`proptest!\`, import it — \`use proptest::prelude::*;\` —
+  and put the \`#[test]\`-generating macro at module level, not inside a function.
 
 ## Output
 
@@ -318,6 +390,8 @@ ${
     ? `\n# A test from this crate that *does* compile\n\nIt is the authority on the real API surface. Where it disagrees with your\nrecollection of the SDK, it is right and you are wrong.\n\n\`\`\`rust\n${info.exampleTest.source}\n\`\`\`\n`
     : ''
 }
+${API_TESTE}
+
 # Task
 
 Return the **complete corrected snippet** in one \`\`\`rust block — \`use\` statements
@@ -336,6 +410,64 @@ If the invariant cannot be expressed against the real API, return exactly:
 \`\`\`rust
 // IMPOSSIVEL: <reason>
 \`\`\``;
+}
+
+/**
+ * O teste compila, roda e falha **contra o contrato correto**.
+ *
+ * Isso é ambíguo, e tratar os dois casos como um só é o que estava acontecendo:
+ * ou a invariante não vale, ou o harness a implementou errado. Descartar em
+ * silêncio joga fora as duas — e as propriedades difíceis, que são as que valem,
+ * são justamente as mais fáceis de implementar errado na primeira tentativa.
+ *
+ * Perguntar é barato. O que importa é que a saída distinga os casos: "consertei
+ * o harness" e "a invariante é falsa" levam a lugares opostos no relatório.
+ */
+export function fixFailingTest(
+  info: ContractInfo,
+  inv: CuratedInvariant,
+  code: string,
+  failure: string,
+): string {
+  return `This test compiles and runs, but **fails against the contract as it is** —
+the version with no known defect.
+
+Invariant **${inv.id}**: ${inv.statement}
+
+# The test
+
+\`\`\`rust
+${code}
+\`\`\`
+
+# The failure
+
+\`\`\`
+${failure}
+\`\`\`
+
+${API_TESTE}
+
+# Task
+
+There are exactly two possibilities, and they lead to opposite places:
+
+1. **The harness is wrong** — a fixture set up differently than the property
+   assumes, an expectation computed with the wrong formula, an off-by-one in a
+   ledger advance. Then fix it and return the corrected snippet.
+2. **The invariant does not actually hold** for this contract. Then the property
+   is wrong, not the code, and saying so is the useful answer.
+
+Decide which, from the failure output and the contract source.
+
+- If (1): return the corrected snippet in one \`\`\`rust block, \`use\` statements
+  included, function name still starting with \`${inv.id.toLowerCase().replace(/[^a-z0-9]/g, '')}\`.
+  **Do not weaken the assertion to make it pass** — that turns a failing test
+  into a test that measures nothing, which is worse than deleting it.
+- If (2): return exactly \`// FALSA: <why the property does not hold>\` and nothing
+  else.
+
+Crate: \`${info.crateName.replace(/-/g, '_')}\`.`;
 }
 
 /** Cabeçalho do arquivo: só os atributos. Cada teste traz os próprios imports. */

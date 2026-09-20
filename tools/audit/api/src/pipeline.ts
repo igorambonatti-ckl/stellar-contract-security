@@ -4,31 +4,54 @@ import { join } from 'node:path';
 import { spawn } from 'node:child_process';
 import type { Response } from 'express';
 
-import { inspectContract, cleanView, type ContractInfo } from './inspect.js';
+import { inspectContract, cleanView, contractSource, type ContractInfo } from './inspect.js';
 import { complete, extractCode, isConfigured } from './openrouter.js';
 import {
-  systemPrompt, proposeInvariants, generateOneTest, fixOneTest, harnessHeader,
+  systemPrompt, proposeInvariants, generateOneTest, fixOneTest, fixFailingTest, harnessHeader,
   type CuratedInvariant,
 } from './prompts.js';
 
 /**
- * Acrescenta `"lib"` ao `crate-type` quando o crate é só `cdylib`.
+ * Deixa o crate em condição de receber um teste de integração.
  *
- * Devolve `true` se mexeu no arquivo. O manifesto original fica em
- * `p.manifestoOriginal` para a limpeza restaurar — a ferramenta escreve no
- * crate de outra pessoa, e o mínimo é desfazer.
+ * Duas coisas faltam em praticamente todo contrato Soroban real, e nenhuma
+ * delas é culpa de quem o escreveu — são consequências de a ferramenta querer
+ * escrever testes num crate que não é dela:
+ *
+ * 1. `crate-type = ["cdylib"]` e nada mais, que é o que o template da Stellar
+ *    gera. Um teste em `tests/` não linka um crate cdylib-only.
+ * 2. `proptest` não está nas dev-dependencies. O prompt exige `proptest!` para
+ *    qualquer propriedade sobre uma faixa de valores, então sem isso a metade
+ *    mais valiosa dos testes não compila em lugar nenhum fora deste repositório.
+ *
+ * As duas edições são aditivas, e o manifesto original volta na limpeza.
+ * Devolve a lista do que mudou, para o log dizer em voz alta — é o `Cargo.toml`
+ * de outra pessoa.
  */
-async function garantirCrateTypeLib(p: Pipeline, info: ContractInfo): Promise<boolean> {
+async function prepararCrate(p: Pipeline, info: ContractInfo): Promise<string[]> {
   const caminho = join(info.path, 'Cargo.toml');
   const original = await readFile(caminho, 'utf8');
+  let texto = original;
+  const feito: string[] = [];
 
-  const m = /crate-type\s*=\s*\[([^\]]*)\]/.exec(original);
-  if (!m) return false;                       // sem crate-type: já é lib por padrão
-  if (/"lib"|"rlib"/.test(m[1])) return false; // já linkável
+  const ct = /crate-type\s*=\s*\[([^\]]*)\]/.exec(texto);
+  if (ct && !/"lib"|"rlib"/.test(ct[1])) {
+    texto = texto.replace(ct[0], `crate-type = ["lib",${ct[1]}]`);
+    feito.push('acrescentei "lib" a crate-type — um teste de integração não linka um crate cdylib-only');
+  }
 
-  p.manifestoOriginal = { caminho, conteudo: original };
-  await writeFile(caminho, original.replace(m[0], `crate-type = ["lib",${m[1]}]`), 'utf8');
-  return true;
+  if (!/^\s*proptest\s*=/m.test(texto)) {
+    texto = /^\[dev-dependencies\]/m.test(texto)
+      ? texto.replace(/^\[dev-dependencies\]/m, '[dev-dependencies]\nproptest = "1"')
+      : texto.trimEnd() + '\n\n[dev-dependencies]\nproptest = "1"\n';
+    feito.push('acrescentei proptest às dev-dependencies — as propriedades sobre faixas de valores precisam dele');
+  }
+
+  if (feito.length) {
+    p.manifestoOriginal = { caminho, conteudo: original };
+    await writeFile(caminho, texto, 'utf8');
+  }
+  return feito;
 }
 
 /**
@@ -96,6 +119,21 @@ function soErros(output: string): string {
     if (dentro) uteis.push(l);
   }
   return (uteis.length ? uteis : linhas.filter((l) => /error/i.test(l))).join('\n').slice(0, 8000);
+}
+
+/**
+ * O bloco de saída de um teste que falhou, e só ele.
+ *
+ * O cargo imprime o stdout de cada teste sob um cabeçalho `---- nome stdout ----`.
+ * Mandar a saída inteira ao modelo enterra o pânico que importa no meio dos
+ * outros, e faz ele consertar o teste errado.
+ */
+function trechoDaFalha(output: string, nome: string): string {
+  const marca = `---- ${nome} stdout ----`;
+  const i = output.indexOf(marca);
+  if (i === -1) return output.slice(-3000);
+  const j = output.indexOf('\n----', i + marca.length);
+  return output.slice(i, j === -1 ? i + 3000 : j).slice(0, 3000);
 }
 
 export type StageId =
@@ -311,10 +349,9 @@ async function run(p: Pipeline, runMutants: boolean) {
     // A correção é aditiva e reversível: acrescenta `"lib"`, guarda o manifesto
     // original e o devolve na limpeza. Fica registrado no log porque é uma
     // escrita no crate de outra pessoa.
-    if (await garantirCrateTypeLib(p, info)) {
-      log(p, 'Cargo.toml: acrescentei "lib" a crate-type — um teste de integração ' +
-        'não linka um crate cdylib-only. O original volta na limpeza.');
-    }
+    const editado = await prepararCrate(p, info);
+    for (const e of editado) log(p, `Cargo.toml: ${e}`);
+    if (editado.length) log(p, 'O Cargo.toml original volta na limpeza.');
     guard();
 
     // ── 2. Suíte existente, como baseline ───────────────────────────────────
@@ -349,7 +386,7 @@ async function run(p: Pipeline, runMutants: boolean) {
 
     // ── 2. Propor ───────────────────────────────────────────────────────────
     setStage(p, 'propor', { status: 'rodando', startedAt: Date.now() });
-    const src = cleanView(await readFile(info.sourceFile, 'utf8'), p.hiddenFeatures);
+    const src = cleanView(await contractSource(info), p.hiddenFeatures);
 
     // O teste de referência passa pelo mesmo filtro. Os testes de um crate
     // costumam citar nos comentários exatamente o que a etapa de esconder
@@ -517,7 +554,7 @@ async function run(p: Pipeline, runMutants: boolean) {
         // Reparo com o erro do compilador na mão. Duas tentativas: no corpus
         // deste projeto o erro típico é uma assinatura só, e o que não cede em
         // duas rodadas não cede em cinco — insistir só queima token.
-        for (let tentativa = 1; tentativa <= 2 && r.code !== 0; tentativa++) {
+        for (let tentativa = 1; tentativa <= 3 && r.code !== 0; tentativa++) {
           guard();
           const erros = soErros(r.output);
           log(p, `${t.inv.id}: tentativa de reparo ${tentativa} — ${erros.split('\n')[0].slice(0, 100)}`);
@@ -550,7 +587,7 @@ async function run(p: Pipeline, runMutants: boolean) {
         } else {
           t.inv.verdict = 'descartada';
           t.inv.verdictReason =
-            'O teste gerado para esta invariante não compila, nem depois de duas ' +
+            'O teste gerado para esta invariante não compila, nem depois de três ' +
             'rodadas de correção com o erro do compilador. Sem um teste que rode, ' +
             'a propriedade não foi verificada nem refutada — ela sai do relatório em ' +
             'vez de entrar como achado sem evidência.';
@@ -607,16 +644,79 @@ async function run(p: Pipeline, runMutants: boolean) {
       { PROPTEST_CASES: '64' });
     guard();
 
-    const falhos = failedTests(val.output);
-    let descartadas = 0;
+    let falhos = failedTests(val.output);
+
+    // Uma rodada de reparo para quem falhou contra o contrato correto.
+    //
+    // "Falha no limpo" é ambíguo: ou a invariante não vale, ou o harness a
+    // implementou errado. Descartar os dois casos juntos e em silêncio
+    // enviesava o pipeline inteiro — as propriedades difíceis são as que mais
+    // valem e também as mais fáceis de implementar errado na primeira
+    // tentativa, então o filtro vinha selecionando as triviais. Numa medição,
+    // as cinco que morreram aqui incluíam a lei de conservação e a de TTL,
+    // enquanto sobreviveram "o saldo não é negativo" e "a flag é permanente".
+    if (falhos.length) {
+      log(p, `--- ${falhos.length} teste(s) falham no contrato correto; perguntando se é o harness ou a invariante ---`);
+      const saida = val.output;
+
+      for (const nome of falhos) {
+        guard();
+        const t = testes.find((x) => invariantForTest(nome, [x.inv]));
+        if (!t) continue;
+
+        const trecho = trechoDaFalha(saida, nome);
+        const fix = await complete({
+          system: systemPrompt(),
+          user: fixFailingTest(info, t.inv, t.code, trecho),
+          model: p.model,
+          maxTokens: 3000,
+        }).catch((e) => { log(p, `!! ${t.inv.id}: ${e.message}`); return null; });
+        if (!fix) continue;
+        p.usage.entrada += fix.usage?.entrada ?? 0;
+        p.usage.saida += fix.usage?.saida ?? 0;
+
+        const novo = extractCode(fix.text, 'rust').trim();
+        if (/^\/\/\s*FALSA/i.test(novo)) {
+          t.inv.verdict = 'descartada';
+          t.inv.verdictReason = 'A invariante não vale para este contrato. ' +
+            novo.replace(/^\/\/\s*FALSA:?\s*/i, '').trim();
+          log(p, `${t.inv.id}: o modelo conclui que a própria invariante é falsa`);
+          continue;
+        }
+        t.code = novo;
+        log(p, `${t.inv.id}: harness corrigido, revalidando`);
+      }
+
+      // Revalida o conjunto inteiro de uma vez: os corrigidos podem ter passado,
+      // e os que o modelo declarou falsos já saíram.
+      const restantes = testes.filter((x) => x.inv.verdict !== 'descartada');
+      if (restantes.length) {
+        await escrever(restantes);
+        const rebuild = await compila();
+        if (rebuild.code === 0) {
+          const val2 = await exec(p, info.path, 'cargo',
+            ['test', '-p', info.crateName, '--test', 'audit_generated'], { PROPTEST_CASES: '64' });
+          falhos = failedTests(val2.output);
+        } else {
+          log(p, '!! uma correção quebrou a compilação; mantenho o veredito anterior');
+          // Volta o arquivo para o estado que compilava.
+          await escrever(testes.filter((x) => x.inv.verdict !== 'descartada'));
+        }
+      }
+    }
+
+    let descartadas = p.invariants.filter((i) => i.verdict === 'descartada' &&
+      /não vale para este contrato/.test(i.verdictReason ?? '')).length;
+
     for (const t of falhos) {
       const inv = invariantForTest(t, p.invariants);
-      if (inv) {
+      if (inv && inv.verdict !== 'descartada') {
         inv.verdict = 'descartada';
         inv.verdictReason =
-          `A propriedade falha contra o contrato como ele é (teste ${t}). ` +
-          `Ou a invariante não vale, ou o harness a implementou errado — nos dois casos ` +
-          `reportá-la seria acusar bug onde não há evidência.`;
+          `A propriedade falha contra o contrato como ele é (teste ${t}), e continuou ` +
+          `falhando depois de uma rodada de correção. Ou a invariante não vale, ou o ` +
+          `harness a implementou errado — nos dois casos reportá-la seria acusar bug ` +
+          `onde não há evidência.`;
         descartadas++;
       }
     }

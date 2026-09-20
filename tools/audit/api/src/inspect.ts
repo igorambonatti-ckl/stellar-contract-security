@@ -13,6 +13,8 @@ export interface ContractInfo {
   path: string;
   crateName: string;
   sourceFile: string;
+  /** Todos os arquivos de `src/` enviados ao modelo, não só o do `#[contract]`. */
+  sourceFiles: string[];
   entryPoints: EntryPoint[];
   errorCodes: { name: string; code: number }[];
   /** Cargo features the crate declares. */
@@ -43,10 +45,23 @@ function extractEntryPoints(src: string): EntryPoint[] {
   const out: EntryPoint[] = [];
   const clean = decomment(src);
 
-  let idx = 0;
-  while ((idx = clean.indexOf('#[contractimpl]', idx)) !== -1) {
+  // `#[contractimpl]` e `#[contractimpl(contracttrait)]`. Procurar a string
+  // exata com `]` no fim ignorava o segundo silenciosamente — e é a forma que
+  // o token contract da Stellar usa para implementar `TokenInterface`, de onde
+  // saem `transfer`, `approve`, `burn` e `transfer_from`. A ferramenta reportava
+  // 4 entry points de 15 e não avisava nada.
+  const attrRe = /#\[contractimpl(?:\([^)]*\))?\]/g;
+  let attr: RegExpExecArray | null;
+  while ((attr = attrRe.exec(clean))) {
+    const idx = attr.index;
     const braceStart = clean.indexOf('{', idx);
     if (braceStart === -1) break;
+
+    // `impl Trait for Tipo` exporta todos os métodos do trait, e num impl de
+    // trait eles não levam `pub` — é sintaticamente proibido. Num impl
+    // inerente, só o que é `pub` faz parte da superfície.
+    const cabecalho = clean.slice(idx, braceStart);
+    const ehTrait = /\bimpl\b[^{]*\bfor\b/.test(cabecalho);
 
     let depth = 0;
     let end = braceStart;
@@ -56,7 +71,9 @@ function extractEntryPoints(src: string): EntryPoint[] {
     }
 
     const body = clean.slice(braceStart, end);
-    const fnRe = /pub\s+fn\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^)]*)\)\s*(->\s*[^{;]+)?/g;
+    const fnRe = ehTrait
+      ? /(?:pub\s+)?fn\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^)]*)\)\s*(->\s*[^{;]+)?/g
+      : /pub\s+fn\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^)]*)\)\s*(->\s*[^{;]+)?/g;
     let m: RegExpExecArray | null;
     while ((m = fnRe.exec(body))) {
       const [, name, args, ret] = m;
@@ -76,7 +93,7 @@ function extractEntryPoints(src: string): EntryPoint[] {
         requiresAuth: /require_auth/.test(fnBody),
       });
     }
-    idx = end;
+    attrRe.lastIndex = end;
   }
   return out;
 }
@@ -163,6 +180,58 @@ async function findExampleTest(dir: string): Promise<{ file: string; source: str
   };
 }
 
+/**
+ * O fonte do contrato, incluindo os módulos onde a lógica de fato mora.
+ *
+ * Um contrato Soroban real raramente cabe num arquivo. No token contract da
+ * Stellar, `contract.rs` tem os entry points e **nada mais** — as leituras e
+ * escritas de storage vivem em `balance.rs`, `allowance.rs` e `admin.rs`.
+ * Mandar só o arquivo do `#[contract]` mostra ao modelo as assinaturas e
+ * esconde o comportamento, e ele então propõe invariantes sobre o que imagina
+ * que as funções auxiliares fazem.
+ *
+ * Junta o arquivo principal e os irmãos de `src/`, com um teto: um contrato
+ * grande empurraria tudo para fora da janela, e o principal é o que menos pode
+ * faltar — por isso vai primeiro. O que não coube é dito em voz alta, porque
+ * um corte silencioso faria o modelo raciocinar sobre um contrato parcial sem
+ * saber disso.
+ */
+async function reunirFontes(
+  dir: string,
+  principal: string,
+): Promise<{ texto: string; arquivos: string[]; omitidos: string[] }> {
+  const MAX = 60000;
+  const srcDir = join(dir, 'src');
+
+  const cabecalho = (p: string) => `// ─── ${basename(p)} ───\n`;
+  const principalTxt = await readFile(principal, 'utf8');
+
+  let texto = cabecalho(principal) + principalTxt;
+  const arquivos = [principal];
+  const omitidos: string[] = [];
+
+  let irmaos: string[] = [];
+  try {
+    irmaos = (await readdir(srcDir))
+      .filter((n) => n.endsWith('.rs') && join(srcDir, n) !== principal)
+      // Testes não são o contrato, e o maior costuma ser o de testes.
+      .filter((n) => !/test/i.test(n))
+      .sort();
+  } catch { /* sem src/ */ }
+
+  for (const n of irmaos) {
+    const p = join(srcDir, n);
+    const t = await readFile(p, 'utf8').catch(() => '');
+    // `lib.rs` com só `mod x;` não acrescenta nada.
+    if (!t.trim() || /^(\s*(#!\[[^\]]*\]|mod\s+\w+;|pub\s+use[^;]*;|use[^;]*;)\s*)*$/.test(t)) continue;
+    if (texto.length + t.length > MAX) { omitidos.push(n); continue; }
+    texto += '\n\n' + cabecalho(p) + t;
+    arquivos.push(p);
+  }
+
+  return { texto, arquivos, omitidos };
+}
+
 export async function inspectContract(inputPath: string): Promise<ContractInfo> {
   const dir = resolve(inputPath);
   const warnings: string[] = [];
@@ -200,9 +269,16 @@ export async function inspectContract(inputPath: string): Promise<ContractInfo> 
     );
   }
 
-  const src = await readFile(sourceFile, 'utf8');
+  const { texto: src, arquivos, omitidos } = await reunirFontes(dir, sourceFile);
   const clean = decomment(src);
   const entryPoints = extractEntryPoints(src);
+
+  if (omitidos.length) {
+    warnings.push(
+      `Não couberam no orçamento de contexto: ${omitidos.join(', ')}. O modelo vai ` +
+      'raciocinar sobre um contrato parcial.',
+    );
+  }
 
   if (entryPoints.length === 0) {
     warnings.push(
@@ -234,9 +310,25 @@ export async function inspectContract(inputPath: string): Promise<ContractInfo> 
     extendsTtl: /extend_ttl/.test(clean),
     callsOtherContracts: /Client::new|token::/.test(clean),
     loc: src.split('\n').length,
+    sourceFiles: arquivos,
     warnings,
     exampleTest: await findExampleTest(dir),
   };
+}
+
+/**
+ * Relê o fonte que a inspeção montou.
+ *
+ * `ContractInfo` guarda a lista de arquivos e não o texto: o objeto vai inteiro
+ * para a UI a cada evento do SSE, e 60 kB de Rust em cada quadro tornaria o
+ * stream inútil.
+ */
+export async function contractSource(info: ContractInfo): Promise<string> {
+  const partes = await Promise.all(
+    info.sourceFiles.map(async (f) =>
+      `// ─── ${basename(f)} ───\n` + (await readFile(f, 'utf8').catch(() => ''))),
+  );
+  return partes.join('\n\n');
 }
 
 /**
