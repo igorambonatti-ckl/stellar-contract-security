@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #ffffff;
+    color: #0D1117;
+    font-family: 'Inter', 'DM Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-bold tracking-tight;
+  }
+}
+
+@layer components {
+  /* CKL grid texture — hero e seções de destaque */
+  .bg-grid {
+    background-image:
+      linear-gradient(rgba(27, 110, 243, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(27, 110, 243, 0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* Card base */
+  .card {
+    @apply bg-white rounded-xl border border-line shadow-card;
+  }
+
+  /* Tag/Badge azul */
+  .tag-blue {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-md
+           bg-brand-50 text-brand-500 border border-brand-100 text-xs font-semibold;
+  }
+
+  /* CTA primário */
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-6 py-3
+           bg-brand-500 hover:bg-brand-600
+           text-white font-semibold rounded-lg
+           transition-all duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* CTA secundário (outline) */
+  .btn-outline {
+    @apply inline-flex items-center gap-2 px-6 py-3
+           border border-line hover:border-brand-300
+           text-ink font-medium rounded-lg
+           transition-all duration-150 hover:bg-gray-50;
+  }
+
+  /* Botão terciário (ghost/utility) */
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-4 py-2
+           border border-line hover:border-brand-200 hover:bg-brand-50
+           text-ink-muted hover:text-brand-600
+           font-medium rounded-lg transition-all duration-150 text-sm;
+  }
+
+  /* Input padrão */
+  .input {
+    @apply w-full px-4 py-3 bg-white border border-line rounded-lg text-sm
+           text-ink placeholder:text-ink-muted
+           focus:outline-none focus:border-brand-400 focus:ring-2 focus:ring-brand-50
+           transition-all duration-150;
+  }
+
+  /* Section label (ALL CAPS acima de heading) */
+  .section-label {
+    @apply text-xs font-semibold uppercase tracking-widest text-ink-muted;
+  }
+}
