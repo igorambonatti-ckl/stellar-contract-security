@@ -1,0 +1,607 @@
+<title>Soroban Audit Report — AI-Assisted Fuzzing</title>
+
+<style>
+  /* ── Tokens ─────────────────────────────────────────────────────────────
+     Values taken verbatim from the ChainGuard design system
+     (apps/web/tailwind.config.js). The dark set is derived: ChainGuard was
+     light-only, so the accent moves up the ramp to hold contrast on ink. */
+  :root {
+    --brand-50:  #E8F0FE;
+    --brand-100: #C5D8FC;
+    --brand-300: #5A91F7;
+    --brand-400: #3578F5;
+    --brand-500: #1B6EF3;
+    --brand-600: #1452C4;
+
+    --surface:   #FFFFFF;
+    --surface-2: #F5F7FA;
+    --surface-3: #FFFFFF;
+    --ink:       #0D1117;
+    --ink-muted: #6B7280;
+    --line:      #E5E7EB;
+
+    --success:   #22C55E;
+    --danger:    #EF4444;
+    --warn:      #F59E0B;
+
+    --sev-crit-bg: #FEF2F2; --sev-crit-fg: #DC2626; --sev-crit-br: #FECACA;
+    --sev-high-bg: #FFF7ED; --sev-high-fg: #EA580C; --sev-high-br: #FED7AA;
+    --sev-med-bg:  #FEFCE8; --sev-med-fg:  #A16207; --sev-med-br:  #FEF08A;
+    --sev-low-bg:  var(--brand-50); --sev-low-fg: var(--brand-600); --sev-low-br: var(--brand-100);
+    --sev-info-bg: #F5F7FA; --sev-info-fg: #6B7280; --sev-info-br: #E5E7EB;
+
+    --shadow-card: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-hover: 0 4px 12px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
+    --grid-ink: rgba(27,110,243,.04);
+
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+    --radius: 12px;
+    --maxw: 1100px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --brand-50:  #10203C;
+      --brand-100: #16305C;
+      --brand-500: #3578F5;
+      --brand-600: #5A91F7;
+
+      --surface:   #0B0E14;
+      --surface-2: #11151E;
+      --surface-3: #141926;
+      --ink:       #E8EDF5;
+      --ink-muted: #94A0B4;
+      --line:      #222836;
+
+      --sev-crit-bg:#2A1315; --sev-crit-fg:#F87171; --sev-crit-br:#4C1D1D;
+      --sev-high-bg:#2A1C0E; --sev-high-fg:#FB923C; --sev-high-br:#4A2C10;
+      --sev-med-bg: #26210D; --sev-med-fg: #FACC15; --sev-med-br: #443A12;
+      --sev-low-bg: #10203C; --sev-low-fg: #7FA9FA; --sev-low-br: #1D3766;
+      --sev-info-bg:#11151E; --sev-info-fg:#94A0B4; --sev-info-br:#222836;
+
+      --shadow-card: 0 1px 3px rgba(0,0,0,.5), 0 1px 2px rgba(0,0,0,.4);
+      --shadow-hover: 0 4px 14px rgba(0,0,0,.55);
+      --grid-ink: rgba(53,120,245,.07);
+    }
+  }
+  /* The viewer's toggle stamps data-theme on :root and must win both ways. */
+  :root[data-theme="light"] {
+    --brand-50:#E8F0FE; --brand-100:#C5D8FC; --brand-500:#1B6EF3; --brand-600:#1452C4;
+    --surface:#FFFFFF; --surface-2:#F5F7FA; --surface-3:#FFFFFF;
+    --ink:#0D1117; --ink-muted:#6B7280; --line:#E5E7EB;
+    --sev-crit-bg:#FEF2F2; --sev-crit-fg:#DC2626; --sev-crit-br:#FECACA;
+    --sev-high-bg:#FFF7ED; --sev-high-fg:#EA580C; --sev-high-br:#FED7AA;
+    --sev-med-bg:#FEFCE8;  --sev-med-fg:#A16207;  --sev-med-br:#FEF08A;
+    --sev-low-bg:#E8F0FE;  --sev-low-fg:#1452C4;  --sev-low-br:#C5D8FC;
+    --sev-info-bg:#F5F7FA; --sev-info-fg:#6B7280; --sev-info-br:#E5E7EB;
+    --shadow-card:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+    --grid-ink: rgba(27,110,243,.04);
+  }
+  :root[data-theme="dark"] {
+    --brand-50:#10203C; --brand-100:#16305C; --brand-500:#3578F5; --brand-600:#5A91F7;
+    --surface:#0B0E14; --surface-2:#11151E; --surface-3:#141926;
+    --ink:#E8EDF5; --ink-muted:#94A0B4; --line:#222836;
+    --sev-crit-bg:#2A1315; --sev-crit-fg:#F87171; --sev-crit-br:#4C1D1D;
+    --sev-high-bg:#2A1C0E; --sev-high-fg:#FB923C; --sev-high-br:#4A2C10;
+    --sev-med-bg:#26210D;  --sev-med-fg:#FACC15;  --sev-med-br:#443A12;
+    --sev-low-bg:#10203C;  --sev-low-fg:#7FA9FA;  --sev-low-br:#1D3766;
+    --sev-info-bg:#11151E; --sev-info-fg:#94A0B4; --sev-info-br:#222836;
+    --shadow-card:0 1px 3px rgba(0,0,0,.5),0 1px 2px rgba(0,0,0,.4);
+    --grid-ink: rgba(53,120,245,.07);
+  }
+
+  /* ── Base ───────────────────────────────────────────────────────────── */
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--surface);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4 { font-weight: 700; letter-spacing: -.02em; text-wrap: balance; margin: 0; }
+  a { color: var(--brand-500); }
+  code, .mono { font-family: var(--mono); font-size: .92em; }
+
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+  .eyebrow {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .12em; color: var(--ink-muted);
+  }
+
+  /* ── Masthead ───────────────────────────────────────────────────────── */
+  header.masthead {
+    border-bottom: 1px solid var(--line);
+    background:
+      linear-gradient(var(--grid-ink) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-ink) 1px, transparent 1px),
+      var(--surface);
+    background-size: 40px 40px, 40px 40px, auto;
+  }
+  .brandbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; height: 60px; border-bottom: 1px solid var(--line);
+  }
+  .logo { display: flex; align-items: center; gap: 3px; font-weight: 700; font-size: 17px; }
+  .logo .br { color: var(--brand-500); font-family: var(--mono); }
+  .repo { font-family: var(--mono); font-size: 12px; color: var(--ink-muted); }
+
+  .hero { padding: 44px 0 36px; display: grid; gap: 22px; }
+  .hero h1 { font-size: clamp(26px, 4.2vw, 40px); line-height: 1.15; max-width: 22ch; }
+  .thesis {
+    font-size: 16px; color: var(--ink-muted); max-width: 62ch;
+    border-left: 3px solid var(--brand-500); padding-left: 16px;
+  }
+  .thesis strong { color: var(--ink); font-weight: 600; }
+
+  /* ── Stat tiles ─────────────────────────────────────────────────────── */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+  .tile {
+    background: var(--surface-3); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow-card);
+    display: grid; gap: 10px;
+  }
+  .tile .eyebrow { font-size: 10px; }
+  .pairs { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .pair { display: grid; gap: 2px; }
+  .pair .v {
+    font-family: var(--mono); font-weight: 700; font-size: 26px;
+    font-variant-numeric: tabular-nums; line-height: 1;
+  }
+  .pair .k { font-size: 11px; color: var(--ink-muted); }
+  .v.base { color: var(--ink-muted); }
+  .v.ai { color: var(--brand-500); }
+  .arrow { color: var(--ink-muted); font-size: 18px; align-self: center; }
+
+  .meter { height: 6px; border-radius: 99px; background: var(--surface-2); overflow: hidden; display: flex; }
+  .meter span { display: block; height: 100%; }
+  .meter .m-base { background: var(--ink-muted); opacity: .45; }
+  .meter .m-ai { background: var(--brand-500); }
+
+  /* ── Sections ───────────────────────────────────────────────────────── */
+  section { padding: 40px 0; border-top: 1px solid var(--line); }
+  .sec-head { display: grid; gap: 6px; margin-bottom: 20px; }
+  .sec-head h2 { font-size: 21px; }
+  .sec-head p { margin: 0; color: var(--ink-muted); max-width: 68ch; }
+
+  /* ── Matrix ─────────────────────────────────────────────────────────── */
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-3); }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  thead th {
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: .09em;
+    color: var(--ink-muted); background: var(--surface-2); font-weight: 700;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr.total td { background: var(--surface-2); font-weight: 700; }
+  td.seed { font-family: var(--mono); }
+  td.note { white-space: normal; color: var(--ink-muted); font-size: 12.5px; min-width: 260px; }
+
+  .dot {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 6px; border: 1px solid;
+  }
+  .dot::before { content: ""; width: 6px; height: 6px; border-radius: 99px; background: currentColor; }
+  .hit  { color: var(--brand-600); background: var(--brand-50); border-color: var(--brand-100); }
+  .miss { color: var(--ink-muted); background: var(--surface-2); border-color: var(--line); }
+  .pend { color: var(--sev-med-fg); background: var(--sev-med-bg); border-color: var(--sev-med-br); }
+
+  /* ── Findings ───────────────────────────────────────────────────────── */
+  .findings { display: grid; gap: 10px; }
+  details.finding {
+    border: 1px solid var(--line); border-radius: var(--radius);
+    background: var(--surface-3); box-shadow: var(--shadow-card); overflow: hidden;
+  }
+  details.finding > summary {
+    list-style: none; cursor: pointer; padding: 13px 16px;
+    display: flex; align-items: center; gap: 11px;
+  }
+  details.finding > summary::-webkit-details-marker { display: none; }
+  details.finding > summary:hover { background: var(--surface-2); }
+  details.finding > summary:focus-visible { outline: 2px solid var(--brand-500); outline-offset: -2px; }
+  .chev { color: var(--ink-muted); font-family: var(--mono); font-size: 12px; transition: transform .15s; }
+  @media (prefers-reduced-motion: reduce) { .chev { transition: none; } }
+  details[open] .chev { transform: rotate(90deg); }
+  .sev {
+    font-size: 10.5px; font-weight: 700; letter-spacing: .05em;
+    padding: 2px 7px; border-radius: 5px; border: 1px solid; flex-shrink: 0;
+  }
+  .sev.crit { background: var(--sev-crit-bg); color: var(--sev-crit-fg); border-color: var(--sev-crit-br); }
+  .sev.high { background: var(--sev-high-bg); color: var(--sev-high-fg); border-color: var(--sev-high-br); }
+  .sev.med  { background: var(--sev-med-bg);  color: var(--sev-med-fg);  border-color: var(--sev-med-br); }
+  .sev.low  { background: var(--sev-low-bg);  color: var(--sev-low-fg);  border-color: var(--sev-low-br); }
+  .sev.info { background: var(--sev-info-bg); color: var(--sev-info-fg); border-color: var(--sev-info-br); }
+  .f-title { font-weight: 600; font-size: 14px; flex: 1; }
+  .f-id { font-family: var(--mono); font-size: 11.5px; color: var(--ink-muted); }
+  .f-body { padding: 0 16px 16px 16px; border-top: 1px solid var(--line); display: grid; gap: 12px; }
+  .f-body > p { margin: 0; max-width: 72ch; }
+  .f-body > p:first-child { margin-top: 12px; }
+  pre {
+    margin: 0; padding: 12px 14px; background: var(--surface-2);
+    border: 1px solid var(--line); border-radius: 8px;
+    overflow-x: auto; font-family: var(--mono); font-size: 12px; line-height: 1.55;
+  }
+  .verdict {
+    display: grid; gap: 4px; padding: 11px 13px; border-radius: 8px;
+    background: var(--brand-50); border: 1px solid var(--brand-100);
+  }
+  .verdict .eyebrow { color: var(--brand-600); }
+  .verdict p { margin: 0; font-size: 13.5px; }
+
+  /* ── Lists ──────────────────────────────────────────────────────────── */
+  ul.clean { margin: 0; padding: 0; list-style: none; display: grid; gap: 9px; }
+  ul.clean li { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; }
+  ul.clean li::before {
+    content: ""; width: 5px; height: 5px; border-radius: 99px;
+    background: var(--brand-500); margin-top: 9px;
+  }
+  ul.clean li p { margin: 0; }
+  ul.clean strong { font-weight: 650; }
+
+  /* ── Footer ─────────────────────────────────────────────────────────── */
+  footer { border-top: 1px solid var(--line); padding: 28px 0 44px; color: var(--ink-muted); font-size: 13px; }
+  footer .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 22px; }
+
+  @media (max-width: 640px) {
+    .hero { padding: 30px 0 26px; }
+    section { padding: 30px 0; }
+  }
+</style>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="brandbar">
+      <div class="logo"><span class="br">&lt;</span><span>stellar-studies</span><span class="br">&gt;</span></div>
+      <div class="repo">soroban-vault · 2026-09-19</div>
+    </div>
+
+    <div class="hero">
+      <div>
+        <div class="eyebrow">Soroban contract audit · AI-assisted fuzzing</div>
+        <h1>Two fuzzing arms, one contract, seven planted bugs.</h1>
+      </div>
+
+      <p class="thesis">
+        <strong>AI proposes, the human curates, the fuzzer disposes.</strong>
+        A model reads an expression and enumerates how it can go wrong. It cannot tell you whether
+        that state is reachable — and it will state the unreachable case with more confidence than
+        the real one. Execution is the only authority in the loop that cannot be argued into a
+        false positive.
+      </p>
+
+      <div class="tiles">
+        <div class="tile">
+          <div class="eyebrow">Planted bugs detected</div>
+          <div class="pairs">
+            <div class="pair"><span class="v base">1/7</span><span class="k">baseline</span></div>
+            <span class="arrow">→</span>
+            <div class="pair"><span class="v ai">7/7</span><span class="k">AI-assisted</span></div>
+          </div>
+          <div class="meter"><span class="m-base" style="width:14%"></span></div>
+          <div class="meter"><span class="m-ai" style="width:100%"></span></div>
+        </div>
+
+        <div class="tile">
+          <div class="eyebrow">Mutation score · seed-independent</div>
+          <div class="pairs">
+            <div class="pair"><span class="v base">34%</span><span class="k">baseline</span></div>
+            <span class="arrow">→</span>
+            <div class="pair"><span class="v ai">98%</span><span class="k">AI-assisted</span></div>
+          </div>
+          <div class="meter"><span class="m-base" style="width:34%"></span></div>
+          <div class="meter"><span class="m-ai" style="width:98%"></span></div>
+        </div>
+
+        <div class="tile">
+          <div class="eyebrow">Region coverage</div>
+          <div class="pairs">
+            <div class="pair"><span class="v base">85.8%</span><span class="k">baseline</span></div>
+            <span class="arrow">→</span>
+            <div class="pair"><span class="v ai">96.2%</span><span class="k">AI-assisted</span></div>
+          </div>
+          <div class="meter"><span class="m-base" style="width:85.8%"></span></div>
+          <div class="meter"><span class="m-ai" style="width:96.2%"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Evidence</div>
+      <h2>Detection matrix</h2>
+      <p>
+        Both arms run the same engine over the same contract with the same budget. The only
+        difference is the oracle: one asks <em>did the call abort?</em>, the other reads state back
+        and compares it against an independently computed expectation. Reported per seed, never as
+        an aggregate — one seed trips four distinct tests and would inflate the total on its own.
+      </p>
+    </div>
+
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Planted bug</th>
+            <th>Invariant</th>
+            <th>Baseline</th>
+            <th>AI arm</th>
+            <th>Caught by</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="seed">bug_overflow</td><td>I6</td>
+            <td><span class="dot miss">missed</span></td><td><span class="dot hit">caught</span></td>
+            <td class="note">Predicted <code>Overflow</code>, got <code>ZeroShares</code>. The buggy contract <em>does</em> abort, so <code>is_err()</code> passes.</td>
+          </tr>
+          <tr>
+            <td class="seed">bug_missing_auth</td><td>I5</td>
+            <td><span class="dot miss">missed</span></td><td><span class="dot hit">caught</span></td>
+            <td class="note">Revoked-auth arm: the call had to fail, and fail on <em>auth</em> rather than for an unrelated reason.</td>
+          </tr>
+          <tr>
+            <td class="seed">bug_zero_amount</td><td>I7</td>
+            <td><span class="dot miss">missed</span></td><td><span class="dot hit">caught</span></td>
+            <td class="note">Caught by an invariant nobody wrote down — the exact-error oracle predicts the rejection reason for every input.</td>
+          </tr>
+          <tr>
+            <td class="seed">bug_self_transfer</td><td>I8, I1</td>
+            <td><span class="dot miss">missed</span></td><td><span class="dot hit">caught</span></td>
+            <td class="note">Self-transfer duplicated a balance. A random <code>(from, to)</code> pair never aliases, so the case is forced.</td>
+          </tr>
+          <tr>
+            <td class="seed">bug_no_ttl</td><td>I10′, N1</td>
+            <td><span class="dot miss">missed</span></td><td><span class="dot hit">caught</span></td>
+            <td class="note">Also caught by N1 — a <em>new</em> invariant the model proposed and the original catalogue did not contain.</td>
+          </tr>
+          <tr>
+            <td class="seed">bug_temp_nonce</td><td>I11</td>
+            <td><span class="dot hit">caught</span></td><td><span class="dot hit">caught</span></td>
+            <td class="note">The only seed that makes the contract <em>abort</em> — the one thing a liveness oracle can see.</td>
+          </tr>
+          <tr>
+            <td class="seed">bug_reinit</td><td>I9</td>
+            <td><span class="dot miss">missed</span></td><td><span class="dot hit">caught</span></td>
+            <td class="note">A second <code>initialize</code> returned <code>Ok</code> and overwrote the admin.</td>
+          </tr>
+          <tr class="total">
+            <td>Total</td><td></td><td>1 / 7</td><td>7 / 7</td>
+            <td class="note">Clean-contract control passes in every arm — without it, none of these would be attributable.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Why the gap exists</div>
+      <h2>Six of seven bugs are silent</h2>
+      <p>
+        The baseline catches exactly the one bug that makes the contract abort. The rest accept the
+        call, return normally, and leave the state wrong — shares duplicated, supply inflated by a
+        wrapped multiplication, an entry left to be archived, the admin overwritten. A liveness
+        oracle is structurally blind to all of it.
+      </p>
+    </div>
+    <ul class="clean">
+      <li><p><strong>The AI's contribution was the oracle, not the harness.</strong> 16 of its 17 compile errors came from one wrong assumption about the SDK — caught by the compiler in seconds, costing nothing. What it contributed was knowing <em>what to assert</em>: 13 usable invariants from 16 proposals, including 10 of the 12 in a catalogue it never saw.</p></li>
+      <li><p><strong>Both Soroban-specific invariants were derived from source alone</strong> — TTL management and the rule that authority must never be read from a tier that can silently expire. These are the properties with no EVM analogue.</p></li>
+      <li><p><strong>Two independent instruments agree.</strong> Mutation testing knows nothing about the planted bugs; it mutilates the contract on its own. 1/7 and 34% for the baseline, 7/7 and 98% for the AI arm — which is what answers the objection a purpose-built benchmark cannot answer for itself.</p></li>
+    </ul>
+  </section>
+
+  <section class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Findings</div>
+      <h2>What the process actually caught</h2>
+      <p>
+        Including the ones that were wrong. Each measurement error below produced a plausible number
+        that survived until something contradicted it — and the list of what caught them is the
+        argument for the method.
+      </p>
+    </div>
+
+    <div class="findings">
+      <details class="finding">
+        <summary>
+          <span class="chev">›</span>
+          <span class="sev crit">REFUTED</span>
+          <span class="f-title">The AI's highest-confidence claim was false</span>
+          <span class="f-id">F-01</span>
+        </summary>
+        <div class="f-body">
+          <p>
+            The input-prioritisation round identified, as <em>“the highest-value truncation target in
+            the file”</em>, that <code>withdraw</code> can burn shares and pay zero. The reasoning was
+            specific, cited the right lines, and was stated with more confidence than anything else
+            it produced.
+          </p>
+          <p>
+            It is unreachable. <code>assets ≥ total_shares</code> holds over every reachable state,
+            provable by induction over the four mutators — and with that, the payout is never zero.
+            The model analysed one expression locally and never asked which states are reachable.
+          </p>
+          <div class="verdict">
+            <div class="eyebrow">Outcome</div>
+            <p>The <em>reason</em> it is false became invariant N2, now asserted on every run. A refuted hypothesis turned into a kept invariant.</p>
+          </div>
+        </div>
+      </details>
+
+      <details class="finding">
+        <summary>
+          <span class="chev">›</span>
+          <span class="sev high">FALSE POSITIVE</span>
+          <span class="f-title">A real accounting flaw that is not reportable</span>
+          <span class="f-id">F-02</span>
+        </summary>
+        <div class="f-body">
+          <p>
+            The fuzzer broke the <em>clean</em> contract: <code>deposit(from = vault)</code> mints
+            shares against a token transfer from the vault to itself, which leaves its balance
+            unchanged. Value created from nothing.
+          </p>
+          <pre>I3 violated by deposit: A1*T0=1000000000000000000 &lt; A0*T1=1000000066000000000
+                        (A0=1000000000 T0=1000000000 A1=1000000000 T1=1000000066)</pre>
+          <p>
+            The asymmetry is real. It is also unreachable on-chain: no external caller can forge the
+            contract's own authorization. The path existed only because the harness mocked all
+            authorization — a false red manufactured by the harness itself.
+          </p>
+          <div class="verdict">
+            <div class="eyebrow">Outcome</div>
+            <p>Contract addresses stay in the pool as counterparties, where stranded value is a genuine hazard, and leave the caller position, where they cannot sign. Every detection from that run was discarded.</p>
+          </div>
+        </div>
+      </details>
+
+      <details class="finding">
+        <summary>
+          <span class="chev">›</span>
+          <span class="sev high">TOOLING</span>
+          <span class="f-title">A flag that was accepted and silently ignored</span>
+          <span class="f-id">F-03</span>
+        </summary>
+        <div class="f-body">
+          <p>
+            <code>cargo fuzz --features</code> is accepted by cargo-fuzz 0.13.2, never forwarded to
+            the underlying build, and reports no error. The first matrix therefore announced that the
+            AI arm had <em>missed</em> a bug — when that bug had never been compiled in.
+          </p>
+          <p>
+            The number was quiet, plausible, and pointed the wrong way. It was caught only because it
+            contradicted the result from a different layer.
+          </p>
+          <div class="verdict">
+            <div class="eyebrow">Outcome</div>
+            <p>The runner now verifies the feature set cargo actually resolved, and aborts if it is not what was asked for. Two weaker checks were tried first and both produced false alarms of their own.</p>
+          </div>
+        </div>
+      </details>
+
+      <details class="finding">
+        <summary>
+          <span class="chev">›</span>
+          <span class="sev med">METHOD</span>
+          <span class="f-title">The assisted arm was briefly worse than the control</span>
+          <span class="f-id">F-04</span>
+        </summary>
+        <div class="f-body">
+          <p>
+            The first coverage-guided AI target found 2 of 7 — and <em>lost</em> one the crude
+            baseline caught. Not an oracle problem: operands came straight from the fuzzer's bytes,
+            so it could never build multi-call state, and every call was wrapped in a fallible
+            variant and checked only on success, so an operation that <em>wrongly aborted</em> was
+            tolerated.
+          </p>
+          <p>
+            The fix was implementing the third prompt — which had been written, executed, committed
+            verbatim, and never opened. 2/7 → 7/7.
+          </p>
+          <div class="verdict">
+            <div class="eyebrow">Outcome</div>
+            <p>A prompt that is authored, executed and committed but never integrated produces no value and leaves no trace of its absence. Its generic half is now a reusable crate.</p>
+          </div>
+        </div>
+      </details>
+
+      <details class="finding">
+        <summary>
+          <span class="chev">›</span>
+          <span class="sev med">SOROBAN</span>
+          <span class="f-title">Rent counters work as a TTL oracle; disk counters do not</span>
+          <span class="f-id">F-05</span>
+        </summary>
+        <div class="f-body">
+          <p>
+            An invocation that wrote persistent state and bumped no rent has left an entry nothing is
+            paying to keep alive. That oracle needs no knowledge of the contract's storage layout —
+            making it the only TTL check here that applies to a contract you have not read, which is
+            the situation an auditor is in.
+          </p>
+          <p>
+            The companion idea does not survive. <em>“A disk read means an archived entry was
+            restored”</em> ignores that the counter also includes non-Soroban entries such as classic
+            account balances, so any contract calling a token reads from disk while perfectly
+            healthy. Written as an assertion, it failed on the clean build in under 90 seconds.
+          </p>
+          <div class="verdict">
+            <div class="eyebrow">Outcome</div>
+            <p>Kept as a documented negative result rather than deleted. “Do the resource counters make a good TTL oracle?” is too coarse a question to have one answer.</p>
+          </div>
+        </div>
+      </details>
+
+      <details class="finding">
+        <summary>
+          <span class="chev">›</span>
+          <span class="sev low">ECOSYSTEM</span>
+          <span class="f-title">EVM bug taxonomies do not port to Soroban</span>
+          <span class="f-id">F-06</span>
+        </summary>
+        <div class="f-body">
+          <p>
+            <code>overflow-checks</code> is on in the Soroban project template, so naive arithmetic
+            <em>aborts rather than wraps</em>. The classic integer-overflow bug barely exists here and
+            had to be planted with an explicit wrapping multiplication to exist at all.
+          </p>
+          <p>
+            Conversely, the two bug classes with no EVM analogue — TTL mismanagement and authority
+            read from a tier that can silently expire — are absent from every EVM-derived checklist,
+            and are where the real Soroban risk sits.
+          </p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <div class="sec-head">
+      <div class="eyebrow">Honesty</div>
+      <h2>What this does not show</h2>
+      <p>These bound what the numbers above are allowed to mean.</p>
+    </div>
+    <ul class="clean">
+      <li><p><strong>Not a productivity measurement.</strong> Both arms were authored by the assistant, so wall-clock compares one model to itself. The claim this cannot make is “AI makes a developer faster”.</p></li>
+      <li><p><strong>Not a statistical result.</strong> One contract, one model, one run per arm. No variance estimate, no significance claim.</p></li>
+      <li><p><strong>Not free of benchmark bias.</strong> The contract was purpose-built around the invariant catalogue, so a model reading it reads a contract whose shape already implies most of the properties.</p></li>
+      <li><p><strong>Two access-control properties are asserted weaker than stated.</strong> “Only the incumbent authorized” is tested as “nobody authorized”, so a contract accepting <em>any</em> signer would pass. Flagged by the model in its own harness.</p></li>
+    </ul>
+  </section>
+</main>
+
+<footer class="wrap">
+  <div class="cols">
+    <div>
+      <div class="eyebrow">Reproduce</div>
+      <pre>git clone &lt;repo&gt; &amp;&amp; cd stellar-studies
+cargo test
+./04-prototype-development/scripts/demo.sh</pre>
+    </div>
+    <div>
+      <div class="eyebrow">Artifacts</div>
+      <p style="margin:8px 0 0">
+        <code>AUDITING.md</code> — the method<br>
+        <code>fuzzkit/</code> — the reusable, contract-agnostic half<br>
+        <code>results/benchmark.md</code> — the full two-arm table<br>
+        <code>prompts/raw/</code> — every model output, verbatim
+      </p>
+    </div>
+    <div>
+      <div class="eyebrow">Context</div>
+      <p style="margin:8px 0 0">
+        Individual Development Plan · Cheesecake Labs<br>
+        Developing Smart Contract Skills on Stellar with a Focus on Security and AI-Assisted Fuzzing
+      </p>
+    </div>
+  </div>
+</footer>

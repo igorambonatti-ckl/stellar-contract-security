@@ -60,6 +60,16 @@ test = false
 doc = false
 bench = false
 
+# A diagnostic, not a fuzz target: prints the metered footprint of each
+# operation so an oracle over these counters is written against measurement
+# rather than assumption.
+[[bin]]
+name = "footprint"
+path = "tools/footprint.rs"
+test = false
+doc = false
+bench = false
+
 [[bin]]
 name = "vault_wasm"
 path = "fuzz_targets/vault_wasm.rs"

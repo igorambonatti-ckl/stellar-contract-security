@@ -1,1 +1,9 @@
 arm	seed	verdict	ttfc_seconds	runs	artifact
+vault_wasm	clean	missed		98399	
+vault_wasm	bug_overflow	missed		98690	
+vault_wasm	bug_missing_auth	missed		104726	
+vault_wasm	bug_zero_amount	missed		98932	
+vault_wasm	bug_self_transfer	missed		101921	
+vault_wasm	bug_no_ttl	missed		96931	
+vault_wasm	bug_temp_nonce	missed		95419	
+vault_wasm	bug_reinit	missed		91848	

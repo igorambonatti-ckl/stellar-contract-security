@@ -39,6 +39,14 @@ MANIFEST="$ROOT/$FUZZ_DIR/Cargo.toml"
 OUT="${P6_OUT:-$ROOT/04-prototype-development/results/p6-raw.tsv}"
 CRASHES="$ROOT/04-prototype-development/results/crashes"
 BUDGET="${1:-300}"
+# Per-unit timeout. libFuzzer only consults `-max_total_time` *between* runs, so
+# a single pathological input stalls the whole cell: the WASM arm's first matrix
+# spent 997 seconds on one input and reported ~1 000 executions per cell instead
+# of ~100 000, which read as "detects nothing" when it had barely run. With this
+# set, a unit that blows the budget is reported as a crash — which is also the
+# right semantics, since an invocation that slow is one that cannot be submitted
+# on-chain.
+UNIT_TIMEOUT="${P6_UNIT_TIMEOUT:-20}"
 
 SEEDS=(clean bug_overflow bug_missing_auth bug_zero_amount bug_self_transfer \
        bug_no_ttl bug_temp_nonce bug_reinit)
@@ -100,13 +108,16 @@ for seed in "${SEEDS[@]}"; do
     start=$(date +%s)
     run_log="$(cd "$ROOT" && cargo +nightly fuzz run --fuzz-dir "$FUZZ_DIR" \
                  --sanitizer none "$arm" "$corpus" -- \
-                 -max_total_time="$BUDGET" -print_final_stats=1 2>&1)"
+                 -max_total_time="$BUDGET" -timeout="$UNIT_TIMEOUT" \
+                 -print_final_stats=1 2>&1)"
     elapsed=$(( $(date +%s) - start ))
 
     runs="$(grep -oE 'stat::number_of_executed_units: *[0-9]+' <<<"$run_log" \
             | grep -oE '[0-9]+' | tail -1)"
     runs="${runs:-0}"
-    artifact="$(grep -oE 'artifacts/[^ ]*/(crash|panic)-[a-f0-9]+' <<<"$run_log" | tail -1)"
+    # `timeout-` artifacts count: a unit that exceeds the per-unit budget is a
+    # detection, not a stall to be discarded.
+    artifact="$(grep -oE 'artifacts/[^ ]*/(crash|panic|timeout)-[a-f0-9]+' <<<"$run_log" | tail -1)"
 
     if [[ -n "$artifact" ]]; then
       verdict=detected
@@ -117,7 +128,7 @@ for seed in "${SEEDS[@]}"; do
       cp "$ROOT/$FUZZ_DIR/$artifact" "$dest.input" 2>/dev/null
       {
         echo "# $arm / $seed — first crash after ${elapsed}s, ${runs} runs"
-        grep -E "panicked|assertion|I[0-9]+'? (broken|violated)|N[0-9]+ (broken|violated)|Error\(Contract" \
+        grep -E "panicked|assertion|I[0-9]+'? (broken|violated)|[NR][0-9]+ (broken|violated)|ERROR: libFuzzer: timeout|Slowest unit|Error\(Contract" \
           <<<"$run_log" | head -6
       } > "$dest.txt"
       echo "  DETECTED in ${elapsed}s after ${runs} runs"

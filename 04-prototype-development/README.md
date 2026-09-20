@@ -44,7 +44,8 @@ die.
 │   └── tests/
 │       ├── proptest_baseline.rs #   control arm (P4)
 │       └── proptest_ai.rs       #   AI arm (P5)
-├── fuzz/                        # cargo-fuzz targets for both arms (P6)
+├── AUDITING.md                  # the method: how to point this at a contract
+├── fuzz/                        # cargo-fuzz targets — baseline, AI, and the WASM arm
 ├── fuzzkit/                     # soroban-fuzzkit — the contract-agnostic half, reusable
 ├── prompts/
 │   ├── propose-invariants.md    #   P1 — contract source → candidate invariants
@@ -62,6 +63,20 @@ Reproduce the headline in about two minutes:
 ```bash
 ./04-prototype-development/scripts/demo.sh bug_self_transfer
 ```
+
+## 3b. Three layers, and what each is for
+
+| Layer | Substrate | Runs in | Catches |
+|---|---|---|---|
+| Hand-written invariant tests | linked crate | 0.3 s | ground truth — the reference everything else is measured against |
+| `proptest` | linked crate | ~11 s | application-logic invariants; the CI gate |
+| `cargo-fuzz` over the **deployed WASM** | WASM in the Soroban VM | unattended | Soroban's own failure modes — resource ceilings, unpaid rent |
+| `cargo-mutants` | linked crate | ~20 min | whether the suite is worth anything, independent of the seeds |
+
+The WASM row is not a formality. The SDK is explicit that against a natively-linked contract *"all
+the costs related to VM instantiation and execution, as well as Wasm reads/rent bumps will be
+missed"* — so every resource and rent oracle is **vacuous** unless the deployed module is what runs.
+That arm is also the answer to limitation L7, which Topic 5 had listed as the largest one.
 
 ## 4. How the comparison was kept honest
 

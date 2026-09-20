@@ -31,7 +31,7 @@
 //! | Oracle | Question |
 //! |---|---|
 //! | **R1** resource ceilings | can this call actually be submitted on-chain? |
-//! | **R2** rent on write | did a persistent write pay to keep its entry alive? |
+//! | ~~**R2** rent on write~~ | *withdrawn — the counter measures the host, not the contract* |
 //! | ~~**R3** archival~~ | *withdrawn — see below* |
 //!
 //! R2 is the surviving answer to Topic 3 open question 5. R3 is the other half
@@ -78,6 +78,11 @@ enum Step {
     Deposit { who: u8, amount: Operand },
     Withdraw { who: u8, shares: Operand },
     Transfer { from: u8, to: u8, shares: Operand },
+    /// Forced aliasing. A random `(from, to)` pair essentially never collides,
+    /// so without a dedicated step the `from == to` branch is unreachable —
+    /// which is how the first version of this arm ended up unable to observe a
+    /// whole class of accounting fault. Prior §2.2, rank 2.
+    SelfTransfer { who: u8, shares: Operand },
     Donate { who: u8, amount: Operand },
     SetAdmin { who: u8 },
     Pause,
@@ -164,16 +169,12 @@ fn check_resources(r: &Rig, f: &Footprint, after: &str) {
         panic!("R1 violated after {after}: {why} (footprint {f:?})");
     }
 
-    // R2 — a persistent write must pay to keep its entry alive. This is
-    // `bug_no_ttl` detected without reading a single storage key: the contract
-    // wrote state and bumped no rent, so the entry is left to be archived and
-    // silently auto-restored at somebody else's cost.
-    assert!(
-        resources::persistent_write_bumped_rent(f),
-        "R2 violated after {after}: {} entries written, {} persistent and {} temporary \
-         rent bumps — state was written that nothing is paying to keep alive",
-        f.write_entries, f.persistent_entry_rent_bumps, f.temporary_entry_rent_bumps
-    );
+    // R2 was an assertion here and is not one any more. Measurement (see
+    // `tools/footprint.rs`) showed `persistent_entry_rent_bumps` is identical
+    // between the clean contract and `bug_no_ttl`: the *host* bumps rent when it
+    // writes an entry, whether or not the contract called `extend_ttl`. The
+    // counter therefore measures the host's behaviour, not the contract's, and
+    // cannot serve as a TTL oracle. See `results/p6b-wasm-arm.md` §4.
 
     // R3 was an assertion here and is not one any more. "A disk read means an
     // archived entry was restored" is wrong: the counter also includes
@@ -248,6 +249,23 @@ fuzz_target!(|program: Program| {
                 let t = r.pool.address(r.pool.index(*to)).clone();
                 let shares = r.ops.resolve2(shares, vault.balance_of(&f), vault.balance_of(&t));
                 metered = vault.try_transfer_shares(&f, &t, &shares).is_ok();
+            }
+            Step::SelfTransfer { who, shares } => {
+                label = "self_transfer";
+                let addr = r.pool.address(r.pool.index_caller(*who)).clone();
+                let shares = r.ops.resolve(shares, vault.balance_of(&addr));
+                let (b0, t0) = (vault.balance_of(&addr), vault.total_shares());
+                metered = vault.try_transfer_shares(&addr, &addr, &shares).is_ok();
+                if metered {
+                    assert_eq!(
+                        vault.balance_of(&addr), b0,
+                        "I8 violated: self-transfer of {shares} moved a balance from {b0}"
+                    );
+                    assert_eq!(
+                        vault.total_shares(), t0,
+                        "I8 violated: self-transfer changed total_shares"
+                    );
+                }
             }
             Step::Donate { who, amount } => {
                 label = "donate";
