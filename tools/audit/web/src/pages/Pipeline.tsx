@@ -114,10 +114,11 @@ export function Pipeline() {
   // de IA dentro do pipeline — não há um passo em que uma pessoa clica.
   const modo = 'automatico' as const;
   // Poucos modelos, escolhidos por medição neste projeto e não por catálogo.
-  // O gemini-3.8-flash é o default; o flash-lite faz por um terço do preço com
-  // detecção parecida no benchmark, e o sonnet-4.5 por vinte vezes mais. A
-  // diferença aparece no relatório, que é onde ela deve ser decidida.
-  const [modelo, setModelo] = useState('google/gemini-3.1-flash-lite');
+  // O grok-4.3 é o default: não raciocina antes de responder, então escreve
+  // uma asserção em ~4 s contra 3 a 5 min do gemini-3.8-flash, e a auditoria
+  // inteira fecha em ~2 min por ~US$ 0,25 (medido). O flash-lite fica por um
+  // décimo do preço; o 3.8-flash por o dobro e cinco vezes o tempo.
+  const [modelo, setModelo] = useState('x-ai/grok-4.3');
   const [vazamento, setVazamento] = useState<{ invariantes: string[]; features: string[] } | null>(null);
   const [id, setId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -303,11 +304,11 @@ export function Pipeline() {
           <select className="text-sm border border-line rounded-md px-2 py-1 bg-surface text-ink"
             value={modelo} onChange={(e) => setModelo(e.target.value)}
             disabled={status === 'rodando'}>
+            <option value="x-ai/grok-4.3">grok-4.3 · ~US$ 0,25 · ~2 min</option>
             <option value="google/gemini-3.1-flash-lite">gemini-3.1-flash-lite · ~US$ 0,03 · ~3 min</option>
             <option value="google/gemini-3.8-flash">gemini-3.8-flash · ~US$ 0,50 · ~10 min</option>
             <option value="qwen/qwen3-coder-next">qwen3-coder-next · ~US$ 0,08</option>
             <option value="openai/gpt-5.4-nano">gpt-5.4-nano · ~US$ 0,07</option>
-            <option value="x-ai/grok-4.3">grok-4.3 · ~US$ 0,13</option>
             <option value="anthropic/claude-sonnet-4.5">claude-sonnet-4.5 · ~US$ 1,70</option>
           </select>
 
