@@ -1135,23 +1135,26 @@ async function run(p: Pipeline, runMutants: boolean) {
         if (i >= p.invariants.length) return;
         guard();
         const inv = p.invariants[i];
-        const r = await complete({
-          system: systemPrompt(),
-          user: generateCheck(info, src, inv, rigCode),
-          model: p.model,
-          maxTokens: 8000,
-        }).catch((e) => { log(p, `${inv.id}: !! ${e.message}`); return null; });
-        if (!r) continue;
-        p.usage.entrada += r.usage?.entrada ?? 0;
-        p.usage.saida += r.usage?.saida ?? 0;
-        const bruto = extractCode(r.text, 'rust').trim();
-        // Uma asserção de menos de cinco linhas é sintoma de parser, não de
-        // modelo. Guardar o começo da resposta crua é o que permite ver o
-        // formato que o parser não entendeu — sem isso, o diagnóstico foi
-        // "o grok desiste fácil" por uma execução inteira.
-        if (bruto.split('\n').length < 5 && !/IMPOSSIVEL/i.test(bruto)) {
-          log(p, `${inv.id}: só ${bruto.split('\n').length} linha(s) extraída(s) de ${r.text.length} chars — resposta crua começa: ${JSON.stringify(r.text.slice(0, 160))}`);
+        let r: Awaited<ReturnType<typeof complete>> | null = null;
+        let bruto = '';
+        // Até duas gerações. Uma asserção com menos de cinco linhas não é uma
+        // asserção — é o parser tendo entendido só um pedaço da resposta, e
+        // segui-la adiante custa três rodadas de reparo sobre um stub.
+        for (let vez = 1; vez <= 2; vez++) {
+          r = await complete({
+            system: systemPrompt(),
+            user: generateCheck(info, src, inv, rigCode),
+            model: p.model,
+            maxTokens: 8000,
+          }).catch((e) => { log(p, `${inv.id}: !! ${e.message}`); return null; });
+          if (!r) break;
+          p.usage.entrada += r.usage?.entrada ?? 0;
+          p.usage.saida += r.usage?.saida ?? 0;
+          bruto = extractCode(r.text, 'rust').trim();
+          if (bruto.split('\n').length >= 5 || /IMPOSSIVEL/i.test(bruto)) break;
+          log(p, `${inv.id}: só ${bruto.split('\n').length} linha(s) extraída(s) de ${r.text.length} chars${vez === 1 ? '; gerando de novo' : ''} — resposta crua começa: ${JSON.stringify(r.text.slice(0, 160))}`);
         }
+        if (!r) continue;
         let pronto = /^\/\/\s*IMPOSSIVEL/i.test(bruto)
           ? bruto
           : alinharCamposDoRig(p, normalizarCheck(p, consertarImports(
