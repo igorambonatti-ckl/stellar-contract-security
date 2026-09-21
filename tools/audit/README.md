@@ -115,4 +115,4 @@ não o modelo. Cada item abaixo existe porque custou uma execução:
 
 - O rig é o ponto frágil em contrato de terceiro: se `setup()` não deixa o contrato usável, toda operação bate em "não inicializado" e o resultado é um teste verde que não exercitou nada.
 - Uma propriedade que falha no contrato correto pode ser o contrato, a invariante ou o harness. A ferramenta não decide; quem audita decide, com o contra-exemplo na mão.
-- A curadoria humana ainda vale mais que a automática: 7/7 contra 4/7 por execução. A diferença é a medida do que uma pessoa acrescenta, e é o achado mais útil que a ferramenta produziu.
+- A curadoria humana ainda vale mais que a automática: 7/7 contra 3–4/7 por execução. A diferença é a medida do que uma pessoa acrescenta, e é o achado mais útil que a ferramenta produziu.
