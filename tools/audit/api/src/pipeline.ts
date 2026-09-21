@@ -1151,7 +1151,8 @@ async function run(p: Pipeline, runMutants: boolean) {
           p.usage.entrada += r.usage?.entrada ?? 0;
           p.usage.saida += r.usage?.saida ?? 0;
           bruto = extractCode(r.text, 'rust').trim();
-          if (bruto.split('\n').length >= 5 || /IMPOSS[IÍ]VEL|IMPOSSIBLE/i.test(bruto)) break;
+          // Curta mas com um comentário explicando é desistência, não parser.
+          if (bruto.split('\n').length >= 5 || /^\s*\/\//.test(bruto)) break;
           log(p, `${inv.id}: só ${bruto.split('\n').length} linha(s) extraída(s) de ${r.text.length} chars${vez === 1 ? '; gerando de novo' : ''} — resposta crua começa: ${JSON.stringify(r.text.slice(0, 160))}`);
         }
         if (!r) continue;
@@ -1194,12 +1195,20 @@ async function run(p: Pipeline, runMutants: boolean) {
         inv.verdictReason = 'A chamada ao modelo falhou para esta invariante.';
         continue;
       }
-      if (/^\/\/\s*IMPOSS[IÍ]VEL|^\/\/\s*IMPOSSIBLE/i.test(code)) {
+      // O sinal de desistência é estrutural, não lexical: sem `fn check` não
+      // há asserção, seja qual for a palavra que o modelo usou — IMPOSSIVEL,
+      // IMPOSSIBLE, ou nenhuma. Um sentinel de texto dependia do idioma da
+      // resposta, e o grok escreveu em inglês: dez desistências legítimas
+      // viraram "uma linha de código" e três rodadas de reparo sobre um stub.
+      if (!/\bfn\s+check\s*\(/.test(code)) {
+        const razao = (code.split('\n').find((l) => /^\s*\/\//.test(l)) ?? '')
+          .replace(/^\s*\/\/\s*(?:IMPOSS[IÍ]VEL|IMPOSSIBLE)?:?\s*/i, '').trim();
         inv.verdict = 'descartada';
-        inv.verdictReason = code.replace(/^\/\/\s*(?:IMPOSS[IÍ]VEL|IMPOSSIBLE):?\s*/i, '').trim() ||
-          'o modelo declarou a invariante inexprimível pela API pública';
+        inv.verdictReason = razao
+          ? `O modelo não conseguiu expressar a invariante contra o rig: ${razao}`
+          : 'O modelo não produziu uma asserção (sem `fn check` na resposta).';
         impossiveis++;
-        log(p, `${inv.id}: inexprimível — ${inv.verdictReason.slice(0, 90)}`);
+        log(p, `${inv.id}: sem asserção — ${(razao || 'sem motivo declarado').slice(0, 90)}`);
         continue;
       }
       if (!balanceado(code)) {

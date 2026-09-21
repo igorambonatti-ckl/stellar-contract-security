@@ -551,11 +551,11 @@ pub fn op_strategy() -> impl Strategy<Value = Op> { ... }
 /// Everything a property might want to compare **before and after** an
 /// operation. Plain owned values — no borrows of the Env. At minimum:
 ///   - every total the contract keeps, and each principal's balances
-///     (in the contract *and* in the token, for every address in `users`)
+///     (in the contract *and* in the token, for every address in \`users\`)
 ///   - the admin, every flag, every configured address (the token, etc.)
 ///   - **TTLs**: the instance TTL, and the persistent/temporary TTL of each
-///     per-principal entry that exists (read via `as_contract` + `get_ttl`;
-///     `None` when the entry does not exist)
+///     per-principal entry that exists (read via \`as_contract\` + \`get_ttl\`;
+///     \`None\` when the entry does not exist)
 /// A property that cannot read something from the snapshot cannot be written.
 /// Half of a catalogue died as "impossible" because the snapshot had no TTLs
 /// and no token address — put in everything cheap to read.
