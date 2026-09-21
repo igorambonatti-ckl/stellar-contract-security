@@ -1670,12 +1670,19 @@ proptest! {
     // Rodar de novo, com sementes novas, é o teste mais direto disso. O que não
     // repete sai, e sai dizendo por quê: a propriedade pode até valer, mas o
     // que existe aqui é um teste instável, e instável não é evidência.
-    for (let rodada = 1; rodada <= 2 && sobreviventes.length; rodada++) {
+    // Uma propriedade que já foi instável uma vez paga uma barra mais alta:
+    // depois de corrigida, precisa passar em mais execuções que as outras.
+    // Numa medição, uma delas passou em três e reprovou na quarta — fora do
+    // pipeline, no controle limpo — e o harness entregue ficou vermelho.
+    const jaInstaveis = new Set<string>();
+    const rodadasMax = () => (jaInstaveis.size ? 4 : 2);
+    for (let rodada = 1; rodada <= rodadasMax() && sobreviventes.length; rodada++) {
       guard();
       const repeticao = await exec(p, info.path, 'cargo',
         ['test', '-p', info.crateName, '--test', 'audit_generated'],
         AMBIENTE_PROPTEST(VALIDACAO_CASOS));
       if (repeticao.code === 0) {
+        if (rodada < rodadasMax()) continue;   // verde, mas ainda não o bastante para quem já oscilou
         log(p, `harness final: ${sobreviventes.length} testes, verde em ${rodada + 1} execuções independentes`);
         break;
       }
@@ -1694,6 +1701,7 @@ proptest! {
         // propriedade fora por causa disso é o mesmo viés de sobrevivência que
         // já tinha esvaziado o relatório antes: o que morre primeiro é sempre o
         // que tenta fazer algo difícil.
+        jaInstaveis.add(inv.id);
         if (t && rodada === 1) {
           const fix = await complete({
             system: systemPrompt(),
