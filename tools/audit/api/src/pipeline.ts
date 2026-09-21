@@ -533,7 +533,10 @@ async function construirRig(
         `the correct contract.\n\n\`\`\`rust\n${code}\n\`\`\`\n\n` +
         queixas.map((q, i) => `${i + 1}. ${q}`).join('\n\n') +
         '\n\nReturn the complete rig in one ```rust block with these fixed. Change nothing else.',
-      model: p.model,
+      // Edição mecânica — "ponha try_ aqui, embrulhe isto em as_contract" — não
+      // precisa do modelo que raciocina; ele levava minutos para reescrever
+      // 280 linhas que já existiam.
+      model: MODELO_CRITICO,
       maxTokens: 16000,
     }).catch(() => null);
 
