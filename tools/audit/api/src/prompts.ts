@@ -324,6 +324,8 @@ pub struct Snapshot {
     pub balance_ttls: Vec<Option<u32>>, // persistent entry per users[i], None if absent
     pub sequence: u32,
     pub timestamp: u64,
+    pub token_in_storage: Option<Address>,  // read from storage: no getter exists
+    pub admin_key_present: bool,
 }
 
 pub fn snapshot(r: &Rig) -> Snapshot {
@@ -338,6 +340,8 @@ pub fn snapshot(r: &Rig) -> Snapshot {
         instance_ttl: r.env.as_contract(&r.id, || r.env.storage().instance().get_ttl()),
         sequence: r.env.ledger().sequence(),
         timestamp: r.env.ledger().timestamp(),
+        token_in_storage: r.env.as_contract(&r.id, || r.env.storage().instance().get(&DataKey::Token)),
+        admin_key_present: r.env.as_contract(&r.id, || r.env.storage().instance().has(&DataKey::Admin)),
         balance_ttls: r.users.iter().map(|u| r.env.as_contract(&r.id, || {
             let k = DataKey::Balance(u.clone());
             if r.env.storage().persistent().has(&k) { Some(r.env.storage().persistent().get_ttl(&k)) } else { None }
@@ -588,7 +592,13 @@ pub fn op_strategy() -> impl Strategy<Value = Op> { ... }
 ///   - every total the contract keeps, and each principal's balances
 ///     (in the contract *and* in the token, for every address in \`users\`)
 ///   - the admin, every flag, every configured address — the token address
-///     **must** be in the snapshot; a property about it was refused for lack of it
+///     **must** be in the snapshot. When the contract has no getter for a
+///     value, read it from storage inside the contract's context:
+///     \`r.env.as_contract(&r.id, || r.env.storage().instance().get::<_, Address>(&DataKey::Token))\`
+///     — the DataKey enum is public in the crate. Three properties were refused
+///     in one run for "no getter for the token" when the storage read was there.
+///   - whether each configured key **exists** (\`.has(&key)\`), so a property can
+///     say "the Admin key was present before this call" without guessing
 ///   - **TTLs**: the instance TTL, and the persistent/temporary TTL of each
 ///     per-principal entry that exists (read via \`as_contract\` + \`get_ttl\`;
 ///     \`None\` when the entry does not exist)
