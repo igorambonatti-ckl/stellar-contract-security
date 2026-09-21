@@ -400,7 +400,9 @@ async function construirRig(
       system: systemPrompt(),
       user: generateRig(info, src),
       model: p.model,
-      maxTokens: 6000,
+      // Um modelo de raciocínio gasta 4 a 7 mil tokens pensando antes de
+      // escrever; com 6000 o rig vinha cortado em duas de duas chamadas.
+      maxTokens: 16000,
     }).catch((e) => { log(p, `!! rig: ${e.message}`); return null; });
     if (!inicial) continue;
     p.usage.entrada += inicial.usage?.entrada ?? 0;
@@ -425,7 +427,7 @@ async function construirRig(
           erros,
         ),
         model: p.model,
-        maxTokens: 6000,
+        maxTokens: 16000,
       }).catch((e) => { log(p, `!! rig: ${e.message}`); return null; });
       if (!fix) break;
       p.usage.entrada += fix.usage?.entrada ?? 0;
@@ -502,7 +504,7 @@ async function construirRig(
         queixas.map((q, i) => `${i + 1}. ${q}`).join('\n\n') +
         '\n\nReturn the complete rig in one ```rust block with these fixed. Change nothing else.',
       model: p.model,
-      maxTokens: 6000,
+      maxTokens: 16000,
     }).catch(() => null);
 
     if (fix) {
@@ -1094,7 +1096,7 @@ async function run(p: Pipeline, runMutants: boolean) {
           system: systemPrompt(),
           user: generateCheck(info, src, inv, rigCode),
           model: p.model,
-          maxTokens: 3000,
+          maxTokens: 8000,
         }).catch((e) => { log(p, `${inv.id}: !! ${e.message}`); return null; });
         if (!r) continue;
         p.usage.entrada += r.usage?.entrada ?? 0;
@@ -1114,7 +1116,7 @@ async function run(p: Pipeline, runMutants: boolean) {
               queixas.map((x, k) => `${k + 1}. ${x}`).join('\n\n') +
               '\n\nReturn the complete corrected snippet in one ```rust block, keeping `pub fn check(r: &rig::Rig, antes: &rig::Snapshot, op: &rig::Op)`. Change nothing else.',
             model: p.model,
-            maxTokens: 3000,
+            maxTokens: 8000,
           }).catch(() => null);
           if (fix) {
             p.usage.entrada += fix.usage?.entrada ?? 0;
@@ -1279,7 +1281,7 @@ proptest! {
           system: systemPrompt(),
           user: fixOneTest(info, t.inv, t.code, erros),
           model: p.model,
-          maxTokens: 3000,
+          maxTokens: 8000,
         }).catch((e) => { log(p, `!! ${t.inv.id}: reparo falhou: ${e.message}`); return null; });
         if (!fix) return;
         p.usage.entrada += fix.usage?.entrada ?? 0;
@@ -1400,7 +1402,7 @@ proptest! {
           system: systemPrompt(),
           user: fixFailingTest(info, t.inv, t.code, trecho),
           model: p.model,
-          maxTokens: 3000,
+          maxTokens: 8000,
         }).catch((e) => { log(p, `!! ${t.inv.id}: ${e.message}`); return null; });
         if (!fix) continue;
         p.usage.entrada += fix.usage?.entrada ?? 0;
@@ -1513,7 +1515,7 @@ proptest! {
             system: systemPrompt(),
             user: fixFailingTest(info, inv, t.code, trechoDaFalha(repeticao.output, nome)),
             model: p.model,
-            maxTokens: 3000,
+            maxTokens: 8000,
           }).catch(() => null);
           if (fix) {
             p.usage.entrada += fix.usage?.entrada ?? 0;
