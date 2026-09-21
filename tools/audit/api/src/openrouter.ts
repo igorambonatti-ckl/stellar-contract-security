@@ -145,7 +145,17 @@ export function extractCode(text: string, lang = 'rust'): string {
   // para o JSON também: uma crase dentro de uma string JSON é raríssima, e a
   // prosa em volta é comum.
   if (lang === 'rust') {
-    out = out.split('\n').filter((l) => !l.includes('`')).join('\n');
+    out = out.split('\n').filter((l) => {
+      if (l.includes('```')) return false;                 // cerca de markdown
+      if (!l.includes('`')) return true;                   // código normal
+      // Tem crase. É prosa ("In `apply`, the generator...") ou é código com um
+      // comentário que cita um identificador (`let _ = c.try_x(); // ver `apply``)?
+      // A primeira versão apagava as duas, e apagar a segunda desbalanceia as
+      // chaves: três amostras de rig vieram com 27, 86 e 4 linhas.
+      const semComentario = l.replace(/\/\/.*$/, '');
+      if (/^\s*\/\//.test(l)) return true;                  // comentário puro: inofensivo
+      return /[;{}()=]/.test(semComentario);               // há código antes do comentário
+    }).join('\n');
   }
   return out;
 }
