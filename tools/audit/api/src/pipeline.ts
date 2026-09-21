@@ -13,6 +13,40 @@ import {
 } from './prompts.js';
 
 /**
+ * A validação roda com mais casos que quem for usar o harness depois.
+ *
+ * O proptest sorteia sementes novas a cada execução, então uma propriedade que
+ * sobrevive a 64 sequências aqui pode falhar em outras 64 logo em seguida — e
+ * foi o que aconteceu: uma execução aprovou cinco invariantes e o controle
+ * limpo seguinte, no mesmo contrato, reprovou o arquivo. A porta de validação
+ * era tão forte quanto a medição que ela deveria proteger.
+ *
+ * Quatro vezes mais casos não torna a validação exata: nada torna. Torna o
+ * falso "sobreviveu" bem mais raro, que é o que importa, porque ele é o erro
+ * caro — uma propriedade instável entregue ao usuário como verificada.
+ */
+const VALIDACAO_CASOS = 256;
+
+/**
+ * Ambiente do proptest para uma execução **independente** da anterior.
+ *
+ * `PROPTEST_FAILURE_PERSISTENCE=off` é o que importa. Por padrão o proptest
+ * grava as entradas que falharam num `.proptest-regressions` ao lado do teste e
+ * as reexecuta antes de qualquer caso novo. Isso é excelente numa suíte de
+ * verdade e é veneno aqui: o arquivo acumulou sementes de ondas diferentes —
+ * com formas de `Op` de rigs que nem existem mais — e passou a reprovar
+ * harnesses que a etapa de validação tinha acabado de aprovar, dois minutos
+ * antes, no mesmo contrato.
+ *
+ * O sintoma era uma validação aprovar seis invariantes e o controle limpo
+ * seguinte reprovar tudo. Não era variância: era a execução anterior vazando
+ * para dentro da seguinte.
+ */
+function AMBIENTE_PROPTEST(casos: number): Record<string, string> {
+  return { PROPTEST_CASES: String(casos), PROPTEST_FAILURE_PERSISTENCE: 'off' };
+}
+
+/**
  * Deixa o crate em condição de receber um teste de integração.
  *
  * Duas coisas faltam em praticamente todo contrato Soroban real, e nenhuma
@@ -530,7 +564,9 @@ export interface Pipeline {
 }
 
 const pipelines = new Map<string, Pipeline>();
-const MAX_LOG = 3000;
+// A saída do cargo domina o log e evictava as linhas de diagnóstico do rig,
+// que são as que explicam por que uma execução deu no que deu.
+const MAX_LOG = 20000;
 
 export const getPipeline = (id: string) => pipelines.get(id);
 export const listPipelines = () =>
@@ -704,7 +740,7 @@ async function run(p: Pipeline, runMutants: boolean) {
     // compilava e a suíte do usuário aparecia vermelha por causa dele.
     setStage(p, 'suite', { status: 'rodando', startedAt: Date.now() });
     const baseline = await exec(p, info.path, 'cargo', ['test', '-p', info.crateName],
-      { PROPTEST_CASES: '32' });
+      AMBIENTE_PROPTEST(32));
     const baselineOk = baseline.code === 0;
     setStage(p, 'suite', {
       status: baselineOk ? 'ok' : 'falhou',
@@ -1070,7 +1106,7 @@ proptest! {
     setStage(p, 'validar', { status: 'rodando', startedAt: Date.now() });
     const val = await exec(p, info.path, 'cargo',
       ['test', '-p', info.crateName, '--test', 'audit_generated'],
-      { PROPTEST_CASES: '64' });
+      AMBIENTE_PROPTEST(VALIDACAO_CASOS));
     guard();
 
     let falhos = failedTests(val.output);
@@ -1124,7 +1160,8 @@ proptest! {
         const rebuild = await compila();
         if (rebuild.code === 0) {
           const val2 = await exec(p, info.path, 'cargo',
-            ['test', '-p', info.crateName, '--test', 'audit_generated'], { PROPTEST_CASES: '64' });
+            ['test', '-p', info.crateName, '--test', 'audit_generated'],
+            AMBIENTE_PROPTEST(VALIDACAO_CASOS));
           falhos = failedTests(val2.output);
         } else {
           log(p, '!! uma correção quebrou a compilação; mantenho o veredito anterior');
@@ -1168,7 +1205,8 @@ proptest! {
       await escrever(sobreviventes);
       p.harnessCode = await readFile(p.harnessPath, 'utf8');
       const rebuild = await exec(p, info.path, 'cargo',
-        ['test', '-p', info.crateName, '--test', 'audit_generated'], { PROPTEST_CASES: '64' });
+        ['test', '-p', info.crateName, '--test', 'audit_generated'],
+        AMBIENTE_PROPTEST(VALIDACAO_CASOS));
       log(p, rebuild.code === 0
         ? `harness final: ${sobreviventes.length} testes, verde contra o contrato como ele é`
         : '!! o harness final ainda falha — não use estes números como detecção');
@@ -1187,7 +1225,7 @@ proptest! {
       log(p, '--- cargo mutants ---');
       await exec(p, info.path, 'cargo',
         ['mutants', '-p', info.crateName, '--timeout', '120', '--', '--test', 'audit_generated'],
-        { PROPTEST_CASES: '32' });
+        AMBIENTE_PROPTEST(32));
     }
     relatorio(p, { compilou: true, baselineOk, descartadas, orfas });
   } catch (e: any) {

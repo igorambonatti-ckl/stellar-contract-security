@@ -44,6 +44,11 @@ for m in json.load(sys.stdin)['data']:
 for M in "$@"; do
   echo "════════ onda: $M ════════"
   rm -f "$HARNESS"
+  # O proptest grava as entradas que falharam ao lado do teste e as reexecuta
+  # na rodada seguinte. O arquivo acumulava sementes de ondas anteriores, com
+  # formas de `Op` de rigs que não existem mais, e reprovava harnesses que a
+  # validação tinha acabado de aprovar. Cada onda começa limpa.
+  rm -f "$VAULT"/tests/audit_generated.proptest-regressions
   INI=$(date +%s)
 
   ID=$(curl -s -X POST "$API/api/pipeline" -H 'Content-Type: application/json' \
@@ -86,13 +91,13 @@ import os" 2>/dev/null || echo erro)
   if [ ! -f "$HARNESS" ] || ! grep -q "fn .*_sequencia" "$HARNESS"; then
     echo "    harness sem nenhum teste — nada a medir"
     QUAIS="sem-testes"; DETECTADOS=-1
-  elif ! (cd "$VAULT" && PROPTEST_CASES=64 cargo test -p soroban-vault \
+  elif ! (cd "$VAULT" && PROPTEST_CASES=64 PROPTEST_FAILURE_PERSISTENCE=off cargo test -p soroban-vault \
           --test audit_generated > "$DETALHE/$SLUG.limpo.out" 2>&1); then
     echo "    ✗✗ o harness falha contra o contrato LIMPO — detecção não medível"
     QUAIS="baseline-vermelha"; DETECTADOS=-1
   else
     for B in "${BUGS[@]}"; do
-      if ! (cd "$VAULT" && PROPTEST_CASES=64 cargo test -p soroban-vault \
+      if ! (cd "$VAULT" && PROPTEST_CASES=64 PROPTEST_FAILURE_PERSISTENCE=off cargo test -p soroban-vault \
             --features "$B" --test audit_generated > "$DETALHE/$SLUG.$B.out" 2>&1); then
         DETECTADOS=$((DETECTADOS+1))
         # Qual teste ficou vermelho — uma detecção que não se atribui a uma

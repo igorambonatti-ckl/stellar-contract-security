@@ -420,6 +420,29 @@ interesting boundary usually cannot be written as a literal.
 \`sequence_number\`, with jumps that land on and just past TTL boundaries, not a
 uniform small step.
 
+**Authorization must vary, or access control is untestable.** \`setup\` calls
+\`env.mock_all_auths()\`, under which every \`require_auth\` succeeds — so a
+contract missing an authorization check behaves *identically* to one that has
+it, and no sequence of operations can tell them apart. Include an \`Op\` that
+performs a state-mutating call with **no authorization available**:
+
+\`\`\`rust
+Op::Unauthorized { which: usize, who: usize } => {
+    r.env.set_auths(&[]);
+    // ... a try_* call that should be refused ...
+    r.env.mock_all_auths();     // restore, or every later op fails too
+}
+\`\`\`
+
+Without this the access-control properties are vacuously true and prove nothing.
+
+**Include the operations that are only interesting the second time.** If the
+contract has an initializer, put it in the alphabet and call it
+**unconditionally** through \`try_*\` — do not guard it with "only if not already
+initialized". A second initialization is exactly the kind of thing a property
+about immutable admin exists to catch, and guarding it away means nothing ever
+observes it.
+
 **\`setup()\` must leave the contract usable.** If it requires initialization
 before anything else is legal, do it in \`setup\`. A rig whose every operation
 bounces off "not initialized" produces a green test that exercised nothing.
