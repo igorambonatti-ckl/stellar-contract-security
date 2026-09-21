@@ -117,7 +117,7 @@ export function Pipeline() {
   // O gemini-3.8-flash é o default; o flash-lite faz por um terço do preço com
   // detecção parecida no benchmark, e o sonnet-4.5 por vinte vezes mais. A
   // diferença aparece no relatório, que é onde ela deve ser decidida.
-  const [modelo, setModelo] = useState('google/gemini-3.8-flash');
+  const [modelo, setModelo] = useState('google/gemini-3.1-flash-lite');
   const [vazamento, setVazamento] = useState<{ invariantes: string[]; features: string[] } | null>(null);
   const [id, setId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -303,8 +303,8 @@ export function Pipeline() {
           <select className="text-sm border border-line rounded-md px-2 py-1 bg-surface text-ink"
             value={modelo} onChange={(e) => setModelo(e.target.value)}
             disabled={status === 'rodando'}>
-            <option value="google/gemini-3.8-flash">gemini-3.8-flash · ~US$ 0,08</option>
-            <option value="google/gemini-3.1-flash-lite">gemini-3.1-flash-lite · ~US$ 0,03</option>
+            <option value="google/gemini-3.1-flash-lite">gemini-3.1-flash-lite · ~US$ 0,03 · ~3 min</option>
+            <option value="google/gemini-3.8-flash">gemini-3.8-flash · ~US$ 0,50 · ~10 min</option>
             <option value="qwen/qwen3-coder-next">qwen3-coder-next · ~US$ 0,08</option>
             <option value="openai/gpt-5.4-nano">gpt-5.4-nano · ~US$ 0,07</option>
             <option value="x-ai/grok-4.3">grok-4.3 · ~US$ 0,13</option>
