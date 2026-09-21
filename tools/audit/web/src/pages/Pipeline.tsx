@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Play, Square, Loader2, CheckCircle2, XCircle, MinusCircle, Circle,
-  ChevronDown, ChevronRight, Trash2, FileCode2, Clock, EyeOff, UserCheck,
+  ChevronDown, ChevronRight, Trash2, FileCode2, Clock, UserCheck,
   FilePlus2, FileDiff, ShieldCheck, AlertTriangle,
 } from 'lucide-react';
 import clsx from 'clsx';
@@ -329,45 +329,6 @@ export function Pipeline() {
           </div>
         )}
 
-        {features.length > 0 && (
-          <div id="esconder" className={clsx('card p-4 flex flex-col gap-3',
-            status === 'rodando' && 'opacity-60')}>
-            <div className="flex items-start gap-2">
-              <EyeOff className="w-4 h-4 text-ink-muted mt-0.5 shrink-0" />
-              <div>
-                <h2 className="text-sm font-bold text-ink">Escondidas do modelo</h2>
-                <p className="text-xs text-ink-muted mt-1 leading-relaxed max-w-[70ch]">
-                  Todas as features do crate ficam fora do fonte que o modelo recebe — um caminho
-                  atrás de <code className="font-mono">cfg</code> é quase sempre bug plantado ou
-                  ramo de debug, e mostrá-lo faz o modelo descrever em vez de deduzir. Desmarque
-                  uma só se quiser que o modelo a veja.
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {features.map((f) => {
-                const on = escondidas.includes(f);
-                return (
-                  <button key={f} disabled={status === 'rodando'}
-                    onClick={() => setEscondidas((xs) =>
-                      on ? xs.filter((x) => x !== f) : [...xs, f])}
-                    className={on
-                      ? 'tag-blue cursor-pointer'
-                      : 'inline-flex items-center px-3 py-1 rounded-md bg-surface-secondary text-ink-muted border border-line text-xs font-semibold hover:border-brand-200'}>
-                    {f}
-                  </button>
-                );
-              })}
-              {features.length > 1 && (
-                <button disabled={status === 'rodando'}
-                  onClick={() => setEscondidas(escondidas.length === features.length ? [] : features)}
-                  className="text-xs text-ink-muted hover:text-brand-600 underline underline-offset-2 px-1">
-                  {escondidas.length === features.length ? 'nenhuma' : 'todas'}
-                </button>
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
       <Erro msg={erro} />

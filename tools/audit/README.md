@@ -40,11 +40,11 @@ confiança que não merece.
 do contrato; a ferramenta sobe até a raiz do crate. Apontar a pasta também
 funciona.
 
-As **features** do crate aparecem e ficam **escondidas do modelo por padrão** —
-um caminho atrás de `#[cfg(feature)]` é quase sempre bug plantado ou ramo de
-debug, e mostrá-lo faz o modelo descrever em vez de deduzir. Se uma invariante
-citar uma feature pelo nome, a ferramenta avisa em vermelho: aquela execução não
-mede nada.
+As **features** do crate ficam **fora do fonte que o modelo recebe**, sempre e
+sem botão: um caminho atrás de `#[cfg(feature)]` é quase sempre bug plantado ou
+ramo de debug, e mostrá-lo faz o modelo descrever em vez de deduzir. Se uma
+invariante citar uma feature pelo nome, a ferramenta avisa em vermelho: aquela
+execução não mede nada.
 
 ## Modelos
 
