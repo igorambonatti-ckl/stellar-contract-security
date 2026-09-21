@@ -48,7 +48,10 @@ const MODELO_CRITICO = process.env.OPENROUTER_MODEL_CRITICO || 'google/gemini-3.
  * para dentro da seguinte.
  */
 function AMBIENTE_PROPTEST(casos: number): Record<string, string> {
-  return { PROPTEST_CASES: String(casos), PROPTEST_FAILURE_PERSISTENCE: 'off' };
+  // PROPTEST_CASES é honrada. PROPTEST_FAILURE_PERSISTENCE não existe — o
+  // proptest ignora e avisa; a persistência é desligada no proptest_config do
+  // driver, que este pipeline escreve.
+  return { PROPTEST_CASES: String(casos) };
 }
 
 /**
@@ -390,7 +393,7 @@ async function construirRig(
       'use super::rig;\n' +
       'use proptest::prelude::*;\n' +
       'proptest! {\n' +
-      '    #![proptest_config(ProptestConfig::with_cases(1))]\n' +
+      '    #![proptest_config(ProptestConfig { cases: 1, failure_persistence: None, .. ProptestConfig::default() })]\n' +
       '    #[test]\n' +
       '    fn rig_dirige(ops in prop::collection::vec(rig::op_strategy(), 1..3)) {\n' +
       '        let r = rig::setup();\n' +
@@ -1253,7 +1256,11 @@ use proptest::prelude::*;
 ${limpo}
 
 proptest! {
-    #![proptest_config(ProptestConfig::with_cases(64))]
+    // failure_persistence: None é o que de fato desliga a gravação de sementes
+    // entre execuções. A variável de ambiente PROPTEST_FAILURE_PERSISTENCE não
+    // existe — o proptest a ignora e avisa no stdout, e a contaminação entre
+    // execuções que parecia fechada só estava quieta.
+    #![proptest_config(ProptestConfig { cases: 64, failure_persistence: None, .. ProptestConfig::default() })]
     #[test]
     fn ${slug}_sequencia(ops in prop::collection::vec(rig::op_strategy(), 1..12)) {
         let r = rig::setup();

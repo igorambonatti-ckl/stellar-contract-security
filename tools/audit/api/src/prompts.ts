@@ -990,6 +990,13 @@ There are exactly two possibilities, and they lead to opposite places:
    assumes, an expectation computed with the wrong formula, an off-by-one in a
    ledger advance. Then fix it and return the corrected snippet.
 
+   **Read the error code, not just the name.** \`Error(Contract, #5)\` is the
+   contract's own error with code 5 — look it up in the declared error codes
+   at the top of this prompt. A check that expected \`ZeroShares\` and got
+   \`#5 = InvalidAmount\` is not a contract defect: the contract has an earlier
+   guard the property did not account for. Match on the code the contract
+   actually returns, or accept either when both are legitimate refusals.
+
    **Read the panic location first.** A panic inside the SDK at
    \`soroban-sdk-*/src/unwrap.rs\` is almost always the *check* unwrapping a
    storage entry that legitimately does not exist in that state — a balance
