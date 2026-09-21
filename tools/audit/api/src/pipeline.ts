@@ -722,14 +722,14 @@ export function startPipeline(opts: {
     stages: [
       { id: 'inspecionar', label: 'Inspecionar o contrato', status: 'pendente' },
       { id: 'suite', label: 'Suíte existente, antes de tocar no crate', status: 'pendente' },
-      { id: 'propor', label: 'IA propõe invariantes', status: 'pendente' },
+      { id: 'propor', label: 'IA: propõe as invariantes', status: 'pendente' },
       ...(modo === 'curado'
         ? [{ id: 'curadoria' as StageId, label: 'Curadoria: o que vale testar', status: 'pendente' as StageStatus }]
         : []),
-      { id: 'gerar', label: 'IA escreve um teste por invariante', status: 'pendente' },
-      { id: 'compilar', label: 'Compilar, descartando o que não compila', status: 'pendente' },
-      { id: 'validar', label: 'Validar contra o contrato como ele é', status: 'pendente' },
-      { id: 'relatorio', label: 'Relatório', status: 'pendente' },
+      { id: 'gerar', label: 'Fuzzer: rig de operações + uma asserção por invariante', status: 'pendente' },
+      { id: 'compilar', label: 'Compilar, com reparo pelo erro do compilador', status: 'pendente' },
+      { id: 'validar', label: 'Fuzzer: sequências sorteadas contra o contrato como ele é', status: 'pendente' },
+      { id: 'relatorio', label: 'Relatório: achados, verificadas, não verificadas', status: 'pendente' },
     ],
     log: [],
     invariants: [],
@@ -1441,10 +1441,19 @@ proptest! {
       // Conta sobre o que foi *testado*, não sobre o catálogo: dizer "todas as 7
       // sobrevivem" quando duas nem compilaram atribui a elas uma aprovação que
       // ninguém deu.
-      detail: descartadas === 0 && orfas.length === 0
-        ? `as ${testes.length} testadas sobrevivem ao contrato correto`
-        : `${descartadas} descartada(s) de ${testes.length} testadas` +
-          (orfas.length ? `, ${orfas.length} falha(s) órfã(s)` : ''),
+      detail: (() => {
+        const nAchados = p.invariants.filter((i) => i.verdict === 'achado').length;
+        if (nAchados === 0 && descartadas === 0 && orfas.length === 0) {
+          return `as ${testes.length} testadas sobrevivem ao contrato`;
+        }
+        // "Sobrevivem" com quatro achados ao lado era uma frase falsa: o
+        // contador de descartes não via as que viraram achado.
+        return [
+          nAchados ? `${nAchados} falha(m) — a investigar` : '',
+          descartadas ? `${descartadas} descartada(s)` : '',
+          orfas.length ? `${orfas.length} falha(s) órfã(s)` : '',
+        ].filter(Boolean).join(', ') + ` de ${testes.length} testadas`;
+      })(),
       data: { falhos, descartadas, orfas },
     });
 

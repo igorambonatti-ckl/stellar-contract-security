@@ -339,11 +339,17 @@ pub fn op_strategy() -> impl Strategy<Value = Op> {
 }
 \`\`\`
 
-Two shapes that cost a compile if you get them wrong:
+Three shapes that cost a compile if you get them wrong:
 
 - \`prop::sample::select\` takes a \`Vec\`, not an array. \`select(vec![0usize, 1, 2])\`.
 - \`TokenClient\` and \`StellarAssetClient\` live in \`soroban_sdk::token\`, not at the
   crate root.
+- **\`Op\` must derive \`Debug\`** (proptest prints the failing sequence), so it can only
+  carry types that already do: \`usize\`, \`i128\`, \`u32\`, \`bool\`, \`Vec\` of those. **Never
+  put a contract type in \`Op\`** — an enum from the contract almost never derives
+  \`Debug\`, and \`\`TimeBoundKind\` doesn't implement \`Debug\`\` is a compile error no
+  repair fixes. Encode it as an index or a bool in \`Op\`, and map to the contract
+  type inside \`apply\`.
 `;
 
 /**
@@ -813,6 +819,14 @@ There are exactly two possibilities, and they lead to opposite places:
 1. **The harness is wrong** — a fixture set up differently than the property
    assumes, an expectation computed with the wrong formula, an off-by-one in a
    ledger advance. Then fix it and return the corrected snippet.
+
+   **Read the panic location first.** A panic inside the SDK at
+   \`soroban-sdk-*/src/unwrap.rs\` is almost always the *check* unwrapping a
+   storage entry that legitimately does not exist in that state — a balance
+   before any deposit, a record after it was consumed. That is not a contract
+   defect; it is a missing precondition in \`check\`. Read with \`.get()\`, match on
+   \`None\`, and return early when the property does not apply. Four "findings"
+   with the same \`unwrap.rs\` line are one harness bug, not four contract bugs.
 2. **The invariant does not actually hold** for this contract. Then the property
    is wrong, not the code, and saying so is the useful answer.
 

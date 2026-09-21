@@ -475,8 +475,86 @@ deposit   write_entries 8   persist_bumps <span class="g">6</span>   <span class
   </blockquote>
 </section>
 
-<!-- 15 — Limitações -->
+<!-- 15 — A ferramenta -->
 <section class="slide" data-n="15">
+  <div class="eyebrow">De método a ferramenta</div>
+  <h2>Aponte para um crate. A IA propõe, você cura, <span class="accent">o fuzzer verifica</span>.</h2>
+  <div class="row eq" style="margin-top:18px">
+    <div class="card">
+      <div class="eyebrow">1 · IA</div>
+      <h3 style="margin-top:8px">Propõe as invariantes</h3>
+      <p class="lead" style="font-size:15px; margin-top:8px">Lê o contrato inteiro, com as features perigosas resolvidas fora do fonte. Devolve um catálogo de propriedades com classe, confiança e a suposição que está fazendo.</p>
+    </div>
+    <div class="card">
+      <div class="eyebrow">2 · Humano</div>
+      <h3 style="margin-top:8px">Cura em trinta segundos</h3>
+      <p class="lead" style="font-size:15px; margin-top:8px">Tira o que restate uma linha, o que não pode falhar, o que não vale para este contrato. É o único passo com uma pessoa dentro — e o que mais pesa.</p>
+    </div>
+    <div class="card">
+      <div class="eyebrow">3 · Fuzzer</div>
+      <h3 style="margin-top:8px">Sequências sorteadas</h3>
+      <p class="lead" style="font-size:15px; margin-top:8px">Um rig com o alfabeto de operações do contrato, operandos pesados nos extremos, saltos de ledger nas bordas de TTL. Cada invariante vira uma asserção checada <strong>depois de cada operação</strong>.</p>
+    </div>
+    <div class="card">
+      <div class="eyebrow">4 · Relatório</div>
+      <h3 style="margin-top:8px">Achados com contra-exemplo</h3>
+      <p class="lead" style="font-size:15px; margin-top:8px">O que falhou, com a sequência mínima que quebra. O que valeu, como suíte de regressão pronta para o CI. E o diff do que a IA escreveu, linha por linha.</p>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <div class="row" style="gap:28px; align-items:baseline">
+    <div class="metric"><span class="n hit" style="font-size:44px">~3 min</span><span class="lbl">uma auditoria completa</span></div>
+    <div class="metric"><span class="n hit" style="font-size:44px">US$ 0,03</span><span class="lbl">gemini-3.1-flash-lite</span></div>
+    <div class="metric"><span class="n" style="font-size:44px">0</span><span class="lbl">escritas no repositório auditado — roda numa cópia</span></div>
+  </div>
+</section>
+
+<!-- 19 — Quanto vale o humano -->
+<section class="slide grid" data-n="16">
+  <div class="eyebrow">A pergunta que a ferramenta respondeu</div>
+  <h2>Quanto vale o passo de curadoria? <span class="accent">Cinco dos sete bugs.</span></h2>
+  <div class="row eq" style="margin-top:14px">
+    <div class="card">
+      <div class="eyebrow">Fuzzing cego</div>
+      <div class="metric" style="margin-top:12px"><span class="n muted">1/7</span><span class="lbl">sem oráculo, só liveness</span></div>
+    </div>
+    <div class="card">
+      <div class="eyebrow">IA + fuzzer, sem humano</div>
+      <div class="metric" style="margin-top:12px"><span class="n" style="color:var(--brand-500)">2–5/7</span><span class="lbl">por execução · união de 4 execuções: 5/7</span></div>
+    </div>
+    <div class="card">
+      <div class="eyebrow">IA + humano + fuzzer</div>
+      <div class="metric" style="margin-top:12px"><span class="n hit">7/7</span><span class="lbl">13 de 16 invariantes aceitas</span></div>
+    </div>
+  </div>
+  <div class="spacer" style="max-height:26px"></div>
+  <blockquote>
+    Dezessete rodadas de medição tentando eliminar o humano. A automação total satura
+    perto de 2 a 5 em 7. <strong>A diferença até 7/7 não é um defeito a consertar — é a
+    medida do que a curadoria vale</strong>, e é a informação que se precisa para decidir
+    onde automatizar uma auditoria e onde não.
+  </blockquote>
+  <p class="lead" style="font-size:14px; margin-top:14px; color:var(--ink-muted)">
+    Cada número acima só existe porque três controles rodam antes dele: o contrato limpo
+    tem que ficar verde; uma invariante que cita um bug pelo nome invalida a execução;
+    e nenhuma conclusão sai de uma execução só.
+  </p>
+</section>
+
+<!-- 20 — Onde a ferramenta erra -->
+<section class="slide" data-n="17">
+  <div class="eyebrow">O que ela não faz</div>
+  <h2>Os limites, medidos</h2>
+  <ul style="margin-top:8px">
+    <li><span><strong>Dois bugs escapam de toda execução automática.</strong> <code>missing_auth</code> e <code>overflow</code> exigem propriedades de <em>transição</em> — antes e depois de uma operação — que o rig só passou a suportar na última iteração. A curadoria humana as pega; a automação ainda não.</span></li>
+    <li><span><strong>Em contrato de terceiro a fixture é o ponto frágil.</strong> Nos exemplos oficiais da Stellar, o rig compila no <code>atomic_swap</code> e não converge no <code>timelock</code> nem no <code>token</code> — um tipo do contrato sem <code>Debug</code> dentro do alfabeto de operações. Corrigido no prompt; ainda sem medição.</span></li>
+    <li><span><strong>Um contrato de terceiro correto deve dar zero achados.</strong> Se der vermelho, ou é falso positivo nosso, ou é bug num exemplo oficial. Os dois casos merecem ser olhados; nenhum dos dois vira número.</span></li>
+    <li><span><strong>A ferramenta escreve código Rust e o mostra.</strong> Uma que gerasse e escondesse pediria uma confiança que não merece. O diff é parte do entregável.</span></li>
+  </ul>
+</section>
+
+<!-- 18 — Limitações -->
+<section class="slide" data-n="18">
   <div class="eyebrow">Honestidade</div>
   <h2>O que estes números <span style="color:var(--danger)">não</span> mostram</h2>
   <ul style="margin-top:8px">
@@ -487,8 +565,8 @@ deposit   write_entries 8   persist_bumps <span class="g">6</span>   <span class
   </ul>
 </section>
 
-<!-- 16 — O que fica -->
-<section class="slide dark grid" data-n="16">
+<!-- 19 — O que fica -->
+<section class="slide dark grid" data-n="19">
   <div class="eyebrow">O que fica</div>
   <h2>Um método, e a metade reutilizável dele</h2>
   <div class="row eq" style="margin-top:14px">
@@ -514,8 +592,8 @@ cargo test
 ./04-prototype-development/scripts/demo.sh</pre>
 </section>
 
-<!-- 17 — Encerramento -->
-<section class="slide" data-n="17">
+<!-- 20 — Encerramento -->
+<section class="slide" data-n="20">
   <div class="spacer"></div>
   <div class="eyebrow">Em uma frase</div>
   <p class="big" style="font-size:34px; max-width:40ch; line-height:1.35">
