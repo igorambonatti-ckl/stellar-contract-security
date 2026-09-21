@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { inspectContract, cleanView, contractSource } from './inspect.js';
 import { complete, extractCode, isConfigured, currentModel } from './openrouter.js';
 import {
-  startPipeline, getPipeline, listPipelines, attachPipeline, cleanupHarness,
+  startPipeline, getPipeline, listPipelines, attachPipeline, cleanupHarness, curar,
 } from './pipeline.js';
 import { pickContract, resolveCrateRoot } from './picker.js';
 
@@ -81,7 +81,7 @@ app.post('/api/clean-view', async (req, res, next) => {
 
 app.post('/api/pipeline', async (req, res, next) => {
   try {
-    const { path, hiddenFeatures = [], runMutants = false, model } = req.body ?? {};
+    const { path, hiddenFeatures = [], runMutants = false, model, modo } = req.body ?? {};
     if (typeof path !== 'string' || !path.trim()) {
       return res.status(400).json({ error: 'Informe o caminho do crate.' });
     }
@@ -89,7 +89,7 @@ app.post('/api/pipeline', async (req, res, next) => {
     const raiz = await resolveCrateRoot(path.trim());
     // Falha cedo se não for um contrato, em vez de dentro do pipeline.
     await inspectContract(raiz);
-    const p = startPipeline({ path: raiz, hiddenFeatures, runMutants, model });
+    const p = startPipeline({ path: raiz, hiddenFeatures, runMutants, model, modo });
     res.json({ id: p.id });
   } catch (e) {
     next(e);
@@ -109,6 +109,30 @@ app.get('/api/pipeline/:id/stream', (req, res) => {
   const p = getPipeline(req.params.id);
   if (!p) return res.status(404).json({ error: 'Pipeline não encontrado.' });
   attachPipeline(p, res);
+});
+
+/**
+ * O veredito da curadoria: quais invariantes seguem para virar teste.
+ *
+ * O pipeline fica parado até isto chegar. É a única etapa com uma pessoa
+ * dentro, e é a que o benchmark deste projeto mostra valer mais — 7 dos 7 bugs
+ * plantados com curadoria, 1 ou 2 sem.
+ */
+app.post('/api/pipeline/:id/curadoria', (req, res) => {
+  const p = getPipeline(req.params.id);
+  if (!p) return res.status(404).json({ error: 'Pipeline não encontrado.' });
+
+  const { aceitas } = req.body ?? {};
+  if (!Array.isArray(aceitas) || aceitas.some((x) => typeof x !== 'string')) {
+    return res.status(400).json({ error: 'Envie `aceitas`: uma lista de IDs de invariante.' });
+  }
+  if (!curar(p, aceitas)) {
+    return res.status(409).json({
+      error: 'Este pipeline não está esperando curadoria.',
+      status: p.status,
+    });
+  }
+  res.json({ ok: true, aceitas: aceitas.length });
 });
 
 app.post('/api/pipeline/:id/cancel', (req, res) => {

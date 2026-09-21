@@ -150,13 +150,24 @@ any inputs, at any ledger sequence.
 
 ## How these will be checked
 
-Each invariant becomes a function \`check(&Rig)\` that a property-based test calls
-**after every operation** of a randomly generated sequence of calls. So write
-properties as **predicates over observable state**, true in every reachable
-state — not as scenarios ("deposit 100, then withdraw 50, then assert").
+Each invariant becomes a function called **after every operation** of a randomly
+generated sequence of calls, with three things in hand: the live state, a
+snapshot of the state **immediately before** that operation, and the operation
+itself. So write properties for a fuzzer, not scenarios — never "deposit 100,
+then withdraw 50, then assert".
 
-A property that only holds under a precondition is still welcome: state the
-precondition, and the check will read the state and skip when it does not apply.
+Two shapes are welcome, and the second is where the value is:
+
+- **state predicates**, true in every reachable state;
+- **transition properties**, relating before and after: "a call that was not
+  authorized changed nothing", "the total rose by exactly what came in", "an
+  operation that writes must have extended the entry's TTL". These catch the
+  defects that leave the contract in a perfectly consistent but wrong state, and
+  they are invisible to any single-state check.
+
+A property that only holds under a precondition is welcome too: state the
+precondition, and the check will read the state, or the operation, and skip when
+it does not apply.
 
 ## What counts as a good invariant
 
@@ -399,7 +410,24 @@ pub fn apply(r: &Rig, op: &Op) { ... }
 
 /// Where the interesting values are.
 pub fn op_strategy() -> impl Strategy<Value = Op> { ... }
+
+/// Everything a property might want to compare **before and after** an
+/// operation: totals, per-principal balances, the admin, flags, TTLs. Plain
+/// owned values — no borrows of the Env.
+#[derive(Debug, Clone)]
+pub struct Snapshot { ... }
+
+/// Reads the state into a Snapshot. Observes only; never mutates.
+pub fn snapshot(r: &Rig) -> Snapshot { ... }
 \`\`\`
+
+**Why the snapshot matters more than it looks.** The most valuable properties are
+about a *transition*, not a state: "an unauthorized call changed nothing", "the
+total went up by exactly what came in", "a write extended the entry's TTL". None
+of them can be checked by looking at one state, and a harness without a snapshot
+is structurally blind to that entire class — it can only assert things that are
+true of every state, which are the weak ones. Put in it everything cheap to
+read.
 
 ## Rules that decide whether this finds anything
 
@@ -540,8 +568,18 @@ ${tecnicaPorClasse(inv.class)}
 Write **one** function, exactly this signature:
 
 \`\`\`rust
-pub fn check(r: &rig::Rig) { ... }
+pub fn check(r: &rig::Rig, antes: &rig::Snapshot, op: &rig::Op) { ... }
 \`\`\`
+
+- \`r\` is the live rig: read the current state through it.
+- \`antes\` is the snapshot taken **immediately before** \`op\` ran.
+- \`op\` is the operation that just ran.
+
+Use \`antes\` and \`op\` whenever the property is about a *transition* — "this
+call must not have changed anything", "the total rose by exactly the amount that
+came in", "a write must have extended the TTL". Those are the properties worth
+having, and they are unreachable from the current state alone. Ignore both
+parameters when the property really is about a single state.
 
 plus any helper it needs. Nothing else — no \`#[test]\`, no \`proptest!\`, no
 fixture. The pipeline wraps it.
@@ -552,6 +590,9 @@ fixture. The pipeline wraps it.
 ## Rules
 
 - **It must hold after every operation**, including the ones that were rejected.
+  \`op\` tells you which ran, so a property that only concerns some operations
+  should match on it and return early for the rest — that is a precondition, not
+  a weakening.
   If the property only holds in some states, guard it: read the state, return
   early when the precondition does not apply, and assert when it does. A
   \`check\` that asserts unconditionally something only true sometimes fails

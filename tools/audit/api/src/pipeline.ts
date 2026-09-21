@@ -266,13 +266,13 @@ function normalizarCheck(p: Pipeline, code: string, id: string): string {
   // reparo, e o corpo não muda.
   const semArg = /\b((?:pub\s+)?fn\s+check\s*)\(\s*\)/.exec(out);
   if (semArg) {
-    log(p, `${id}: \`fn check()\` não recebia o rig; completei a assinatura`);
-    out = out.replace(semArg[0], `${semArg[1]}(r: &rig::Rig)`);
+    log(p, `${id}: \`fn check()\` não recebia nada; completei a assinatura`);
+    out = out.replace(semArg[0], `${semArg[1]}(r: &rig::Rig, antes: &rig::Snapshot, op: &rig::Op)`);
   }
 
   if (/\bfn\s+check\s*\(/.test(out)) return out;
 
-  const outraFn = /\b(?:pub\s+)?fn\s+([a-z_][a-z0-9_]*)\s*\(\s*[a-z_]+\s*:\s*&\s*(?:rig::)?Rig\s*\)/i.exec(out);
+  const outraFn = /\b(?:pub\s+)?fn\s+([a-z_][a-z0-9_]*)\s*\(\s*[a-z_]+\s*:\s*&\s*(?:rig::)?Rig\b/i.exec(out);
   if (outraFn) {
     log(p, `${id}: a função se chamava \`${outraFn[1]}\`; renomeei para \`check\`, que é o que o driver chama`);
     return out.replace(outraFn[0], outraFn[0].replace(`fn ${outraFn[1]}`, 'fn check'));
@@ -297,7 +297,7 @@ function normalizarCheck(p: Pipeline, code: string, id: string): string {
   }
 
   log(p, `${id}: o trecho era o corpo da asserção, não a função; embrulhei em \`fn check\``);
-  return `${imports}\n\npub fn check(r: &rig::Rig) {\n${corpo}\n}\n`;
+  return `${imports}\n\npub fn check(r: &rig::Rig, antes: &rig::Snapshot, op: &rig::Op) {\n${corpo}\n}\n`;
 }
 
 /**
@@ -336,7 +336,7 @@ async function construirRig(
       '    #[test]\n' +
       '    fn rig_dirige(ops in prop::collection::vec(rig::op_strategy(), 1..3)) {\n' +
       '        let r = rig::setup();\n' +
-      '        for op in &ops { rig::apply(&r, op); }\n' +
+      '        for op in &ops { let _a = rig::snapshot(&r); rig::apply(&r, op); }\n' +
       '    }\n' +
       '}\n}\n',
       'utf8',
@@ -353,7 +353,8 @@ async function construirRig(
   // erro que a correção anterior criou, nunca o original.
   const completo = (c: string) =>
     /pub\s+struct\s+Rig\b/.test(c) && /pub\s+fn\s+setup\s*\(/.test(c) &&
-    /pub\s+fn\s+apply\s*\(/.test(c) && /pub\s+fn\s+op_strategy\s*\(/.test(c);
+    /pub\s+fn\s+apply\s*\(/.test(c) && /pub\s+fn\s+op_strategy\s*\(/.test(c) &&
+    /pub\s+fn\s+snapshot\s*\(/.test(c) && /pub\s+struct\s+Snapshot\b/.test(c);
 
   let code = '';
   let r: { code: number | null; output: string } = { code: 1, output: '' };
@@ -511,9 +512,11 @@ function trechoDaFalha(output: string, nome: string): string {
 }
 
 export type StageId =
-  | 'inspecionar' | 'propor' | 'gerar' | 'compilar' | 'validar' | 'suite' | 'relatorio';
+  | 'inspecionar' | 'propor' | 'curadoria' | 'gerar' | 'compilar' | 'validar' | 'suite'
+  | 'relatorio';
 
-export type StageStatus = 'pendente' | 'rodando' | 'ok' | 'falhou' | 'pulado';
+export type StageStatus =
+  | 'pendente' | 'rodando' | 'ok' | 'falhou' | 'pulado' | 'aguardando';
 
 export interface Stage {
   id: StageId;
@@ -546,7 +549,18 @@ export interface Pipeline {
   model?: string;
   /** Tokens gastos, para estimar custo por auditoria. */
   usage: { entrada: number; saida: number };
-  status: 'rodando' | 'concluido' | 'falhou' | 'cancelado';
+  status: 'rodando' | 'aguardando-curadoria' | 'concluido' | 'falhou' | 'cancelado';
+  /**
+   * Curado: o pipeline para depois de propor e espera o veredito humano.
+   *
+   * É o fluxo que produziu 7/7 no benchmark deste projeto, com 13 de 16
+   * invariantes aceitas. O modo automático chega a 1-2 de 7 — a diferença entre
+   * os dois *é* o valor da curadoria, e é por isso que os dois modos continuam
+   * existindo: um é o produto, o outro é a medição.
+   */
+  modo: 'curado' | 'automatico';
+  /** Resolve quando a curadoria chega pela API. */
+  aguardando?: (ids: string[]) => void;
   stages: Stage[];
   log: string[];
   info?: ContractInfo;
@@ -678,18 +692,23 @@ export function startPipeline(opts: {
   hiddenFeatures: string[];
   runMutants: boolean;
   model?: string;
+  modo?: 'curado' | 'automatico';
 }): Pipeline {
   const p: Pipeline = {
     id: randomUUID(),
     path: opts.path,
     hiddenFeatures: opts.hiddenFeatures,
     model: opts.model,
+    modo: opts.modo ?? 'curado',
     usage: { entrada: 0, saida: 0 },
     status: 'rodando',
     stages: [
       { id: 'inspecionar', label: 'Inspecionar o contrato', status: 'pendente' },
       { id: 'suite', label: 'Suíte existente, antes de tocar no crate', status: 'pendente' },
       { id: 'propor', label: 'IA propõe invariantes', status: 'pendente' },
+      ...(opts.modo === 'curado'
+        ? [{ id: 'curadoria' as StageId, label: 'Curadoria: o que vale testar', status: 'pendente' as StageStatus }]
+        : []),
       { id: 'gerar', label: 'IA escreve um teste por invariante', status: 'pendente' },
       { id: 'compilar', label: 'Compilar, descartando o que não compila', status: 'pendente' },
       { id: 'validar', label: 'Validar contra o contrato como ele é', status: 'pendente' },
@@ -832,6 +851,55 @@ async function run(p: Pipeline, runMutants: boolean) {
     });
     guard();
 
+    // ── 2b. Curadoria ───────────────────────────────────────────────────────
+    //
+    // O pipeline para aqui e espera. É a única etapa em que uma pessoa entra, e
+    // é a que o benchmark deste projeto mostra valer mais: com curadoria, 7 dos
+    // 7 bugs plantados; sem ela, 1 ou 2. A diferença não está em a IA propor
+    // invariantes melhores — está em alguém gastar trinta segundos separando as
+    // que valem das que só parecem valer.
+    if (p.modo === 'curado') {
+      setStage(p, 'curadoria', {
+        status: 'aguardando',
+        startedAt: Date.now(),
+        detail: `${p.invariants.length} propostas — aceite as que valem testar`,
+        data: { invariants: p.invariants },
+      });
+      p.status = 'aguardando-curadoria';
+      emit(p, 'curadoria', { invariants: p.invariants });
+
+      const aceitas = await new Promise<string[]>((resolve) => { p.aguardando = resolve; });
+      p.aguardando = undefined;
+      guard();
+
+      const conjunto = new Set(aceitas);
+      const propostas = p.invariants.length;
+      for (const inv of p.invariants) {
+        if (!conjunto.has(inv.id)) {
+          inv.verdict = 'descartada';
+          inv.verdictReason = 'Rejeitada na curadoria.';
+        }
+      }
+      p.invariants = p.invariants.filter((i) => conjunto.has(i.id));
+      p.status = 'rodando';
+
+      setStage(p, 'curadoria', {
+        status: 'ok',
+        finishedAt: Date.now(),
+        detail: `${p.invariants.length} aceitas de ${propostas}` +
+          (propostas > p.invariants.length ? `, ${propostas - p.invariants.length} rejeitada(s)` : ''),
+        data: { aceitas: p.invariants },
+      });
+
+      if (p.invariants.length === 0) {
+        setStage(p, 'gerar', { status: 'pulado', detail: 'nenhuma invariante aceita' });
+        setStage(p, 'compilar', { status: 'pulado' });
+        setStage(p, 'validar', { status: 'pulado' });
+        relatorio(p, { compilou: false, baselineOk });
+        return;
+      }
+    }
+
     // ── 3. Rig, depois uma asserção por invariante ──────────────────────────
     //
     // A decomposição anterior — um teste completo e independente por
@@ -946,10 +1014,14 @@ proptest! {
     #[test]
     fn ${slug}_sequencia(ops in prop::collection::vec(rig::op_strategy(), 1..12)) {
         let r = rig::setup();
-        check(&r);                       // vale já no estado inicial
         for op in &ops {
+            // O estado de antes é capturado aqui, não dentro do check: uma
+            // propriedade sobre transição — "esta chamada não mudou nada", "o
+            // total subiu exatamente o que entrou" — é inexpressável a partir
+            // do estado atual sozinho, e é justamente a classe que vale.
+            let antes = rig::snapshot(&r);
             rig::apply(&r, op);
-            check(&r);                   // e depois de cada operação
+            check(&r, &antes, op);
         }
     }
 }
@@ -1385,6 +1457,18 @@ export function attachPipeline(p: Pipeline, res: Response) {
 
   p.listeners.add(res);
   res.on('close', () => p.listeners.delete(res));
+}
+
+/**
+ * Entrega o veredito da curadoria e destrava o pipeline.
+ *
+ * Devolve `false` se o pipeline não está esperando — chamar duas vezes, ou
+ * chamar um pipeline em modo automático, não deve derrubar nada.
+ */
+export function curar(p: Pipeline, aceitas: string[]): boolean {
+  if (!p.aguardando) return false;
+  p.aguardando(aceitas);
+  return true;
 }
 
 /** Remove o harness gerado e desfaz o que a ferramenta escreveu no crate. */
