@@ -828,19 +828,12 @@ async function run(p: Pipeline, runMutants: boolean) {
     // ferramenta — e foi o que aconteceu na primeira versão: o harness não
     // compilava e a suíte do usuário aparecia vermelha por causa dele.
     setStage(p, 'suite', { status: 'rodando', startedAt: Date.now() });
-    const baseline = await exec(p, info.path, 'cargo', ['test', '-p', info.crateName],
+    // A suíte-baseline é um build a frio de 30 a 90 s, e a proposta de
+    // invariantes é uma chamada de 40 s que não precisa dela. Em série, somam;
+    // em paralelo, o mais lento manda. A proposta começa já; o resultado da
+    // suíte é lido logo abaixo, quando importa.
+    const baselinePromise = exec(p, info.path, 'cargo', ['test', '-p', info.crateName],
       AMBIENTE_PROPTEST(32));
-    const baselineOk = baseline.code === 0;
-    setStage(p, 'suite', {
-      status: baselineOk ? 'ok' : 'falhou',
-      finishedAt: Date.now(),
-      detail: baselineOk
-        ? 'verde — o que vier depois é atribuível'
-        : 'já falha antes da ferramenta tocar em nada; nada depois é atribuível',
-      data: { failed: failedTests(baseline.output) },
-    });
-    guard();
-
     if (!isConfigured()) {
       setStage(p, 'propor', {
         status: 'falhou',
@@ -885,6 +878,19 @@ async function run(p: Pipeline, runMutants: boolean) {
     p.usage.entrada += proposta.usage?.entrada ?? 0;
     p.usage.saida += proposta.usage?.saida ?? 0;
     p.rawProposal = proposta.text;
+
+    const baseline = await baselinePromise;
+    const baselineOk = baseline.code === 0;
+    setStage(p, 'suite', {
+      status: baselineOk ? 'ok' : 'falhou',
+      finishedAt: Date.now(),
+      detail: baselineOk
+        ? 'verde — o que vier depois é atribuível'
+        : 'já falha antes da ferramenta tocar em nada; nada depois é atribuível',
+      data: { failed: failedTests(baseline.output) },
+    });
+    guard();
+
 
     const { invs, perdidos } = parseInvariants(proposta.text);
     if (perdidos) log(p, `aviso: ${perdidos} objeto(s) do catálogo vieram malformados e foram descartados`);
@@ -1154,7 +1160,14 @@ async function run(p: Pipeline, runMutants: boolean) {
     // Um teste por invariante, e não um teste que confere todas, porque uma
     // falha tem que ser atribuível: `i7::i7_sequencia` diz qual propriedade
     // quebrou, `sequencia` não diz nada.
+    // Devolve em que linhas cada `mod` ficou. É o que permite atribuir um erro
+    // do compilador — `tests/audit_generated.rs:316` — à asserção certa numa
+    // compilação só, em vez de compilar cada uma sozinha para descobrir.
+    const faixas = new Map<string, [number, number]>();
     const escrever = async (items: { inv: Invariant; code: string }[]) => {
+      faixas.clear();
+      const cabeca = harnessHeader(info) + '\nmod rig {\n' + rigCode + '\n}\n\n';
+      let linha = cabeca.split('\n').length;
       const corpo = items.map((t) => {
         const slug = t.inv.id.toLowerCase().replace(/[^a-z0-9_]/g, '');
         // `use super::rig;` é adicionado aqui; se o modelo também o escreveu,
@@ -1183,13 +1196,34 @@ proptest! {
     }
 }
 }`;
+      }).map((bloco, k) => {
+        const n = bloco.split('\n').length;
+        faixas.set(items[k].inv.id, [linha, linha + n - 1]);
+        linha += n + 2; // o '\n\n' do join
+        return bloco;
       }).join('\n\n');
 
-      await writeFile(
-        p.harnessPath!,
-        harnessHeader(info) + '\nmod rig {\n' + rigCode + '\n}\n\n' + corpo + '\n',
-        'utf8',
-      );
+      await writeFile(p.harnessPath!, cabeca + corpo + '\n', 'utf8');
+    };
+
+    /** Quais asserções o compilador culpou, pela linha de cada erro. */
+    const culpados = (output: string): Set<string> => {
+      const ids = new Set<string>();
+      for (const m of output.matchAll(/audit_generated\.rs:(\d+):\d+/g)) {
+        const ln = Number(m[1]);
+        for (const [id, [a, b]] of faixas) if (ln >= a && ln <= b) { ids.add(id); break; }
+      }
+      return ids;
+    };
+
+    /** Só as linhas de diagnóstico que apontam para dentro de um mod. */
+    const errosDe = (output: string, id: string): string => {
+      const [a, b] = faixas.get(id) ?? [0, 0];
+      const blocos = soErros(output).split(/\n(?=error)/);
+      return blocos.filter((bl) => {
+        const m = /audit_generated\.rs:(\d+):/.exec(bl);
+        return m && Number(m[1]) >= a && Number(m[1]) <= b;
+      }).join('\n').slice(0, 6000) || soErros(output).slice(0, 2000);
     };
 
     const testsDir = join(info.path, 'tests');
@@ -1206,12 +1240,17 @@ proptest! {
     });
     guard();
 
-    // ── 4. Compilar, descartando o que não compila ──────────────────────────
+    // ── 4. Compilar: uma vez por rodada, culpados pela linha ───────────────
     //
-    // Um teste que não compila não vira achado nem vira evidência — ele sai, e
-    // os outros seguem. Bissecção: compila tudo; se falhar, tenta cada um
-    // sozinho para saber quais são os culpados. Custa N compilações no pior
-    // caso, e o pior caso é raro.
+    // Antes: se o conjunto falhava, cada asserção era compilada sozinha para
+    // achar as culpadas, e cada reparo era mais uma compilação — com treze
+    // asserções, perto de cinquenta invocações do cargo, de 8 a 15 s cada.
+    // Era de onde vinham os dez minutos.
+    //
+    // Agora o compilador diz a linha de cada erro, e `faixas` diz de quem é a
+    // linha. Uma compilação classifica todas; os reparos das culpadas são
+    // chamadas independentes e rodam em paralelo; uma compilação valida a
+    // rodada. Três rodadas no máximo: o que não cede em três não cede em dez.
     setStage(p, 'compilar', { status: 'rodando', startedAt: Date.now() });
     const compila = () => exec(p, info.path, 'cargo',
       ['test', '-p', info.crateName, '--test', 'audit_generated', '--no-run']);
@@ -1219,86 +1258,74 @@ proptest! {
     let build = await compila();
     let descartadosCompilacao = 0;
     let reparados = 0;
+    const jaReparados = new Set<string>();
 
-    if (build.code !== 0 && testes.length >= 1) {
-      log(p, '--- o conjunto não compila; isolando os testes culpados ---');
-      const bons: typeof testes = [];
+    for (let rodada = 1; rodada <= 3 && build.code !== 0 && testes.length; rodada++) {
+      guard();
+      let ruins = culpados(build.output);
+      if (ruins.size === 0) {
+        // Erro fora de qualquer mod — no rig ou no cabeçalho. Não há asserção
+        // a culpar, e o log já tem o diagnóstico.
+        log(p, '!! erro de compilação fora das asserções (rig ou cabeçalho)');
+        break;
+      }
+      log(p, `--- rodada ${rodada}: ${ruins.size} asserção(ões) não compilam; reparando em paralelo ---`);
+      const saida = build.output;
 
-      for (const t of testes) {
-        guard();
-        await escrever([t]);
-        let r = await compila();
+      await Promise.all(testes.filter((t) => ruins.has(t.inv.id)).map(async (t) => {
+        const erros = errosDe(saida, t.inv.id);
+        log(p, `${t.inv.id}: reparo ${rodada} — ${erros.split('\n')[0].slice(0, 100)}`);
+        const fix = await complete({
+          system: systemPrompt(),
+          user: fixOneTest(info, t.inv, t.code, erros),
+          model: p.model,
+          maxTokens: 3000,
+        }).catch((e) => { log(p, `!! ${t.inv.id}: reparo falhou: ${e.message}`); return null; });
+        if (!fix) return;
+        p.usage.entrada += fix.usage?.entrada ?? 0;
+        p.usage.saida += fix.usage?.saida ?? 0;
 
-        // Reparo com o erro do compilador na mão. Duas tentativas: no corpus
-        // deste projeto o erro típico é uma assinatura só, e o que não cede em
-        // duas rodadas não cede em cinco — insistir só queima token.
-        for (let tentativa = 1; tentativa <= 3 && r.code !== 0; tentativa++) {
-          guard();
-          const erros = soErros(r.output);
-          log(p, `${t.inv.id}: tentativa de reparo ${tentativa} — ${erros.split('\n')[0].slice(0, 100)}`);
-          const fix = await complete({
-            system: systemPrompt(),
-            user: fixOneTest(info, t.inv, t.code, erros),
-            model: p.model,
-            maxTokens: 3000,
-          }).catch((e) => { log(p, `!! reparo falhou: ${e.message}`); return null; });
-          if (!fix) break;
-          p.usage.entrada += fix.usage?.entrada ?? 0;
-          p.usage.saida += fix.usage?.saida ?? 0;
-
-          const novo = extractCode(fix.text, 'rust').trim();
-          if (/^\/\/\s*IMPOSSIVEL/i.test(novo)) {
-            log(p, `${t.inv.id}: o modelo desistiu — inexprimível contra a API real`);
-            break;
-          }
-          // O driver chama `check(&r)`. Uma correção que renomeia ou perde a
-          // função troca o erro original por `cannot find function check`, e as
-          // tentativas seguintes passam a consertar o erro que a correção
-          // anterior criou — foi o que consumiu três rodadas em quatro
-          // invariantes de uma medição, sem nunca voltar ao problema real.
-          const normalizado = alinharCamposDoRig(
-            p, normalizarCheck(p, novo, t.inv.id), rigCode, t.inv.id);
-          if (!/\bfn\s+check\s*\(/.test(normalizado)) {
-            log(p, `${t.inv.id}: a correção perdeu \`fn check\` e não dava para reconstruir`);
-            break;
-          }
-          t.code = normalizado;
-          await escrever([t]);
-          r = await compila();
-          if (r.code === 0) {
-            reparados++;
-            log(p, `${t.inv.id}: compila após ${tentativa} reparo(s)`);
-          }
+        const novo = extractCode(fix.text, 'rust').trim();
+        if (/^\/\/\s*IMPOSSIVEL/i.test(novo)) {
+          log(p, `${t.inv.id}: o modelo desistiu — inexprimível contra a API real`);
+          return;
         }
+        const normalizado = alinharCamposDoRig(
+          p, normalizarCheck(p, novo, t.inv.id), rigCode, t.inv.id);
+        if (!/\bfn\s+check\s*\(/.test(normalizado)) {
+          log(p, `${t.inv.id}: a correção perdeu \`fn check\`; mantenho a anterior`);
+          return;
+        }
+        t.code = normalizado;
+        jaReparados.add(t.inv.id);
+      }));
 
-        if (r.code === 0) {
-          bons.push(t);
-        } else {
+      await escrever(testes);
+      build = await compila();
+
+      if (build.code !== 0 && rodada === 3) {
+        ruins = culpados(build.output);
+        for (const t of testes) {
+          if (!ruins.has(t.inv.id)) continue;
           t.inv.verdict = 'descartada';
           t.inv.verdictReason =
             'O teste gerado para esta invariante não compila, nem depois de três ' +
             'rodadas de correção com o erro do compilador. Sem um teste que rode, ' +
             'a propriedade não foi verificada nem refutada — ela sai do relatório em ' +
             'vez de entrar como achado sem evidência.';
-          t.inv.compileError = soErros(r.output).slice(0, 4000);
+          t.inv.compileError = errosDe(build.output, t.inv.id).slice(0, 4000);
           descartadosCompilacao++;
           log(p, `${t.inv.id}: descartado, não compila`);
         }
-      }
-
-      testes.length = 0;
-      testes.push(...bons);
-      await escrever(testes);
-      p.harnessCode = await readFile(p.harnessPath, 'utf8');
-      build = await compila();
-
-      // Cada um compila sozinho mas o conjunto não: colisão entre testes. Com
-      // um `mod` por teste isso não deveria acontecer, e se acontecer eu quero
-      // ver o erro no log em vez de perder tudo em silêncio.
-      if (build.code !== 0 && bons.length > 0) {
-        log(p, '!! cada teste compila sozinho mas o conjunto não — colisão entre módulos');
+        const bons = testes.filter((t) => t.inv.verdict !== 'descartada');
+        testes.length = 0;
+        testes.push(...bons);
+        await escrever(testes);
+        build = await compila();
       }
     }
+    for (const t of testes) if (jaReparados.has(t.inv.id)) reparados++;
+    p.harnessCode = await readFile(p.harnessPath, 'utf8');
 
     if (build.code !== 0) {
       setStage(p, 'compilar', {
