@@ -148,6 +148,19 @@ export function extractCode(text: string, lang = 'rust'): string {
   }
   let out = blocos.length ? blocos.reduce((a, b) => (b.length > a.length ? b : a)) : text;
 
+  // Sem cerca nenhuma, a resposta é prosa e código misturados. A prosa sem
+  // crase passava inteira — e "the user's balance" vira `prefix user is
+  // unknown` no rustc, que lê o apóstrofo como literal de char. O código
+  // começa na primeira linha que parece Rust e termina na última chave que
+  // fecha; o resto é explicação.
+  if (blocos.length === 0 && lang === 'rust') {
+    const linhas = out.split('\n');
+    const ini = linhas.findIndex((l) => /^\s*(use\s|pub\s|fn\s|#\[|#!\[|\/\/|impl\s|struct\s|enum\s|mod\s|const\s|static\s|let\s)/.test(l));
+    let fim = linhas.length - 1;
+    while (fim > 0 && !/[}\];)]\s*$/.test(linhas[fim])) fim--;
+    if (ini >= 0 && fim >= ini) out = linhas.slice(ini, fim + 1).join('\n');
+  }
+
   // Código Rust não contém crase. Uma linha com crase é prosa com código
   // inline ("In `apply`, the generator...") ou uma cerca de markdown que
   // sobrou — e as duas dão `unknown start of token` no compilador. Isto vale
