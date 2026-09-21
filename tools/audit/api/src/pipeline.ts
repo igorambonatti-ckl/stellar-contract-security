@@ -1385,6 +1385,35 @@ proptest! {
         build = await compila();
       }
     }
+    // O rustc para em fases: enquanto há erro de resolução de nomes num mod,
+    // os erros de fase seguinte dos outros nem aparecem. Remover os culpados
+    // de uma passada revela os que estavam mascarados — numa execução, 7
+    // descartadas e o arquivo ainda vermelho por causa de 2 que ninguém tinha
+    // visto, e as 9 boas morreram junto. Sem chamadas ao modelo aqui: só
+    // compilar, atribuir e tirar, até ficar verde ou não sobrar nada.
+    for (let passada = 0; passada < 6 && build.code !== 0 && testes.length; passada++) {
+      guard();
+      const ruins = culpados(build.output);
+      for (const t of testes) if (!balanceado(t.code)) ruins.add(t.inv.id);
+      if (ruins.size === 0) { log(p, '!! erro de compilação fora das asserções (rig ou cabeçalho)'); break; }
+      for (const t of testes) {
+        if (!ruins.has(t.inv.id)) continue;
+        t.inv.verdict = 'descartada';
+        t.inv.verdictReason =
+          'O teste gerado não compila. O erro só apareceu depois que outros foram ' +
+          'removidos — o compilador o mascarava — e não houve rodada de correção para ' +
+          'ele. Sem um teste que rode, a propriedade não foi verificada nem refutada.';
+        t.inv.compileError = errosDe(build.output, t.inv.id).slice(0, 4000);
+        descartadosCompilacao++;
+        log(p, `${t.inv.id}: descartado — erro que estava mascarado`);
+      }
+      const bons = testes.filter((t) => t.inv.verdict !== 'descartada');
+      testes.length = 0;
+      testes.push(...bons);
+      await escrever(testes);
+      build = await compila();
+    }
+
     for (const t of testes) if (jaReparados.has(t.inv.id)) reparados++;
     p.harnessCode = await readFile(p.harnessPath, 'utf8');
 
