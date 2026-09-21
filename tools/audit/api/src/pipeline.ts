@@ -1492,6 +1492,7 @@ proptest! {
     if (falhos.length) {
       log(p, `--- ${falhos.length} teste(s) falham no contrato correto; perguntando se é o harness ou a invariante ---`);
       const saida = val.output;
+      const codigoAnterior = new Map<string, string>();
 
       for (const nome of falhos) {
         guard();
@@ -1517,7 +1518,17 @@ proptest! {
           log(p, `${t.inv.id}: o modelo conclui que a própria invariante é falsa`);
           continue;
         }
-        t.code = novo;
+        // Mesmas travas da geração. Este reparo não passava por elas: um
+        // `r.contract_id` inventado — que o alinhamento trocaria por `r.id`
+        // sozinho — quebrou o rebuild, e o arquivo ficou reescrito com o
+        // código quebrado por cima de sete propriedades já aprovadas.
+        const pronto = alinharCamposDoRig(p, normalizarCheck(p, novo, t.inv.id), rigCode, t.inv.id);
+        if (!/\bfn\s+check\s*\(/.test(pronto) || !balanceado(pronto)) {
+          log(p, `${t.inv.id}: a correção veio sem fn check ou com chaves abertas; mantenho a anterior`);
+          continue;
+        }
+        codigoAnterior.set(t.inv.id, t.code);
+        t.code = pronto;
         log(p, `${t.inv.id}: harness corrigido, revalidando`);
       }
 
@@ -1533,8 +1544,11 @@ proptest! {
             AMBIENTE_PROPTEST(VALIDACAO_CASOS));
           falhos = failedTests(val2.output);
         } else {
-          log(p, '!! uma correção quebrou a compilação; mantenho o veredito anterior');
-          // Volta o arquivo para o estado que compilava.
+          log(p, '!! uma correção quebrou a compilação; revertendo as corrigidas para o código anterior');
+          for (const [id, code] of codigoAnterior) {
+            const t = testes.find((x) => x.inv.id === id);
+            if (t) t.code = code;
+          }
           await escrever(testes.filter((x) => x.inv.verdict !== 'descartada'));
         }
       }
@@ -1667,6 +1681,31 @@ proptest! {
       }
       p.harnessCode = await readFile(p.harnessPath, 'utf8');
     }
+
+    // Garantia final, sem modelo: o harness entregue compila, ou fica vazio.
+    // Um arquivo vermelho por cima de propriedades aprovadas é o pior
+    // resultado possível — parece verificado e não roda. Aconteceu.
+    for (let volta = 0; volta < 6 && sobreviventes.length; volta++) {
+      const r = await compila();
+      if (r.code === 0) break;
+      const ruins = culpados(r.output);
+      for (const t of sobreviventes) if (!balanceado(t.code)) ruins.add(t.inv.id);
+      if (ruins.size === 0) {
+        log(p, '!! o harness final não compila por erro fora das asserções; entregando vazio');
+        for (const t of sobreviventes) { t.inv.verdict = 'descartada'; t.inv.verdictReason = 'O harness final não compilava por um erro fora das asserções.'; }
+        sobreviventes = [];
+        break;
+      }
+      for (const t of sobreviventes) {
+        if (!ruins.has(t.inv.id)) continue;
+        t.inv.verdict = 'descartada';
+        t.inv.verdictReason = 'O harness final não compilava por causa desta asserção; ela sai para o resto rodar.';
+        log(p, `${t.inv.id}: retirada do harness final — não compila`);
+      }
+      sobreviventes = sobreviventes.filter((t) => t.inv.verdict !== 'descartada');
+      await escrever(sobreviventes);
+    }
+    p.harnessCode = await readFile(p.harnessPath, 'utf8');
 
     setStage(p, 'validar', {
       status: 'ok',
