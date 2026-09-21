@@ -77,9 +77,13 @@ abrir `localhost:5173` e:
 4. ~30 s: regras propostas e revisadas, com a razão de cada rejeição no log.
 5. ~4 a 8 min depois: **A investigar / Verificadas / Não verificadas**, o custo real, e **O que a auditoria escreveu** — o diff, com o caminho da cópia em `/tmp`.
 
-Para mostrar o fuzzer pegando um bug ao vivo: desmarcar só `bug_self_transfer` em
-**Escondidas do modelo** — o bug entra no contrato compilado e a regra de conservação
-aparece em **A investigar** com a sequência mínima que a quebra.
+Para mostrar o fuzzer pegando um bug ao vivo, o caminho é o benchmark, não a tela:
+a auditoria pela interface compila o contrato como ele está, sem as chaves `bug_*`,
+e um contrato correto deve dar zero achados.
+
+```bash
+cd tools/audit && ./ondas-par.sh x-ai/grok-4.3   # auditoria + detecção dos 7, com placar
+```
 
 O que também funciona bem em tela:
 

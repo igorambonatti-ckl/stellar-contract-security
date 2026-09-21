@@ -308,8 +308,11 @@ pub fn setup() -> Rig {
     let token = env.register_stellar_asset_contract_v2(admin.clone()).address();
     let id = env.register(Bank, ());
 
-    let mut users: Vec<Address> = (0..3).map(|_| Address::generate(&env)).collect();
-    users.push(id.clone());   // the contract itself is a reachable principal
+    // Four independent principals. The contract's own address is *not* one of
+    // them: a transfer from the contract to itself nets zero, and a mint to it
+    // inflates the vault before any deposit — together they produced four
+    // false alarms against a correct contract in one run.
+    let users: Vec<Address> = (0..4).map(|_| Address::generate(&env)).collect();
 
     let sac = StellarAssetClient::new(&env, &token);
     for u in &users { sac.mint(u, &(i128::MAX / 8)); }   // big enough for products to overflow
@@ -359,7 +362,8 @@ pub enum Op {
     Credit { who: usize, amount: i128 },
     Debit  { who: usize, amount: i128 },
     Freeze { who: usize },
-    Unauthorized { who: usize },   // a call with no authorization available
+    Unauthorized { which: usize, who: usize },   // any mutating call, with no authorization available
+    Reinit,                                       // initialize again, unconditionally
     Advance(u32),
 }
 
@@ -380,10 +384,22 @@ pub fn apply(r: &Rig, op: &Op) {
             let res = c.try_freeze(&r.users[who % r.users.len()]);
             *r.last.borrow_mut() = Some(match res { Ok(Ok(_)) => Ok(0), Err(Ok(e)) => Err(e), _ => Err(soroban_sdk::Error::from_contract_error(0)) });
         }
-        Op::Unauthorized { who } => {
+        Op::Unauthorized { which, who } => {
+            // Every entry point that requires auth gets its turn here. One that
+            // is never exercised without auth is one whose missing check no
+            // property can see.
+            let u = &r.users[who % r.users.len()];
             r.env.set_auths(&[]);
-            let res = c.try_freeze(&r.users[who % r.users.len()]);
+            let res = match which % 3 {
+                0 => c.try_credit(u, &1).map(|x| x.map(|_| 0)),
+                1 => c.try_debit(u, &1).map(|x| x.map(|_| 0)),
+                _ => c.try_freeze(u).map(|x| x.map(|_| 0)),
+            };
             r.env.mock_all_auths();
+            *r.last.borrow_mut() = Some(match res { Ok(Ok(_)) => Ok(0), Err(Ok(e)) => Err(e), _ => Err(soroban_sdk::Error::from_contract_error(0)) });
+        }
+        Op::Reinit => {
+            let res = c.try_initialize(&r.admin, &r.token);
             *r.last.borrow_mut() = Some(match res { Ok(Ok(_)) => Ok(0), Err(Ok(e)) => Err(e), _ => Err(soroban_sdk::Error::from_contract_error(0)) });
         }
         Op::Advance(n) => {
@@ -409,7 +425,8 @@ pub fn op_strategy() -> impl Strategy<Value = Op> {
         8 => (0usize..4, amount()).prop_map(|(who, amount)| Op::Credit { who, amount }),
         8 => (0usize..4, amount()).prop_map(|(who, amount)| Op::Debit  { who, amount }),
         1 => (0usize..4).prop_map(|who| Op::Freeze { who }),        // irreversible: rare
-        1 => (0usize..4).prop_map(|who| Op::Unauthorized { who }),
+        1 => (0usize..3, 0usize..4).prop_map(|(which, who)| Op::Unauthorized { which, who }),
+        1 => Just(Op::Reinit),
         // Ledger jumps land on and just past TTL cliffs, not uniformly.
         2 => prop_oneof![Just(1u32), Just(15), Just(17), Just(99), Just(101), Just(1_000)]
                  .prop_map(Op::Advance),
@@ -645,9 +662,11 @@ read.
 **Principals are indices into a fixed pool**, never generated inside the
 strategy: a freshly generated \`Address\` cannot be authorized, so fuzzing
 address bytes collapses every access-control property into "an unknown caller
-is rejected". Put at least three principals in \`Rig\`, and include the
-**contract's own address** as a reachable choice — a contract's "principals are
-not contracts" assumption is exactly the kind that goes untested.
+is rejected". Put at least three principals in \`Rig\`. **Never put the
+contract's own address in the pool, and never mint to it**: a transfer from the
+contract to itself nets zero and a pre-funded vault breaks every share-price
+computation — that one choice produced four false alarms against a correct
+contract.
 
 **Fund the principals so arithmetic can actually overflow.** Mint something
 like \`i128::MAX / 8\` to each principal, not a round million. A contract that
@@ -831,11 +850,8 @@ fixture. The pipeline wraps it.
   flag that refuses everything (\`paused\`, \`frozen\`), read it from the snapshot
   first: a call refused with \`Paused\` is not a violation of an input-validation
   property, and asserting "must fail with InvalidAmount" while paused produced
-  two false findings against a correct contract. The same for a principal that
-  is the **contract's own address** — it is in the pool on purpose, and a
-  transfer from the contract to itself nets zero; condition on it, do not
-  assert a delta. And a TTL can never exceed \`max_entry_ttl\`: assert
-  \`min(bump, ceiling)\`, not the bump.
+  two false findings against a correct contract. And a TTL can never exceed
+  \`max_entry_ttl\`: assert \`min(bump, ceiling)\`, not the bump.
 - **Compare against a value you computed yourself**, not against another read of
   the same thing. "The contract agrees with itself" holds in every buggy
   contract too.
