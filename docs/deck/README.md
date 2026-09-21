@@ -48,8 +48,8 @@ margem. Alternativa: abrir `slides.html` no navegador e imprimir para PDF.
 | IA + fuzzer, sem humano | 2–5/7 por execução; união de 4 execuções 5/7 |
 | mutation score | 34% → 98% |
 | cobertura | 85,8% → 96,2% |
-| custo de uma auditoria | US$ 0,03 (gemini-3.1-flash-lite) · ~US$ 0,08 (gemini-3.8-flash, padrão) · US$ 1,70 (claude-sonnet-4.5) |
-| tempo | ~40 s até a curadoria, ~2 min depois dela |
+| custo de uma auditoria | **US$ 0,03** (gemini-3.1-flash-lite, padrão) · US$ 0,60 (gemini-3.8-flash — o raciocínio é cobrado como saída) · US$ 1,70 (claude-sonnet-4.5) |
+| tempo | ~40 s até a curadoria, ~2 min depois dela (flash-lite); ~10 min com o 3.8-flash |
 | erros de medição encontrados e registrados | 6 no benchmark, mais o gabarito vazado e o proptest vazando entre execuções na ferramenta |
 
 ## Roteiro, 20 minutos
