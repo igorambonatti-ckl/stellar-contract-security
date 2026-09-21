@@ -1314,102 +1314,85 @@ proptest! {
     let reparados = 0;
     const jaReparados = new Set<string>();
 
-    for (let rodada = 1; rodada <= 3 && build.code !== 0 && testes.length; rodada++) {
-      guard();
-      let ruins = culpados(build.output);
-      // "unclosed delimiter" aponta para o fim do arquivo, fora de todo mod.
-      // Quem desbalanceou é quem não fecha as chaves.
-      for (const t of testes) if (!balanceado(t.code)) ruins.add(t.inv.id);
-      if (ruins.size === 0) {
-        // Erro fora de qualquer mod — no rig ou no cabeçalho. Não há asserção
-        // a culpar, e o log já tem o diagnóstico.
-        log(p, '!! erro de compilação fora das asserções (rig ou cabeçalho)');
-        break;
-      }
-      log(p, `--- rodada ${rodada}: ${ruins.size} asserção(ões) não compilam; reparando em paralelo ---`);
-      const saida = build.output;
-
-      await Promise.all(testes.filter((t) => ruins.has(t.inv.id)).map(async (t) => {
-        const erros = errosDe(saida, t.inv.id);
-        log(p, `${t.inv.id}: reparo ${rodada} — ${erros.split('\n')[0].slice(0, 100)}`);
-        const fix = await complete({
-          system: systemPrompt(),
-          user: fixOneTest(info, t.inv, t.code, erros),
-          model: p.model,
-          maxTokens: 8000,
-        }).catch((e) => { log(p, `!! ${t.inv.id}: reparo falhou: ${e.message}`); return null; });
-        if (!fix) return;
-        p.usage.entrada += fix.usage?.entrada ?? 0;
-        p.usage.saida += fix.usage?.saida ?? 0;
-
-        const novo = extractCode(fix.text, 'rust').trim();
-        if (/^\/\/\s*IMPOSSIVEL/i.test(novo)) {
-          log(p, `${t.inv.id}: o modelo desistiu — inexprimível contra a API real`);
-          return;
-        }
-        const normalizado = alinharCamposDoRig(
-          p, normalizarCheck(p, novo, t.inv.id), rigCode, t.inv.id);
-        if (!/\bfn\s+check\s*\(/.test(normalizado)) {
-          log(p, `${t.inv.id}: a correção perdeu \`fn check\`; mantenho a anterior`);
-          return;
-        }
-        if (!balanceado(normalizado)) {
-          log(p, `${t.inv.id}: a correção veio com chaves que não fecham; mantenho a anterior`);
-          return;
-        }
-        t.code = normalizado;
-        jaReparados.add(t.inv.id);
-      }));
-
-      await escrever(testes);
-      build = await compila();
-
-      if (build.code !== 0 && rodada === 3) {
-        ruins = culpados(build.output);
-        for (const t of testes) {
-          if (!ruins.has(t.inv.id)) continue;
-          t.inv.verdict = 'descartada';
-          t.inv.verdictReason =
-            'O teste gerado para esta invariante não compila, nem depois de três ' +
-            'rodadas de correção com o erro do compilador. Sem um teste que rode, ' +
-            'a propriedade não foi verificada nem refutada — ela sai do relatório em ' +
-            'vez de entrar como achado sem evidência.';
-          t.inv.compileError = errosDe(build.output, t.inv.id).slice(0, 4000);
-          descartadosCompilacao++;
-          log(p, `${t.inv.id}: descartado, não compila`);
-        }
-        const bons = testes.filter((t) => t.inv.verdict !== 'descartada');
-        testes.length = 0;
-        testes.push(...bons);
-        await escrever(testes);
-        build = await compila();
-      }
-    }
-    // O rustc para em fases: enquanto há erro de resolução de nomes num mod,
-    // os erros de fase seguinte dos outros nem aparecem. Remover os culpados
-    // de uma passada revela os que estavam mascarados — numa execução, 7
-    // descartadas e o arquivo ainda vermelho por causa de 2 que ninguém tinha
-    // visto, e as 9 boas morreram junto. Sem chamadas ao modelo aqui: só
-    // compilar, atribuir e tirar, até ficar verde ou não sobrar nada.
-    for (let passada = 0; passada < 6 && build.code !== 0 && testes.length; passada++) {
+    // Orçamento de reparo **por asserção**, não por rodada global.
+    //
+    // O rustc para em fases: enquanto um mod tem erro de resolução de nomes,
+    // os erros de fase seguinte dos outros nem aparecem. Com três rodadas
+    // globais, o que só aparecia na quarta compilação era descartado sem
+    // nunca ter sido reparado — e o descartado era, numa execução, o check de
+    // auto-transferência que pega um dos bugs plantados. Agora cada asserção
+    // tem direito a três tentativas contadas para ela, apareça o erro quando
+    // aparecer. O laço só termina verde, ou quando todo culpado esgotou as
+    // suas.
+    const tentativas = new Map<string, number>();
+    for (let passada = 1; passada <= 12 && build.code !== 0 && testes.length; passada++) {
       guard();
       const ruins = culpados(build.output);
       for (const t of testes) if (!balanceado(t.code)) ruins.add(t.inv.id);
-      if (ruins.size === 0) { log(p, '!! erro de compilação fora das asserções (rig ou cabeçalho)'); break; }
-      for (const t of testes) {
-        if (!ruins.has(t.inv.id)) continue;
+      if (ruins.size === 0) {
+        log(p, '!! erro de compilação fora das asserções (rig ou cabeçalho)');
+        break;
+      }
+
+      const reparaveis = testes.filter((t) => ruins.has(t.inv.id) && (tentativas.get(t.inv.id) ?? 0) < 3);
+      const esgotadas = testes.filter((t) => ruins.has(t.inv.id) && (tentativas.get(t.inv.id) ?? 0) >= 3);
+      const saida = build.output;
+
+      if (reparaveis.length) {
+        log(p, `--- passada ${passada}: ${ruins.size} não compilam; reparando ${reparaveis.length} em paralelo ---`);
+        await Promise.all(reparaveis.map(async (t) => {
+          const n = (tentativas.get(t.inv.id) ?? 0) + 1;
+          tentativas.set(t.inv.id, n);
+          const erros = errosDe(saida, t.inv.id);
+          log(p, `${t.inv.id}: reparo ${n} — ${erros.split('\n')[0].slice(0, 100)}`);
+          const fix = await complete({
+            system: systemPrompt(),
+            user: fixOneTest(info, t.inv, t.code, erros),
+            model: p.model,
+            maxTokens: 8000,
+          }).catch((e) => { log(p, `!! ${t.inv.id}: reparo falhou: ${e.message}`); return null; });
+          if (!fix) return;
+          p.usage.entrada += fix.usage?.entrada ?? 0;
+          p.usage.saida += fix.usage?.saida ?? 0;
+
+          const novo = extractCode(fix.text, 'rust').trim();
+          if (/^\/\/\s*IMPOSSIVEL/i.test(novo)) {
+            log(p, `${t.inv.id}: o modelo desistiu — inexprimível contra a API real`);
+            tentativas.set(t.inv.id, 3);
+            return;
+          }
+          const normalizado = alinharCamposDoRig(
+            p, normalizarCheck(p, novo, t.inv.id), rigCode, t.inv.id);
+          if (!/\bfn\s+check\s*\(/.test(normalizado)) {
+            log(p, `${t.inv.id}: a correção perdeu \`fn check\`; mantenho a anterior`);
+            return;
+          }
+          if (!balanceado(normalizado)) {
+            log(p, `${t.inv.id}: a correção veio com chaves que não fecham; mantenho a anterior`);
+            return;
+          }
+          t.code = normalizado;
+          jaReparados.add(t.inv.id);
+        }));
+      }
+
+      for (const t of esgotadas) {
         t.inv.verdict = 'descartada';
         t.inv.verdictReason =
-          'O teste gerado não compila. O erro só apareceu depois que outros foram ' +
-          'removidos — o compilador o mascarava — e não houve rodada de correção para ' +
-          'ele. Sem um teste que rode, a propriedade não foi verificada nem refutada.';
-        t.inv.compileError = errosDe(build.output, t.inv.id).slice(0, 4000);
+          'O teste gerado para esta invariante não compila, nem depois de três ' +
+          'rodadas de correção com o erro do compilador. Sem um teste que rode, ' +
+          'a propriedade não foi verificada nem refutada — ela sai do relatório em ' +
+          'vez de entrar como achado sem evidência.';
+        t.inv.compileError = errosDe(saida, t.inv.id).slice(0, 4000);
         descartadosCompilacao++;
-        log(p, `${t.inv.id}: descartado — erro que estava mascarado`);
+        log(p, `${t.inv.id}: descartado após 3 reparos`);
       }
-      const bons = testes.filter((t) => t.inv.verdict !== 'descartada');
-      testes.length = 0;
-      testes.push(...bons);
+      if (esgotadas.length) {
+        const bons = testes.filter((t) => t.inv.verdict !== 'descartada');
+        testes.length = 0;
+        testes.push(...bons);
+      }
+
       await escrever(testes);
       build = await compila();
     }
