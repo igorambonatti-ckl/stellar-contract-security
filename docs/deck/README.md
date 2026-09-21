@@ -31,7 +31,7 @@ margem. Alternativa: abrir `slides.html` no navegador e imprimir para PDF.
    precisa de **regras**, e escrever regras é trabalho de auditor sênior.
 3. A ideia: **a IA escreve as regras, o fuzzer verifica.** Cada um no que faz melhor.
 4. Medimos com um cofre de sete bugs plantados. Fuzzing sem regras: **1 de 7**. Com as
-   regras da IA, sem ninguém no meio: **4 de 7 por execução, 6 de 7 em três** —
+   regras da IA, sem ninguém no meio: **3 a 4 de 7 por execução, 6 de 7 em três** —
    por US$ 0,25 cada.
 5. A ferramenta roda numa cópia do contrato, entrega o que falhou com a sequência
    exata, o que passou como testes de regressão, e o diff de tudo que a IA escreveu.
@@ -43,7 +43,7 @@ margem. Alternativa: abrir `slides.html` no navegador e imprimir para PDF.
 |---|---|
 | bugs plantados | 7, cada um atrás de uma chave, cada um viola uma regra |
 | fuzzing sem regras | 1/7 |
-| IA + fuzzer, sem humano | **4/7** por execução · **6/7** na união de 3 execuções |
+| IA + fuzzer, sem humano | **3–4/7** por execução · **6/7** na união de 3 execuções |
 | custo de uma auditoria | **US$ 0,25** (grok-4.3, padrão) |
 | tempo | 4 a 10 minutos, sozinha |
 | uma auditoria típica | ~30 regras propostas, 20+ viram teste, 15+ verificadas |

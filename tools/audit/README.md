@@ -73,12 +73,12 @@ Controles que rodam antes de qualquer número: o contrato limpo tem que ficar
 verde (senão "não medível"); um harness vazio não conta como 0/7; e uma
 invariante que cita um bug pelo nome invalida a execução.
 
-Resultado com o grok, três execuções limpas no mesmo dia:
+Resultado com o grok, execuções limpas no mesmo dia (4, 2, 4, 3 de 7):
 
 | | detecção |
 |---|---|
 | fuzzing cego (referência do projeto) | 1/7 |
-| **automático, por execução** | **4/7** |
+| **automático, por execução** | **3–4/7** |
 | **automático, união de 3 execuções** | **6/7** |
 | IA + curadoria humana + fuzzer (referência) | 7/7 |
 

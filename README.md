@@ -42,7 +42,7 @@ fuzzing, plus the evidence that the combination works.
 the AI proposes the invariants, a second AI pass curates them, a fuzzing rig drives random
 operation sequences, and the report comes back with findings, counterexamples, a regression
 suite and the diff of everything the AI wrote. Measured against the seven seeded bugs with no
-human in the loop: **4/7 per run, 6/7 over three runs**, at about US$ 0.25 a run.
+human in the loop: **3–4/7 per run, 6/7 over three runs**, at about US$ 0.25 a run.
 **[→ `soroban-fuzzkit`](04-prototype-development/fuzzkit/)** — the reusable, contract-agnostic half.
 
 ## The evidence

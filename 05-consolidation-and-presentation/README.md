@@ -408,13 +408,13 @@ and reports three groups — *to investigate* with the minimal counterexample, *
 ready regression suite, *not verified* with the reason — plus the real cost and the diff of
 everything the AI wrote.
 
-Measured against the seven seeded bugs, with no human in the loop, three clean runs on the
-same day:
+Measured against the seven seeded bugs, with no human in the loop, clean runs on the same
+day (4, 2, 4, 3 of 7):
 
 | | detection |
 |---|---|
 | blind fuzzing (Topic 4 control arm) | 1/7 |
-| **the tool, one run** | **4/7** |
+| **the tool, one run** | **3–4/7** |
 | **the tool, union of three runs** | **6/7** |
 
 `overflow` and `missing_auth`, the two no earlier version detected, fall to it — each through
@@ -422,7 +422,7 @@ a change to the *rig*, not the model: balances large enough for the arithmetic t
 and the result of an unauthorized call visible to the assertion. Cost: about US$ 0.25 and 4–10
 minutes a run with `grok-4.3`.
 
-Nearly everything that moved the number from 0–2/7 to 4/7 in a day was the layer between the
+Nearly everything that moved the number from 0–2/7 to 3–4/7 in a day was the layer between the
 model and the compiler, made deterministic: the largest fenced block regardless of tag, giving
 up detected structurally rather than by keyword, an assertion with unbalanced braces never
 entering the file, rig fields aligned when the model invents a name, storage reads outside
