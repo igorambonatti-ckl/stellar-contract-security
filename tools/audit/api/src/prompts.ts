@@ -111,7 +111,9 @@ that cannot fail and therefore cannot find anything.
 
 What is still falsifiable is the TTL **number**: a restored entry comes back at
 \`min_persistent_entry_ttl - 1\`, which is distinguishable from one that was
-properly extended. Assert the number, not the readability.
+properly extended. Assert the number, not the readability. And the host **caps
+every extension at \`max_entry_ttl\`** — an \`extend_ttl(_, 1_036_800)\` under a
+ceiling of 1_000_000 leaves the TTL at 999_999, correctly.
 `;
 
 function contractContext(info: ContractInfo, source: string): string {
@@ -296,7 +298,7 @@ pub fn setup() -> Rig {
         l.timestamp = 1000;
         l.min_persistent_entry_ttl = 100;
         l.min_temp_entry_ttl = 16;
-        l.max_entry_ttl = 1_000_000;
+        l.max_entry_ttl = 10_000_000;   // above every extend_ttl in the contract
     });
 
     let admin = Address::generate(&env);
@@ -401,9 +403,9 @@ fn amount() -> impl Strategy<Value = i128> {
 
 pub fn op_strategy() -> impl Strategy<Value = Op> {
     prop_oneof![
-        4 => (0usize..4, amount()).prop_map(|(who, amount)| Op::Credit { who, amount }),
-        4 => (0usize..4, amount()).prop_map(|(who, amount)| Op::Debit  { who, amount }),
-        1 => (0usize..4).prop_map(|who| Op::Freeze { who }),
+        8 => (0usize..4, amount()).prop_map(|(who, amount)| Op::Credit { who, amount }),
+        8 => (0usize..4, amount()).prop_map(|(who, amount)| Op::Debit  { who, amount }),
+        1 => (0usize..4).prop_map(|who| Op::Freeze { who }),        // irreversible: rare
         1 => (0usize..4).prop_map(|who| Op::Unauthorized { who }),
         // Ledger jumps land on and just past TTL cliffs, not uniformly.
         2 => prop_oneof![Just(1u32), Just(15), Just(17), Just(99), Just(101), Just(1_000)]
@@ -658,6 +660,17 @@ probability of \`0\`, \`1\`, \`i128::MAX\`, \`i128::MAX / 2\`, and of a value de
 from live state (a holder's exact balance, and that balance plus one) — the
 interesting boundary usually cannot be written as a literal.
 
+**The ledger ceiling must be above every \`extend_ttl\` in the contract.** Read the
+contract's bump constants and set \`max_entry_ttl\` comfortably above the largest
+(\`10_000_000\` is a safe default). With a ceiling *below* the bump, the host caps
+the extension and every TTL property reads "not extended" against a correct
+contract — three false findings in one run came from exactly this.
+
+**Irreversible operations get low weight.** A \`pause\`, a \`freeze\`, anything
+that locks the contract for the rest of the sequence: weight 1 against 8 or
+more for the ordinary operations, or most sequences spend their remaining
+steps being refused with the same error.
+
 **Ledger movement is an operation.** Include an \`Op\` that advances
 \`sequence_number\`, with jumps that land on and just past TTL boundaries, not a
 uniform small step.
@@ -811,6 +824,15 @@ fixture. The pipeline wraps it.
   early when the precondition does not apply, and assert when it does. A
   \`check\` that asserts unconditionally something only true sometimes fails
   against the correct contract and gets thrown away.
+- **Check the gates before asserting a reason.** If the contract has a global
+  flag that refuses everything (\`paused\`, \`frozen\`), read it from the snapshot
+  first: a call refused with \`Paused\` is not a violation of an input-validation
+  property, and asserting "must fail with InvalidAmount" while paused produced
+  two false findings against a correct contract. The same for a principal that
+  is the **contract's own address** — it is in the pool on purpose, and a
+  transfer from the contract to itself nets zero; condition on it, do not
+  assert a delta. And a TTL can never exceed \`max_entry_ttl\`: assert
+  \`min(bump, ceiling)\`, not the bump.
 - **Compare against a value you computed yourself**, not against another read of
   the same thing. "The contract agrees with itself" holds in every buggy
   contract too.

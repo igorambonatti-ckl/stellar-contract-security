@@ -1534,8 +1534,12 @@ proptest! {
     // tentativa, então o filtro vinha selecionando as triviais. Numa medição,
     // as cinco que morreram aqui incluíam a lei de conservação e a de TTL,
     // enquanto sobreviveram "o saldo não é negativo" e "a flag é permanente".
-    if (falhos.length) {
-      log(p, `--- ${falhos.length} teste(s) falham no contrato correto; perguntando se é o harness ou a invariante ---`);
+    for (let rodadaLimpo = 1; rodadaLimpo <= 2 && falhos.length; rodadaLimpo++) {
+      // Duas rodadas, não uma: as propriedades que falham aqui por suposição
+      // errada do harness são justamente as que pegam bugs — numa execução, as
+      // seis que saíram eram as de input validation, conservação e TTL, e a
+      // detecção caiu de 4/7 para 2/7 com o dobro de propriedades verificadas.
+      log(p, `--- rodada ${rodadaLimpo}: ${falhos.length} teste(s) falham no contrato correto; perguntando se é o harness ou a invariante ---`);
       const saida = val.output;
       const codigoAnterior = new Map<string, string>();
 
