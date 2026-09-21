@@ -17,6 +17,9 @@
 set -uo pipefail
 
 API=${API:-http://localhost:5174}
+# Modo automático explícito: sem isso o pipeline entra em curadoria e fica
+# parado esperando um humano que este script não tem. O default do produto é
+# curado — um medidor não pode herdar o default de ninguém.
 RAIZ=$(cd "$(dirname "$0")" && pwd)
 MODELO=${1:?informe o modelo}
 shift
@@ -39,7 +42,7 @@ for ALVO in "$@"; do
   INI=$(date +%s)
 
   ID=$(curl -s -X POST "$API/api/pipeline" -H 'Content-Type: application/json' \
-    -d "{\"path\":\"$ALVO\",\"hiddenFeatures\":[],\"model\":\"$MODELO\"}" \
+    -d "{\"path\":\"$ALVO\",\"hiddenFeatures\":[],\"model\":\"$MODELO\",\"modo\":\"automatico\"}" \
     | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('id') or 'ERRO:'+str(d.get('error'))[:120])")
 
   case "$ID" in

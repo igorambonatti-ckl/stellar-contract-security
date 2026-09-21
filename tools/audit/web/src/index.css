@@ -30,6 +30,15 @@
     @apply bg-white rounded-xl border border-line shadow-card;
   }
 
+  /* Rótulo curto inline: classe de invariante, confiança, tipo de arquivo.
+     Existia no markup e não no CSS, então renderizava como texto solto e
+     desalinhava a lista inteira de curadoria. */
+  .chip {
+    @apply inline-flex items-center px-2 py-0.5 rounded
+           bg-surface-secondary text-ink-muted border border-line
+           text-[11px] font-medium whitespace-nowrap;
+  }
+
   /* Tag/Badge azul */
   .tag-blue {
     @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-md

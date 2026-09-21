@@ -16,6 +16,8 @@
 set -uo pipefail
 
 API=${API:-http://localhost:5174}
+# O benchmark mede o modo automático por padrão; MODO=curado exige um humano.
+MODO=${MODO:-automatico}
 RAIZ=$(cd "$(dirname "$0")" && pwd)
 ORIG=${VAULT:-/Users/igorfambonatti/dev/stellar-studies/04-prototype-development/contracts/soroban-vault}
 CONTRACTS=$(dirname "$ORIG")
@@ -54,7 +56,7 @@ rodar() {
   local INI FIM ID S
   INI=$(date +%s)
   ID=$(curl -s -X POST "$API/api/pipeline" -H 'Content-Type: application/json' \
-    -d "{\"path\":\"$DIR/src/lib.rs\",\"hiddenFeatures\":$ESCONDER,\"model\":\"$M\"}" \
+    -d "{\"path\":\"$DIR/src/lib.rs\",\"hiddenFeatures\":$ESCONDER,\"model\":\"$M\",\"modo\":\"${MODO:-automatico}\"}" \
     | python3 -c "import json,sys; print(json.load(sys.stdin).get('id',''))")
   [ -z "$ID" ] && { echo "[$N $M] não iniciou"; return; }
   echo "[$N $M] pipeline $ID"

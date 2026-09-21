@@ -5,7 +5,8 @@ import { spawn } from 'node:child_process';
 import type { Response } from 'express';
 
 import { inspectContract, cleanView, contractSource, type ContractInfo } from './inspect.js';
-import { complete, extractCode, isConfigured } from './openrouter.js';
+import { copiarCrate, descartarCopia, diffDaCopia, type Copia, type ArquivoDiff } from './copia.js';
+import { complete, extractCode, isConfigured, currentModel } from './openrouter.js';
 import {
   systemPrompt, proposeInvariants, generateRig, generateCheck, fixOneTest, fixFailingTest,
   harnessHeader,
@@ -59,9 +60,9 @@ function AMBIENTE_PROPTEST(casos: number): Record<string, string> {
  *    qualquer propriedade sobre uma faixa de valores, então sem isso a metade
  *    mais valiosa dos testes não compila em lugar nenhum fora deste repositório.
  *
- * As duas edições são aditivas, e o manifesto original volta na limpeza.
- * Devolve a lista do que mudou, para o log dizer em voz alta — é o `Cargo.toml`
- * de outra pessoa.
+ * As duas edições acontecem na **cópia**, nunca no crate original, e aparecem
+ * no diff que a auditoria entrega junto com o relatório. Devolve a lista do que
+ * mudou, para o log dizer em voz alta.
  */
 async function prepararCrate(p: Pipeline, info: ContractInfo): Promise<string[]> {
   const caminho = join(info.path, 'Cargo.toml');
@@ -82,10 +83,7 @@ async function prepararCrate(p: Pipeline, info: ContractInfo): Promise<string[]>
     feito.push('acrescentei proptest às dev-dependencies — as propriedades sobre faixas de valores precisam dele');
   }
 
-  if (feito.length) {
-    p.manifestoOriginal = { caminho, conteudo: original };
-    await writeFile(caminho, texto, 'utf8');
-  }
+  if (feito.length) await writeFile(caminho, texto, 'utf8');
   return feito;
 }
 
@@ -535,10 +533,21 @@ export interface Invariant extends CuratedInvariant {
   confidence?: string;
   rationale?: string;
   /** Preenchido pela etapa de validação. */
-  verdict?: 'mantida' | 'descartada' | 'nao-testada';
+  /**
+   * `achado` é a razão de a ferramenta existir.
+   *
+   * Uma propriedade que continua falhando depois de uma rodada de correção é
+   * ou um defeito no contrato, ou uma invariante que não vale para ele. A
+   * ferramenta não sabe qual — quem audita sabe, e para decidir precisa do
+   * contra-exemplo. Tratar isso como descarte, que era o que acontecia,
+   * significa jogar fora justamente o que se foi procurar.
+   */
+  verdict?: 'mantida' | 'achado' | 'descartada' | 'nao-testada';
   verdictReason?: string;
   /** Diagnóstico do cargo, quando a invariante caiu por não compilar. */
   compileError?: string;
+  /** A sequência mínima que quebra a propriedade, já encolhida pelo proptest. */
+  contraExemplo?: string;
 }
 
 export interface Pipeline {
@@ -571,8 +580,10 @@ export interface Pipeline {
   rigCode?: string;
   /** Diretório de build exclusivo, para auditorias simultâneas não se bloquearem. */
   targetDir?: string;
-  /** Manifesto original, quando a ferramenta precisou mexer no crate-type. */
-  manifestoOriginal?: { caminho: string; conteudo: string };
+  /** A cópia autônoma onde a auditoria trabalha. O original nunca é tocado. */
+  copia?: Copia;
+  /** Invariantes que citam uma feature do crate pelo nome — sinal de gabarito lido. */
+  vazamento?: { invariantes: string[]; features: string[] };
   rawProposal?: string;
   listeners: Set<Response>;
   cancelled: boolean;
@@ -694,19 +705,25 @@ export function startPipeline(opts: {
   model?: string;
   modo?: 'curado' | 'automatico';
 }): Pipeline {
+  // Um default só, resolvido uma vez. Estava em dois lugares — a lista de
+  // etapas testava `opts.modo === 'curado'` e o campo usava `opts.modo ??
+  // 'curado'` — então uma chamada sem `modo` criava um pipeline em modo curado
+  // *sem* a etapa de curadoria, e ele morria ao tentar atualizá-la.
+  const modo = opts.modo ?? 'curado';
+
   const p: Pipeline = {
     id: randomUUID(),
     path: opts.path,
     hiddenFeatures: opts.hiddenFeatures,
     model: opts.model,
-    modo: opts.modo ?? 'curado',
+    modo,
     usage: { entrada: 0, saida: 0 },
     status: 'rodando',
     stages: [
       { id: 'inspecionar', label: 'Inspecionar o contrato', status: 'pendente' },
       { id: 'suite', label: 'Suíte existente, antes de tocar no crate', status: 'pendente' },
       { id: 'propor', label: 'IA propõe invariantes', status: 'pendente' },
-      ...(opts.modo === 'curado'
+      ...(modo === 'curado'
         ? [{ id: 'curadoria' as StageId, label: 'Curadoria: o que vale testar', status: 'pendente' as StageStatus }]
         : []),
       { id: 'gerar', label: 'IA escreve um teste por invariante', status: 'pendente' },
@@ -736,7 +753,20 @@ async function run(p: Pipeline, runMutants: boolean) {
   try {
     // ── 1. Inspecionar ──────────────────────────────────────────────────────
     setStage(p, 'inspecionar', { status: 'rodando', startedAt: Date.now() });
-    const info = await inspectContract(p.path);
+    const original = await inspectContract(p.path);
+
+    // A auditoria trabalha numa cópia autônoma, fora do repositório. Ela precisa
+    // escrever para funcionar — crate-type, dev-dependencies, o harness — e
+    // fazer isso no código de quem contratou a auditoria não é aceitável, mesmo
+    // sendo aditivo e reversível: basta o processo morrer no meio para o
+    // Cargo.toml de outra pessoa ficar alterado.
+    const copia = await copiarCrate(original.path, p.id);
+    p.copia = copia;
+    for (const a of copia.ajustes) log(p, `cópia: ${a}`);
+    log(p, `a auditoria roda em ${copia.dir} — o crate original não é tocado`);
+
+    // Reinspeciona a cópia: é sobre ela que tudo daqui para a frente fala.
+    const info = await inspectContract(copia.dir);
     p.info = info;
     p.targetDir = join(info.path, '.audit-target');
     setStage(p, 'inspecionar', {
@@ -758,7 +788,7 @@ async function run(p: Pipeline, runMutants: boolean) {
     // escrita no crate de outra pessoa.
     const editado = await prepararCrate(p, info);
     for (const e of editado) log(p, `Cargo.toml: ${e}`);
-    if (editado.length) log(p, 'O Cargo.toml original volta na limpeza.');
+    if (editado.length) log(p, 'Tudo isso na cópia — o Cargo.toml original fica intacto.');
     guard();
 
     // ── 2. Suíte existente, como baseline ───────────────────────────────────
@@ -842,12 +872,36 @@ async function run(p: Pipeline, runMutants: boolean) {
     }
 
     p.invariants = invs.map((i) => ({ ...i, verdict: 'nao-testada' as const }));
+
+    // Uma invariante que cita pelo nome uma feature escondida não foi
+    // deduzida do contrato — foi lida do gabarito. Acontece quando ninguém
+    // marcou as features na tela, e o resultado *parece* excelente: o modelo
+    // descreve com precisão bugs que ele está enxergando.
+    //
+    // Sem este aviso a execução passa por uma detecção brilhante. É o modo de
+    // falha mais perigoso desta ferramenta, porque erra para o lado bonito.
+    const todas = info.features;
+    if (todas.length) {
+      const alt = todas.map((f) => f.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+      const re = new RegExp(`\\b(${alt})\\b`);
+      const vazando = p.invariants.filter(
+        (i) => re.test(`${i.statement} ${i.observation ?? ''} ${i.assumption ?? ''}`));
+
+      if (vazando.length) {
+        const citadas = [...new Set(vazando.flatMap(
+          (i) => (`${i.statement} ${i.observation ?? ''} ${i.assumption ?? ''}`.match(new RegExp(alt, 'g')) ?? [])))];
+        p.vazamento = { invariantes: vazando.map((i) => i.id), features: citadas };
+        log(p, `!! ATENÇÃO: ${vazando.length} invariante(s) citam ${citadas.join(', ')} pelo nome — ` +
+          'o modelo está lendo os bugs no fonte, não deduzindo do contrato. ' +
+          'Marque essas features para esconder e rode de novo; esta execução não mede detecção.');
+      }
+    }
     setStage(p, 'propor', {
       status: 'ok',
       finishedAt: Date.now(),
       detail: `${p.invariants.length} propostas · ${proposta.model}` +
         (perdidos ? ` · ${perdidos} descartada(s) por JSON inválido` : ''),
-      data: { invariants: p.invariants, raw: proposta.text, perdidos },
+      data: { invariants: p.invariants, raw: proposta.text, perdidos, vazamento: p.vazamento },
     });
     guard();
 
@@ -866,7 +920,7 @@ async function run(p: Pipeline, runMutants: boolean) {
         data: { invariants: p.invariants },
       });
       p.status = 'aguardando-curadoria';
-      emit(p, 'curadoria', { invariants: p.invariants });
+      emit(p, 'curadoria', { invariants: p.invariants, vazamento: p.vazamento ?? null });
 
       const aceitas = await new Promise<string[]>((resolve) => { p.aguardando = resolve; });
       p.aguardando = undefined;
@@ -895,7 +949,7 @@ async function run(p: Pipeline, runMutants: boolean) {
         setStage(p, 'gerar', { status: 'pulado', detail: 'nenhuma invariante aceita' });
         setStage(p, 'compilar', { status: 'pulado' });
         setStage(p, 'validar', { status: 'pulado' });
-        relatorio(p, { compilou: false, baselineOk });
+        await relatorio(p, { compilou: false, baselineOk });
         return;
       }
     }
@@ -939,7 +993,7 @@ async function run(p: Pipeline, runMutants: boolean) {
       });
       setStage(p, 'compilar', { status: 'pulado' });
       setStage(p, 'validar', { status: 'pulado' });
-      relatorio(p, { compilou: false, baselineOk });
+      await relatorio(p, { compilou: false, baselineOk });
       return;
     }
     p.rigCode = rigCode;
@@ -1150,7 +1204,7 @@ proptest! {
         detail: 'nenhum teste gerado compila',
       });
       setStage(p, 'validar', { status: 'pulado', detail: 'nada para rodar' });
-      relatorio(p, { compilou: false, baselineOk });
+      await relatorio(p, { compilou: false, baselineOk });
       return;
     }
 
@@ -1165,7 +1219,7 @@ proptest! {
         data: { descartadosCompilacao, reparados },
       });
       setStage(p, 'validar', { status: 'pulado', detail: 'nada para rodar' });
-      relatorio(p, { compilou: false, baselineOk });
+      await relatorio(p, { compilou: false, baselineOk });
       return;
     }
 
@@ -1259,13 +1313,13 @@ proptest! {
     for (const t of falhos) {
       const inv = invariantForTest(t, p.invariants);
       if (inv && inv.verdict !== 'descartada') {
-        inv.verdict = 'descartada';
+        inv.verdict = 'achado';
         inv.verdictReason =
-          `A propriedade falha contra o contrato como ele é (teste ${t}), e continuou ` +
-          `falhando depois de uma rodada de correção. Ou a invariante não vale, ou o ` +
-          `harness a implementou errado — nos dois casos reportá-la seria acusar bug ` +
-          `onde não há evidência.`;
-        descartadas++;
+          'A propriedade falha contra o contrato, e continuou falhando depois de uma ' +
+          'rodada de correção do harness. Ou o contrato tem um defeito aqui, ou a ' +
+          'invariante não vale para ele — o contra-exemplo é o que decide, e quem ' +
+          'decide é quem audita.';
+        inv.contraExemplo = trechoDaFalha(val.output, t);
       }
     }
     for (const i of p.invariants) {
@@ -1282,7 +1336,7 @@ proptest! {
     // contrato, então deixá-lo no arquivo transforma toda execução futura em
     // detecção falsa — foi o que quase aconteceu com a primeira medição de
     // detecção, cujos números incluíam cinco testes vermelhos de nascença.
-    let sobreviventes = testes.filter((t) => t.inv.verdict !== 'descartada');
+    let sobreviventes = testes.filter((t) => t.inv.verdict === 'nao-testada' || t.inv.verdict === 'mantida');
     if (sobreviventes.length !== testes.length) {
       await escrever(sobreviventes);
       p.harnessCode = await readFile(p.harnessPath, 'utf8');
@@ -1358,7 +1412,7 @@ proptest! {
         descartadas++;
         log(p, `${inv.id}: instável entre execuções; descartado`);
       }
-      sobreviventes = sobreviventes.filter((t) => t.inv.verdict !== 'descartada');
+      sobreviventes = sobreviventes.filter((t) => t.inv.verdict !== 'descartada' && t.inv.verdict !== 'achado');
       await escrever(sobreviventes);
       // Um harness corrigido que não compila derruba o arquivo inteiro, e a
       // culpada é conhecida: só as que acabaram de ser corrigidas. Reverter
@@ -1384,9 +1438,13 @@ proptest! {
     setStage(p, 'validar', {
       status: 'ok',
       finishedAt: Date.now(),
+      // Conta sobre o que foi *testado*, não sobre o catálogo: dizer "todas as 7
+      // sobrevivem" quando duas nem compilaram atribui a elas uma aprovação que
+      // ninguém deu.
       detail: descartadas === 0 && orfas.length === 0
-        ? `todas as ${p.invariants.length} sobrevivem ao contrato correto`
-        : `${descartadas} descartada(s)` + (orfas.length ? `, ${orfas.length} falha(s) órfã(s)` : ''),
+        ? `as ${testes.length} testadas sobrevivem ao contrato correto`
+        : `${descartadas} descartada(s) de ${testes.length} testadas` +
+          (orfas.length ? `, ${orfas.length} falha(s) órfã(s)` : ''),
       data: { falhos, descartadas, orfas },
     });
 
@@ -1396,7 +1454,7 @@ proptest! {
         ['mutants', '-p', info.crateName, '--timeout', '120', '--', '--test', 'audit_generated'],
         AMBIENTE_PROPTEST(32));
     }
-    relatorio(p, { compilou: true, baselineOk, descartadas, orfas });
+    await relatorio(p, { compilou: true, baselineOk, descartadas, orfas });
   } catch (e: any) {
     if (e?.cancelled) {
       p.status = 'cancelado';
@@ -1411,24 +1469,35 @@ proptest! {
   }
 }
 
-function relatorio(p: Pipeline, extra: Record<string, unknown>) {
+async function relatorio(p: Pipeline, extra: Record<string, unknown>) {
+  const diff: ArquivoDiff[] = p.copia ? await diffDaCopia(p.copia).catch(() => []) : [];
   const mantidas = p.invariants.filter((i) => i.verdict === 'mantida');
+  const achados = p.invariants.filter((i) => i.verdict === 'achado');
   const descartadas = p.invariants.filter((i) => i.verdict === 'descartada');
 
   setStage(p, 'relatorio', {
     status: 'ok',
     startedAt: Date.now(),
     finishedAt: Date.now(),
-    detail: `${mantidas.length} mantidas, ${descartadas.length} descartadas`,
+    detail: (achados.length ? `${achados.length} a investigar · ` : '') +
+      `${mantidas.length} verificadas, ${descartadas.length} descartadas`,
     data: {
       ...extra,
       propostas: p.invariants.length,
       mantidas: mantidas.length,
+      achados: achados.length,
       descartadas: descartadas.length,
       yield: p.invariants.length
         ? Math.round((mantidas.length / p.invariants.length) * 100)
         : 0,
       invariants: p.invariants,
+      diff,
+      copia: p.copia?.dir,
+      // O custo entra no relatório porque é metade do argumento: uma auditoria
+      // que custa centavos pode rodar a cada pull request; uma que custa dois
+      // dólares roda quando alguém lembra.
+      usage: p.usage,
+      modelo: p.model ?? currentModel(),
     },
   });
 
@@ -1471,11 +1540,17 @@ export function curar(p: Pipeline, aceitas: string[]): boolean {
   return true;
 }
 
-/** Remove o harness gerado e desfaz o que a ferramenta escreveu no crate. */
+/**
+ * Descarta a cópia inteira.
+ *
+ * Não há mais nada a desfazer no crate original — a auditoria nunca escreveu
+ * nele. O que se apaga aqui é só espaço em disco, e é por isso que a limpeza
+ * deixou de ser uma obrigação e virou uma conveniência: se ninguém chamar, o
+ * pior que acontece é uma pasta esquecida em /tmp.
+ */
 export async function cleanupHarness(p: Pipeline) {
-  if (p.harnessPath) await rm(p.harnessPath, { force: true });
-  if (p.manifestoOriginal) {
-    await writeFile(p.manifestoOriginal.caminho, p.manifestoOriginal.conteudo, 'utf8');
-    p.manifestoOriginal = undefined;
+  if (p.copia) {
+    await descartarCopia(p.copia);
+    p.copia = undefined;
   }
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Play, Square, Loader2, CheckCircle2, XCircle, MinusCircle, Circle,
   ChevronDown, ChevronRight, Trash2, FileCode2, Clock, EyeOff, UserCheck, Wand2,
+  FilePlus2, FileDiff, ShieldCheck, AlertTriangle,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { Erro } from '../components/Erro';
@@ -13,10 +14,41 @@ interface Stage {
   startedAt?: number; finishedAt?: number; data?: any;
 }
 
+interface ArquivoDiff {
+  caminho: string; tipo: 'novo' | 'alterado'; antes?: string; depois: string;
+}
+
+/**
+ * Diff por linha, o suficiente para ler o que a auditoria escreveu.
+ *
+ * Um algoritmo de verdade (Myers) seria melhor para arquivos grandes, mas os
+ * dois casos aqui são um `Cargo.toml` com duas linhas a mais e um harness que é
+ * arquivo novo inteiro — a versão simples mostra os dois corretamente.
+ */
+function linhasDoDiff(antes: string | undefined, depois: string) {
+  const a = (antes ?? '').split('\n');
+  const b = depois.split('\n');
+  if (antes === undefined) return b.map((t) => ({ sinal: '+' as const, texto: t }));
+
+  const antigas = new Set(a);
+  const novas = new Set(b);
+  const out: { sinal: '+' | '-' | ' '; texto: string }[] = [];
+  let i = 0, j = 0;
+  while (i < a.length || j < b.length) {
+    if (i < a.length && j < b.length && a[i] === b[j]) { out.push({ sinal: ' ', texto: a[i] }); i++; j++; }
+    else if (j < b.length && !antigas.has(b[j])) { out.push({ sinal: '+', texto: b[j] }); j++; }
+    else if (i < a.length && !novas.has(a[i])) { out.push({ sinal: '-', texto: a[i] }); i++; }
+    else { i++; j++; }
+  }
+  return out;
+}
+
 interface Invariant {
   id: string; statement: string; class: string; observation: string;
   confidence?: string; assumption?: string;
-  verdict?: 'mantida' | 'descartada' | 'nao-testada'; verdictReason?: string;
+  verdict?: 'mantida' | 'achado' | 'descartada' | 'nao-testada'; verdictReason?: string;
+  /** A sequência mínima que quebra a propriedade, encolhida pelo proptest. */
+  contraExemplo?: string;
 }
 
 const ICON: Record<StageStatus, React.ReactNode> = {
@@ -33,6 +65,22 @@ function dur(s: Stage) {
   const ms = s.finishedAt - s.startedAt;
   return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(1)}s`;
 }
+
+/**
+ * Preço por milhão de tokens [entrada, saída], do catálogo do OpenRouter.
+ *
+ * Fica no cliente porque serve para uma frase só — "esta auditoria custou X" —
+ * e porque essa frase é metade do argumento: uma auditoria de três centavos
+ * roda a cada pull request; uma de dois dólares roda quando alguém lembra.
+ * Um preço desatualizado aqui erra o rodapé de um relatório, não uma decisão.
+ */
+const PRECOS: Record<string, [number, number]> = {
+  'google/gemini-3.1-flash-lite': [0.25, 1.50],
+  'qwen/qwen3-coder-next':        [0.12, 0.80],
+  'openai/gpt-5.4-nano':          [0.20, 1.25],
+  'x-ai/grok-4.3':                [1.25, 2.50],
+  'anthropic/claude-sonnet-4.5':  [3.00, 15.00],
+};
 
 /** Caminhos já auditados, para não ter que escolher de novo. */
 const RECENTES = 'auditoria:recentes';
@@ -64,7 +112,13 @@ export function Pipeline() {
   // plantados para 7 de 7. O modo automático fica disponível ao lado, e o que
   // ele mede é exatamente o tamanho dessa diferença.
   const [modo, setModo] = useState<'curado'|'automatico'>('curado');
+  // Poucos modelos, escolhidos por medição neste projeto e não por catálogo.
+  // O gemini-flash-lite faz uma auditoria completa por três centavos; o
+  // sonnet-4.5 faz a mesma por um dólar e meio e compila tudo de primeira. A
+  // diferença aparece no relatório, que é onde ela deve ser decidida.
+  const [modelo, setModelo] = useState('google/gemini-3.1-flash-lite');
   const [propostas, setPropostas] = useState<Invariant[] | null>(null);
+  const [vazamento, setVazamento] = useState<{ invariantes: string[]; features: string[] } | null>(null);
   const [aceitas, setAceitas] = useState<Set<string>>(new Set());
   const [enviando, setEnviando] = useState(false);
   const [id, setId] = useState<string | null>(null);
@@ -109,13 +163,19 @@ export function Pipeline() {
     } catch { /* silencioso: é conveniência, o pipeline inspeciona de novo */ }
   }
 
-  async function iniciar(alvo = path) {
+  /**
+   * `ocultar` existe por causa do botão "esconder e rodar de novo": chamar
+   * `setEscondidas` e `iniciar()` em seguida mandaria o valor antigo do estado,
+   * e o botão prometeria esconder as features enquanto reenviava exatamente a
+   * mesma requisição.
+   */
+  async function iniciar(alvo = path, ocultar = escondidas) {
     setErro(null); setStages([]); setLog([]); setStatus('rodando'); setAberto({});
-    setPropostas(null); setAceitas(new Set());
+    setPropostas(null); setAceitas(new Set()); setVazamento(null);
     try {
       const res = await fetch('/api/pipeline', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: alvo.trim(), hiddenFeatures: escondidas, modo }),
+        body: JSON.stringify({ path: alvo.trim(), hiddenFeatures: ocultar, modo, model: modelo }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
@@ -131,6 +191,9 @@ export function Pipeline() {
       src.addEventListener('stage', (e) => {
         const s: Stage = JSON.parse((e as MessageEvent).data);
         setStages((prev) => prev.map((x) => (x.id === s.id ? s : x)));
+        // No modo automático não há painel de curadoria, e era lá que o aviso
+        // de gabarito vazado vivia — o detector disparava e ninguém via.
+        if (s.id === 'propor' && s.data?.vazamento) setVazamento(s.data.vazamento);
       });
       src.addEventListener('log', (e) => {
         setLog((l) => [...l, JSON.parse((e as MessageEvent).data)]);
@@ -138,6 +201,7 @@ export function Pipeline() {
       src.addEventListener('curadoria', (e) => {
         const d = JSON.parse((e as MessageEvent).data);
         setPropostas(d.invariants);
+        setVazamento(d.vazamento ?? null);
         // Tudo aceito por padrão: o trabalho é tirar o que não vale, e partir
         // de "nada aceito" faria uma curadoria apressada virar zero invariante.
         setAceitas(new Set(d.invariants.map((i: Invariant) => i.id)));
@@ -170,11 +234,6 @@ export function Pipeline() {
           <strong className="text-ink">contra o contrato como ele é</strong> — o que falha ali é
           falso positivo e sai sozinho.
         </p>
-        <p className="text-sm text-ink-muted max-w-[72ch] leading-relaxed">
-          No benchmark deste projeto, com sete bugs plantados e resposta conhecida, a curadoria
-          é o passo que mais pesa: <strong className="text-ink">7 de 7</strong> com ela,{' '}
-          <strong className="text-ink">1 a 2 de 7</strong> sem.
-        </p>
       </header>
 
       <div className="flex flex-col gap-3">
@@ -203,8 +262,19 @@ export function Pipeline() {
           )}
         </div>
 
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-ink-muted">Modo:</span>
+        <div className="flex items-center gap-2 text-sm flex-wrap">
+          <span className="text-ink-muted">Modelo:</span>
+          <select className="text-sm border border-line rounded-md px-2 py-1 bg-surface text-ink"
+            value={modelo} onChange={(e) => setModelo(e.target.value)}
+            disabled={status === 'rodando' || status === 'aguardando-curadoria'}>
+            <option value="google/gemini-3.1-flash-lite">gemini-3.1-flash-lite · ~US$ 0,03</option>
+            <option value="qwen/qwen3-coder-next">qwen3-coder-next · ~US$ 0,08</option>
+            <option value="openai/gpt-5.4-nano">gpt-5.4-nano · ~US$ 0,07</option>
+            <option value="x-ai/grok-4.3">grok-4.3 · ~US$ 0,13</option>
+            <option value="anthropic/claude-sonnet-4.5">claude-sonnet-4.5 · ~US$ 1,70</option>
+          </select>
+
+          <span className="text-ink-muted ml-3">Modo:</span>
           {([
             ['curado', 'Curado', UserCheck, 'Para depois de propor e espera seu veredito'],
             ['automatico', 'Automático', Wand2, 'Vai direto ao fim, sem curadoria — mede quanto ela vale'],
@@ -235,8 +305,9 @@ export function Pipeline() {
           </div>
         )}
 
-        {features.length > 0 && status !== 'rodando' && (
-          <div className="card p-4 flex flex-col gap-3">
+        {features.length > 0 && (
+          <div id="esconder" className={clsx('card p-4 flex flex-col gap-3',
+            status === 'rodando' && 'opacity-60')}>
             <div className="flex items-start gap-2">
               <EyeOff className="w-4 h-4 text-ink-muted mt-0.5 shrink-0" />
               <div>
@@ -253,7 +324,7 @@ export function Pipeline() {
               {features.map((f) => {
                 const on = escondidas.includes(f);
                 return (
-                  <button key={f}
+                  <button key={f} disabled={status === 'rodando'}
                     onClick={() => setEscondidas((xs) =>
                       on ? xs.filter((x) => x !== f) : [...xs, f])}
                     className={on
@@ -264,7 +335,7 @@ export function Pipeline() {
                 );
               })}
               {features.length > 1 && (
-                <button
+                <button disabled={status === 'rodando'}
                   onClick={() => setEscondidas(escondidas.length === features.length ? [] : features)}
                   className="text-xs text-ink-muted hover:text-brand-600 underline underline-offset-2 px-1">
                   {escondidas.length === features.length ? 'nenhuma' : 'todas'}
@@ -277,8 +348,200 @@ export function Pipeline() {
 
       <Erro msg={erro} />
 
+      {vazamento && (
+        <div className="rounded-lg border border-danger/40 bg-danger/5 p-4 flex gap-3">
+          <AlertTriangle className="w-5 h-5 text-danger shrink-0 mt-0.5" />
+          <div className="flex flex-col gap-1.5 min-w-0">
+            <strong className="text-sm text-ink">
+              O modelo está lendo o gabarito, não deduzindo do contrato
+            </strong>
+            <p className="text-sm text-ink-muted leading-relaxed">
+              {vazamento.invariantes.length} invariante(s) citam{' '}
+              <code className="font-mono text-xs break-words">{vazamento.features.join(', ')}</code>{' '}
+              pelo nome. Essas features foram enviadas junto com o código, e os caminhos que elas
+              ativam também — o modelo está descrevendo defeitos que está <em>vendo</em>, não
+              encontrando.
+            </p>
+            <p className="text-sm text-ink-muted leading-relaxed">
+              O resultado vai parecer excelente e não mede nada.
+            </p>
+            <button className="btn-primary w-fit mt-1"
+              onClick={async () => {
+                if (id) await fetch(`/api/pipeline/${id}/cancel`, { method: 'POST' }).catch(() => {});
+                setEscondidas(features);
+                setVazamento(null);
+                void iniciar(path, features);
+              }}>
+              <Play className="w-4 h-4" /> Esconder as {features.length} features e rodar de novo
+            </button>
+          </div>
+        </div>
+      )}
+
+      {stages.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {stages.map((s) => {
+            const temDetalhe = s.data && ['inspecionar','propor','gerar','validar','relatorio'].includes(s.id);
+            const open = aberto[s.id];
+            return (
+              <div key={s.id} className={clsx('card overflow-hidden',
+                s.status === 'rodando' && 'border-brand-300',
+                s.status === 'falhou' && 'border-red-200')}>
+                <button
+                  onClick={() => temDetalhe && setAberto((a) => ({ ...a, [s.id]: !a[s.id] }))}
+                  className={clsx('w-full flex items-center gap-3 px-4 py-3 text-left',
+                    temDetalhe && 'hover:bg-surface-secondary cursor-pointer')}>
+                  {temDetalhe
+                    ? (open ? <ChevronDown className="w-3.5 h-3.5 text-ink-muted" />
+                            : <ChevronRight className="w-3.5 h-3.5 text-ink-muted" />)
+                    : <span className="w-3.5" />}
+                  {ICON[s.status]}
+                  <span className={clsx('text-sm font-medium flex-1',
+                    s.status === 'pendente' ? 'text-ink-muted' : 'text-ink')}>{s.label}</span>
+                  {s.detail && <span className="text-xs text-ink-muted text-right">{s.detail}</span>}
+                  {dur(s) && <span className="font-mono text-[11px] text-ink-muted tabular-nums w-14 text-right">{dur(s)}</span>}
+                </button>
+
+                {open && s.id === 'relatorio' && (
+                  <div className="px-4 pb-4 pt-3 border-t border-line flex flex-col gap-4">
+                    <div className="grid sm:grid-cols-4 gap-3">
+                      {[['Propostas', s.data.propostas], ['A investigar', s.data.achados ?? 0],
+                        ['Verificadas', s.data.mantidas], ['Descartadas', s.data.descartadas]].map(([k, v]) => (
+                        <div key={k as string}>
+                          <div className="section-label mb-1">{k as string}</div>
+                          <div className={clsx('font-mono text-2xl font-bold tabular-nums',
+                            k === 'A investigar' && (v as number) > 0 ? 'text-danger' : 'text-ink')}>
+                            {v as any}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {s.data.usage && (
+                      <p className="text-xs text-ink-muted font-mono">
+                        {s.data.modelo} · {(s.data.usage.entrada / 1000).toFixed(0)}k tokens de
+                        entrada, {(s.data.usage.saida / 1000).toFixed(0)}k de saída
+                        {PRECOS[s.data.modelo] && (
+                          <strong className="text-ink not-italic">
+                            {' '}· US$ {(s.data.usage.entrada / 1e6 * PRECOS[s.data.modelo][0]
+                              + s.data.usage.saida / 1e6 * PRECOS[s.data.modelo][1]).toFixed(3)}
+                          </strong>
+                        )}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {open && s.id === 'inspecionar' && (
+                  <div className="px-4 pb-4 pt-3 border-t border-line flex flex-wrap gap-2">
+                    {s.data.entryPoints.map((e: any) => (
+                      <span key={e.name} className="font-mono text-xs px-2 py-1 rounded bg-surface-secondary border border-line text-ink-muted">
+                        {e.name}{e.requiresAuth && <span className="text-brand-500"> · auth</span>}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {open && s.id === 'gerar' && (
+                  <pre className="mx-4 mb-4 p-3 rounded-lg bg-ink text-brand-100 text-[11px] font-mono overflow-auto max-h-80 leading-relaxed">
+                    {s.data.code}
+                  </pre>
+                )}
+
+                {open && (s.id === 'propor' || s.id === 'validar') && s.data?.raw && (
+                  <pre className="mx-4 mb-4 p-3 rounded-lg bg-ink text-brand-100 text-[11px] font-mono overflow-auto max-h-80">
+                    {s.data.raw}
+                  </pre>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {invariantes.length > 0 && (() => {
+        // O resultado é três coisas diferentes e elas exigem coisas diferentes
+        // de quem lê. Misturá-las numa lista só era o motivo de o relatório não
+        // significar nada: "19 mantidas, 11 descartadas" não diz se a auditoria
+        // encontrou algo.
+        const achados = invariantes.filter((i) => i.verdict === 'achado');
+        const verificadas = invariantes.filter((i) => i.verdict === 'mantida');
+        const fora = invariantes.filter((i) => i.verdict === 'descartada');
+
+        const Grupo = ({ titulo, explicacao, itens, tom }: {
+          titulo: string; explicacao: string; itens: Invariant[];
+          tom: 'achado' | 'ok' | 'fora';
+        }) => itens.length === 0 ? null : (
+          <section className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-xl font-bold text-ink flex items-center gap-2">
+                {tom === 'achado' && <AlertTriangle className="w-5 h-5 text-danger" />}
+                {tom === 'ok' && <ShieldCheck className="w-5 h-5 text-success" />}
+                {tom === 'fora' && <MinusCircle className="w-5 h-5 text-ink-muted" />}
+                {titulo}
+                <span className="font-mono text-base text-ink-muted tabular-nums">{itens.length}</span>
+              </h2>
+              <p className="text-sm text-ink-muted max-w-[70ch] leading-relaxed">{explicacao}</p>
+            </div>
+            <div className="flex flex-col gap-2">
+              {itens.map((inv) => (
+                <div key={inv.id} className={clsx('card p-4 flex flex-col gap-2 overflow-hidden',
+                  tom === 'achado' && 'border-danger/40 bg-danger/5',
+                  tom === 'fora' && 'opacity-70')}>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-xs font-bold text-ink">{inv.id}</span>
+                    <span className="chip">{inv.class}</span>
+                  </div>
+                  <p className="text-sm text-ink leading-relaxed break-words">{inv.statement}</p>
+                  {inv.verdictReason && (
+                    <p className={clsx('text-xs leading-relaxed border-l-2 pl-3',
+                      tom === 'achado' ? 'text-ink border-danger/40' : 'text-ink-muted border-line')}>
+                      {inv.verdictReason}
+                    </p>
+                  )}
+                  {inv.contraExemplo && (
+                    <details className="text-xs">
+                      <summary className="cursor-pointer text-danger font-medium select-none">
+                        Contra-exemplo mínimo
+                      </summary>
+                      <pre className="mt-2 p-3 bg-ink text-brand-100 rounded-lg overflow-auto max-h-64 text-[11px] leading-relaxed whitespace-pre-wrap">
+                        {inv.contraExemplo}
+                      </pre>
+                    </details>
+                  )}
+                  {tom === 'ok' && inv.assumption && (
+                    <p className="text-xs text-ink-muted leading-relaxed border-l-2 border-line pl-3">
+                      <span className="font-semibold">Suposição não verificada:</span> {inv.assumption}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+
+        return (
+          <div className="flex flex-col gap-8">
+            <Grupo tom="achado" titulo="A investigar" itens={achados}
+              explicacao="A propriedade falhou contra o contrato e continuou falhando depois de uma
+                tentativa de correção do harness. Ou o contrato tem um defeito aqui, ou a invariante
+                não vale para ele. O contra-exemplo é a sequência mínima que quebra — a ferramenta
+                não decide qual dos dois é, quem audita decide." />
+
+            <Grupo tom="ok" titulo="Verificadas" itens={verificadas}
+              explicacao="Valem para toda sequência de operações sorteada, contra o contrato como ele
+                é. O harness que ficou na cópia contém exatamente estas — é uma suíte de regressão
+                pronta para entrar no CI." />
+
+            <Grupo tom="fora" titulo="Não verificadas" itens={fora}
+              explicacao="Não viraram evidência: ou o teste gerado não compilou, ou a propriedade se
+                mostrou instável entre execuções, ou saiu na curadoria. Ficam listadas porque um
+                silêncio aqui faria o relatório parecer mais completo do que é." />
+          </div>
+        );
+      })()}
+
       {propostas && status === 'aguardando-curadoria' && (
-        <section className="card border-brand-300 flex flex-col gap-4">
+        <section className="card p-5 border-brand-300 flex flex-col gap-4 overflow-hidden">
           <header className="flex items-start justify-between gap-4 flex-wrap">
             <div className="flex flex-col gap-1">
               <span className="section-label flex items-center gap-1.5">
@@ -329,9 +592,9 @@ export function Pipeline() {
               return (
                 <li key={inv.id}>
                   <label className={clsx(
-                    'flex gap-3 p-3 rounded-lg border cursor-pointer transition-colors',
+                    'flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors',
                     on ? 'border-brand-200 bg-brand-50/40' : 'border-line opacity-55 hover:opacity-80')}>
-                    <input type="checkbox" checked={on} className="mt-1 accent-brand-500"
+                    <input type="checkbox" checked={on} className="mt-0.5 shrink-0 accent-brand-500 w-4 h-4"
                       onChange={() => setAceitas((prev) => {
                         const p = new Set(prev);
                         if (p.has(inv.id)) p.delete(inv.id); else p.add(inv.id);
@@ -348,9 +611,9 @@ export function Pipeline() {
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-ink leading-relaxed">{inv.statement}</p>
+                      <p className="text-sm text-ink leading-relaxed break-words">{inv.statement}</p>
                       {inv.assumption && (
-                        <p className="text-xs text-ink-muted leading-relaxed">
+                        <p className="text-xs text-ink-muted leading-relaxed break-words">
                           <strong>Assume:</strong> {inv.assumption}
                         </p>
                       )}
@@ -360,105 +623,6 @@ export function Pipeline() {
               );
             })}
           </ul>
-        </section>
-      )}
-
-      {stages.length > 0 && (
-        <div className="flex flex-col gap-2">
-          {stages.map((s) => {
-            const temDetalhe = s.data && ['inspecionar','propor','gerar','validar','relatorio'].includes(s.id);
-            const open = aberto[s.id];
-            return (
-              <div key={s.id} className={clsx('card overflow-hidden',
-                s.status === 'rodando' && 'border-brand-300',
-                s.status === 'falhou' && 'border-red-200')}>
-                <button
-                  onClick={() => temDetalhe && setAberto((a) => ({ ...a, [s.id]: !a[s.id] }))}
-                  className={clsx('w-full flex items-center gap-3 px-4 py-3 text-left',
-                    temDetalhe && 'hover:bg-surface-secondary cursor-pointer')}>
-                  {temDetalhe
-                    ? (open ? <ChevronDown className="w-3.5 h-3.5 text-ink-muted" />
-                            : <ChevronRight className="w-3.5 h-3.5 text-ink-muted" />)
-                    : <span className="w-3.5" />}
-                  {ICON[s.status]}
-                  <span className={clsx('text-sm font-medium flex-1',
-                    s.status === 'pendente' ? 'text-ink-muted' : 'text-ink')}>{s.label}</span>
-                  {s.detail && <span className="text-xs text-ink-muted text-right">{s.detail}</span>}
-                  {dur(s) && <span className="font-mono text-[11px] text-ink-muted tabular-nums w-14 text-right">{dur(s)}</span>}
-                </button>
-
-                {open && s.id === 'relatorio' && (
-                  <div className="px-4 pb-4 pt-3 border-t border-line grid sm:grid-cols-4 gap-3">
-                    {[['Propostas', s.data.propostas], ['Mantidas', s.data.mantidas],
-                      ['Descartadas', s.data.descartadas], ['Yield', `${s.data.yield}%`]].map(([k, v]) => (
-                      <div key={k as string}>
-                        <div className="section-label mb-1">{k as string}</div>
-                        <div className="font-mono text-2xl font-bold text-ink tabular-nums">{v as any}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {open && s.id === 'inspecionar' && (
-                  <div className="px-4 pb-4 pt-3 border-t border-line flex flex-wrap gap-2">
-                    {s.data.entryPoints.map((e: any) => (
-                      <span key={e.name} className="font-mono text-xs px-2 py-1 rounded bg-surface-secondary border border-line text-ink-muted">
-                        {e.name}{e.requiresAuth && <span className="text-brand-500"> · auth</span>}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {open && s.id === 'gerar' && (
-                  <pre className="mx-4 mb-4 p-3 rounded-lg bg-ink text-brand-100 text-[11px] font-mono overflow-auto max-h-80 leading-relaxed">
-                    {s.data.code}
-                  </pre>
-                )}
-
-                {open && (s.id === 'propor' || s.id === 'validar') && s.data?.raw && (
-                  <pre className="mx-4 mb-4 p-3 rounded-lg bg-ink text-brand-100 text-[11px] font-mono overflow-auto max-h-80">
-                    {s.data.raw}
-                  </pre>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {invariantes.length > 0 && (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-xl font-bold text-ink">Invariantes</h2>
-          <div className="flex flex-col gap-2">
-            {invariantes.map((inv) => {
-              const desc = inv.verdict === 'descartada';
-              return (
-                <div key={inv.id} className={clsx('card p-4 flex flex-col gap-2',
-                  desc && 'opacity-70 border-red-200 bg-red-50/30')}>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-xs font-bold text-ink">{inv.id}</span>
-                    <span className="text-xs text-ink-muted">{inv.class}</span>
-                    <span className={clsx('px-2 py-0.5 rounded text-[10px] font-bold uppercase border ml-auto',
-                      desc ? 'bg-red-50 text-red-600 border-red-200'
-                           : 'bg-brand-50 text-brand-600 border-brand-100')}>
-                      {desc ? 'descartada' : 'mantida'}
-                    </span>
-                  </div>
-                  <p className="text-sm text-ink leading-relaxed">{inv.statement}</p>
-                  {inv.verdictReason && (
-                    <p className="text-xs text-red-700 leading-relaxed border-l-2 border-red-300 pl-3">
-                      {inv.verdictReason}
-                    </p>
-                  )}
-                  {!desc && inv.assumption && (
-                    <p className="text-xs text-ink-muted leading-relaxed border-l-2 border-line pl-3">
-                      <span className="font-semibold">Suposição não verificada:</span> {inv.assumption}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
         </section>
       )}
 
@@ -479,10 +643,68 @@ export function Pipeline() {
         </section>
       )}
 
+      {relatorio?.diff?.length > 0 && (
+        <section className="card p-5 flex flex-col gap-4 overflow-hidden">
+          <header className="flex flex-col gap-1">
+            <span className="section-label flex items-center gap-1.5">
+              <FileDiff className="w-3.5 h-3.5" /> O que a auditoria escreveu
+            </span>
+            <p className="text-sm text-ink-muted max-w-[68ch] leading-relaxed">
+              Tudo isto aconteceu numa <strong className="text-ink">cópia</strong> do crate, fora do
+              seu repositório — nada aqui tocou no original. O diff é parte do entregável: uma
+              ferramenta que gera código e mostra só o placar pede uma confiança que não merece.
+            </p>
+            {relatorio.copia && (
+              <p className="font-mono text-[11px] text-ink-muted flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-success shrink-0" />
+                {relatorio.copia}
+              </p>
+            )}
+          </header>
+
+          {(relatorio.diff as ArquivoDiff[]).map((d) => {
+            const linhas = linhasDoDiff(d.antes, d.depois);
+            const mais = linhas.filter((l) => l.sinal === '+').length;
+            const menos = linhas.filter((l) => l.sinal === '-').length;
+            const chave = `diff:${d.caminho}`;
+            const abertoAgora = aberto[chave] ?? d.tipo === 'alterado';
+            return (
+              <div key={d.caminho} className="border border-line rounded-lg overflow-hidden">
+                <button className="w-full flex items-center gap-2 px-3 py-2 bg-surface-secondary hover:bg-brand-50/50 transition-colors"
+                  onClick={() => setAberto((p) => ({ ...p, [chave]: !abertoAgora }))}>
+                  {abertoAgora ? <ChevronDown className="w-3.5 h-3.5 text-ink-muted" />
+                               : <ChevronRight className="w-3.5 h-3.5 text-ink-muted" />}
+                  {d.tipo === 'novo' ? <FilePlus2 className="w-3.5 h-3.5 text-success" />
+                                     : <FileDiff className="w-3.5 h-3.5 text-brand-500" />}
+                  <span className="font-mono text-xs text-ink">{d.caminho}</span>
+                  <span className="chip ml-1">{d.tipo}</span>
+                  <span className="font-mono text-[11px] ml-auto tabular-nums">
+                    <span className="text-success">+{mais}</span>{' '}
+                    {menos > 0 && <span className="text-danger">-{menos}</span>}
+                  </span>
+                </button>
+                {abertoAgora && (
+                  <pre className="text-[11px] font-mono overflow-auto max-h-[28rem] leading-[1.6]">
+                    {linhas.map((l, n) => (
+                      <div key={n} className={clsx('px-3 whitespace-pre-wrap',
+                        l.sinal === '+' && 'bg-success/10 text-ink',
+                        l.sinal === '-' && 'bg-danger/10 text-danger',
+                        l.sinal === ' ' && 'text-ink-muted')}>
+                        <span className="select-none opacity-40 mr-2">{l.sinal}</span>{l.texto}
+                      </div>
+                    ))}
+                  </pre>
+                )}
+              </div>
+            );
+          })}
+        </section>
+      )}
+
       {status === 'concluido' && id && (
         <button className="btn-ghost w-fit"
           onClick={() => fetch(`/api/pipeline/${id}/cleanup`, { method: 'POST' })}>
-          <Trash2 className="w-3.5 h-3.5" /> Apagar o harness gerado do crate
+          <Trash2 className="w-3.5 h-3.5" /> Apagar a cópia de trabalho
         </button>
       )}
     </div>
