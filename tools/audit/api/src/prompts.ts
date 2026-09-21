@@ -181,6 +181,18 @@ test harness. Prefer properties that:
   liveness checking already catches it;
 - exercise the platform's own hazards, not just application logic.
 
+## Two classes that catalogues keep leaving out
+
+- **The authorized happy path never fails, at any ledger.** For each entry
+  point: when the *right* principal calls it with *valid* arguments after
+  initialization, it succeeds — no matter how many ledgers have passed. A
+  contract that gates an admin call on a temporary-storage entry silently
+  starts refusing its own admin once that entry expires; this is the property
+  that sees it, and it needs the operation and its result, not just the state.
+- **Every configured address and flag is immutable except through its own
+  setter.** Token address, admin, pause flag: compare before and after each
+  operation; only the designated call may change each one.
+
 ## Soroban-specific ground to cover
 
 - **Storage tiers.** Which tier can silently disappear, and what must therefore
@@ -295,7 +307,7 @@ pub fn setup() -> Rig {
     users.push(id.clone());   // the contract itself is a reachable principal
 
     let sac = StellarAssetClient::new(&env, &token);
-    for u in &users { sac.mint(u, &1_000_000_000i128); }
+    for u in &users { sac.mint(u, &(i128::MAX / 8)); }   // big enough for products to overflow
 
     BankClient::new(&env, &id).initialize(&admin, &token);
     Rig { env, id, token, admin, users, last: std::cell::RefCell::new(None) }
@@ -447,6 +459,13 @@ is worth turning into a fuzzing property. Be strict: a property that cannot fail
 costs a test slot and proves nothing, and a property that fails for the wrong
 reason produces a finding nobody can act on.
 
+## The catalogue comes from two independent proposals — merge it
+
+Two proposals were made and concatenated, so **duplicates are expected**. When
+two entries state the same property, keep the better-formulated one and reject
+the other with reason \`duplicate of Ix\`. Two entries about the same entry point
+are *not* duplicates if they assert different relations.
+
 ## Reject only when one of these holds — and say which
 
 - **It cannot fail.** True by construction of the SDK or the protocol, not of
@@ -568,7 +587,8 @@ pub fn op_strategy() -> impl Strategy<Value = Op> { ... }
 /// operation. Plain owned values — no borrows of the Env. At minimum:
 ///   - every total the contract keeps, and each principal's balances
 ///     (in the contract *and* in the token, for every address in \`users\`)
-///   - the admin, every flag, every configured address (the token, etc.)
+///   - the admin, every flag, every configured address — the token address
+///     **must** be in the snapshot; a property about it was refused for lack of it
 ///   - **TTLs**: the instance TTL, and the persistent/temporary TTL of each
 ///     per-principal entry that exists (read via \`as_contract\` + \`get_ttl\`;
 ///     \`None\` when the entry does not exist)
@@ -613,6 +633,14 @@ address bytes collapses every access-control property into "an unknown caller
 is rejected". Put at least three principals in \`Rig\`, and include the
 **contract's own address** as a reachable choice — a contract's "principals are
 not contracts" assumption is exactly the kind that goes untested.
+
+**Fund the principals so arithmetic can actually overflow.** Mint something
+like \`i128::MAX / 8\` to each principal, not a round million. A contract that
+multiplies \`amount × total\` only wraps when the product passes ~1.7×10³⁸, and
+with balances of 10⁹ a deposit of \`i128::MAX\` is refused by the token transfer
+before the multiplication ever runs — the arithmetic property becomes
+unreachable and a wrapping bug survives every run. Big balances are cheap;
+an unreachable property is not.
 
 **Amounts must reach the edges.** Do not restrict the strategy to a comfortable
 range. Weight it: mostly small values so sequences get deep, but with real

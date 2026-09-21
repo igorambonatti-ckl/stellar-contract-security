@@ -1,0 +1,4 @@
+modelo	status	propostas	compilam	reparados	descartados	mantidas	detectados	quais	seg	usd
+x-ai/grok-4.3	concluido	13	10	4	2	7	-1/7	baseline-vermelha	221	0.2506
+x-ai/grok-4.3	concluido	13	8	2	3	7	1/7	reinit	341	0.2567
+x-ai/grok-4.3	concluido	14	12	7	0	6	2/7	missing_auth,no_ttl	341	0.2854

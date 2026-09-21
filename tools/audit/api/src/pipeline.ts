@@ -909,17 +909,25 @@ async function run(p: Pipeline, runMutants: boolean) {
       (p.hiddenFeatures.length ? ` (features escondidas: ${p.hiddenFeatures.join(', ')})` : '') +
       (info.exampleTest ? ` · referência de API: ${info.exampleTest.file.split('/').pop()}` : ' · sem teste de referência'));
 
-    const proposta = await complete({
+    // Duas propostas independentes, fundidas. Cada chamada devolve um catálogo
+    // diferente — treze invariantes numa execução, treze outras na seguinte —
+    // e a união de quatro execuções detectou 5 dos 7 bugs onde cada uma
+    // sozinha detectava 1 a 4. Pedir duas vezes custa dois centavos e traz
+    // parte dessa união para dentro de uma execução só; o crítico desduplica.
+    const [propA, propB] = await Promise.all([1, 2].map(() => complete({
       system: systemPrompt(),
       user: proposeInvariants(info, src),
       model: p.model,
       // Folgado de propósito: a 8000 o JSON de um modelo verboso vinha
       // truncado, e "0 propostas" parecia falha do modelo quando era corte meu.
       maxTokens: 16000,
-    });
-    p.usage.entrada += proposta.usage?.entrada ?? 0;
-    p.usage.saida += proposta.usage?.saida ?? 0;
-    p.rawProposal = proposta.text;
+    })));
+    for (const pr of [propA, propB]) {
+      p.usage.entrada += pr.usage?.entrada ?? 0;
+      p.usage.saida += pr.usage?.saida ?? 0;
+    }
+    const proposta = propA;
+    p.rawProposal = propA.text + '\n\n' + propB.text;
 
     const baseline = await baselinePromise;
     const baselineOk = baseline.code === 0;
@@ -934,7 +942,14 @@ async function run(p: Pipeline, runMutants: boolean) {
     guard();
 
 
-    const { invs, perdidos } = parseInvariants(proposta.text);
+    const a = parseInvariants(propA.text);
+    const b = parseInvariants(propB.text);
+    // Renumera as da segunda proposta para não colidir; o crítico decide o
+    // que é duplicata.
+    const invs = [...a.invs, ...b.invs.map((i, k) => ({ ...i, id: `I${a.invs.length + k + 1}` }))]
+      .map((i, k) => ({ ...i, id: `I${k + 1}` }));
+    const perdidos = a.perdidos + b.perdidos;
+    log(p, `catálogo: ${a.invs.length} + ${b.invs.length} propostas de duas chamadas independentes`);
     if (perdidos) log(p, `aviso: ${perdidos} objeto(s) do catálogo vieram malformados e foram descartados`);
 
     if (invs.length === 0) {
