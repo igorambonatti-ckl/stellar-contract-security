@@ -902,7 +902,18 @@ Do **not** narrow the generator to keep the correct contract green. Assert the
 **disjunction**: either the call aborts with the specific error it should and
 state is untouched, or it succeeds and the relation holds. Narrowing the range
 until everything passes is how a harness reports success without testing
-anything.`;
+anything.
+
+**You do not need to predict the contract's internal operands — you have
+them.** The snapshot taken before the operation holds every total and balance
+the formula reads; the operation holds the amount; \`last\` holds what the call
+returned. Recompute the contract's own formula from \`antes\` and \`op\` with
+\`checked_mul\` / \`checked_add\`, and compare with \`last\`: if your checked
+computation overflows, the call must have failed with the overflow error; if
+it did not, the returned value must equal yours. A wrapping bug returns a
+number that is not yours. "Requires predicting internal operands" is the
+reason one such property was given up — the operands were all in the
+snapshot.`;
   }
 
   if (/ttl|archival|expiry|storage tier|temporary|persistent/.test(k)) {
