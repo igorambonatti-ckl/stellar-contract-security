@@ -95,6 +95,35 @@ async function prepararCrate(p: Pipeline, info: ContractInfo): Promise<string[]>
 }
 
 /**
+ * Desduplica o catálogo por similaridade de enunciado, antes do crítico.
+ *
+ * Duas propostas independentes trazem sobreposição — e pedir ao crítico que
+ * marque \`duplicate of Ix\` não funcionou: 29 de 29 seguiram. Jaccard sobre o
+ * conjunto de palavras é grosseiro, mas é determinístico e barato, e dois
+ * enunciados sobre a mesma propriedade compartilham os identificadores do
+ * contrato, que são o que pesa. O limiar é alto de propósito: melhor deixar
+ * passar uma duplicata que fundir duas propriedades distintas sobre o mesmo
+ * entry point.
+ */
+function desduplicar(invs: any[], log: (m: string) => void): any[] {
+  const bag = (s: string) => new Set(
+    String(s).toLowerCase().replace(/[^a-z0-9_\s]/g, ' ').split(/\s+/).filter((w) => w.length > 2));
+  const out: any[] = [];
+  for (const i of invs) {
+    const a = bag(i.statement);
+    const dup = out.find((j) => {
+      const b = bag(j.statement);
+      const inter = [...a].filter((w) => b.has(w)).length;
+      const uni = new Set([...a, ...b]).size;
+      return uni > 0 && inter / uni >= 0.7;
+    });
+    if (dup) log(`${i.id}: duplicata de ${dup.id} (${Math.round(100 * [...a].filter((w) => bag(dup.statement).has(w)).length / new Set([...a, ...bag(dup.statement)]).size)}% das palavras); descartada`);
+    else out.push(i);
+  }
+  return out;
+}
+
+/**
  * Lê o catálogo de invariantes tolerando um objeto malformado.
  *
  * Motivo concreto: uma rodada inteira foi perdida porque o modelo escreveu
@@ -946,10 +975,11 @@ async function run(p: Pipeline, runMutants: boolean) {
     const b = parseInvariants(propB.text);
     // Renumera as da segunda proposta para não colidir; o crítico decide o
     // que é duplicata.
-    const invs = [...a.invs, ...b.invs.map((i, k) => ({ ...i, id: `I${a.invs.length + k + 1}` }))]
+    const brutas = [...a.invs, ...b.invs.map((i, k) => ({ ...i, id: `I${a.invs.length + k + 1}` }))]
       .map((i, k) => ({ ...i, id: `I${k + 1}` }));
+    const invs = desduplicar(brutas, (m) => log(p, m)).map((i, k) => ({ ...i, id: `I${k + 1}` }));
     const perdidos = a.perdidos + b.perdidos;
-    log(p, `catálogo: ${a.invs.length} + ${b.invs.length} propostas de duas chamadas independentes`);
+    log(p, `catálogo: ${a.invs.length} + ${b.invs.length} propostas de duas chamadas independentes, ${invs.length} depois de desduplicar`);
     if (perdidos) log(p, `aviso: ${perdidos} objeto(s) do catálogo vieram malformados e foram descartados`);
 
     if (invs.length === 0) {
