@@ -93,6 +93,15 @@ async function chamar(
   const escolha = json?.choices?.[0];
   const text: string | undefined = escolha?.message?.content;
 
+  // Conteúdo presente mas cortado pelo teto. Um modelo de raciocínio gasta
+  // parte do orçamento pensando, e o que sobra nem sempre cabe o código
+  // inteiro: a resposta vem com metade de um rig e `finish_reason: "length"`.
+  // Só retentar na resposta vazia deixava isso passar, e o compilador via
+  // "unclosed delimiter" — três amostras de rig com 26, 7 e 4 linhas.
+  if (text && escolha?.finish_reason === 'length' && tentativa === 0) {
+    return chamar(key, model, opts, Math.min(maxTokens * 3, 64000), 1);
+  }
+
   if (!text) {
     const truncado = escolha?.finish_reason === 'length';
     const pensou = (escolha?.message?.reasoning ?? '').length;
