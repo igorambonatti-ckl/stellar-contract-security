@@ -1263,7 +1263,11 @@ proptest! {
       }).map((bloco, k) => {
         const n = bloco.split('\n').length;
         faixas.set(items[k].inv.id, [linha, linha + n - 1]);
-        linha += n + 2; // o '\n\n' do join
+        // O join('\n\n') põe UMA linha em branco entre blocos, não duas: com
+        // n + 2 o mapa adiantava uma linha por mod, e depois de seis mods um
+        // erro no topo do sétimo caía no vão — "fora das asserções" — e o
+        // arquivo inteiro morria com oito asserções boas dentro.
+        linha += n + 1;
         return bloco;
       }).join('\n\n');
 
