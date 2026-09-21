@@ -264,6 +264,8 @@ pub struct Rig {
     pub token: Address,
     pub admin: Address,
     pub users: Vec<Address>,  // index into this; never generate an Address
+    /// What the last operation returned, for transition properties.
+    pub last: std::cell::RefCell<Option<Result<i128, soroban_sdk::Error>>>,
 }
 
 // The generated client borrows the Env, so a struct holding both would be
@@ -296,7 +298,35 @@ pub fn setup() -> Rig {
     for u in &users { sac.mint(u, &1_000_000_000i128); }
 
     BankClient::new(&env, &id).initialize(&admin, &token);
-    Rig { env, id, token, admin, users }
+    Rig { env, id, token, admin, users, last: std::cell::RefCell::new(None) }
+}
+
+#[derive(Debug, Clone)]
+pub struct Snapshot {
+    pub total: i128,
+    pub balances: Vec<i128>,          // per users[i], in the contract
+    pub token_balances: Vec<i128>,    // per users[i], in the token
+    pub vault_token_balance: i128,
+    pub frozen: Vec<bool>,
+    pub instance_ttl: u32,
+    pub balance_ttls: Vec<Option<u32>>, // persistent entry per users[i], None if absent
+}
+
+pub fn snapshot(r: &Rig) -> Snapshot {
+    use soroban_sdk::testutils::storage::{Instance as _, Persistent as _};
+    let c = r.client(); let t = r.token();
+    Snapshot {
+        total: c.total(),
+        balances: r.users.iter().map(|u| c.balance(u)).collect(),
+        token_balances: r.users.iter().map(|u| t.balance(u)).collect(),
+        vault_token_balance: t.balance(&r.id),
+        frozen: r.users.iter().map(|u| c.is_frozen(u)).collect(),
+        instance_ttl: r.env.as_contract(&r.id, || r.env.storage().instance().get_ttl()),
+        balance_ttls: r.users.iter().map(|u| r.env.as_contract(&r.id, || {
+            let k = DataKey::Balance(u.clone());
+            if r.env.storage().persistent().has(&k) { Some(r.env.storage().persistent().get_ttl(&k)) } else { None }
+        })).collect(),
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -312,8 +342,14 @@ pub fn apply(r: &Rig, op: &Op) {
     // try_* everywhere: the fuzzer will produce arguments the contract is right
     // to refuse, and a panic here would end the sequence before it got deep.
     match op {
-        Op::Credit { who, amount } => { let _ = c.try_credit(&r.users[who % r.users.len()], amount); }
-        Op::Debit  { who, amount } => { let _ = c.try_debit(&r.users[who % r.users.len()], amount); }
+        Op::Credit { who, amount } => {
+            let res = c.try_credit(&r.users[who % r.users.len()], amount);
+            *r.last.borrow_mut() = Some(match res { Ok(Ok(v)) => Ok(v), Err(Ok(e)) => Err(e), _ => Err(soroban_sdk::Error::from_contract_error(0)) });
+        }
+        Op::Debit  { who, amount } => {
+            let res = c.try_debit(&r.users[who % r.users.len()], amount);
+            *r.last.borrow_mut() = Some(match res { Ok(Ok(v)) => Ok(v), Err(Ok(e)) => Err(e), _ => Err(soroban_sdk::Error::from_contract_error(0)) });
+        }
         Op::Freeze { who }         => { let _ = c.try_freeze(&r.users[who % r.users.len()]); }
         Op::Advance(n)             => {
             let s = r.env.ledger().sequence();
@@ -513,14 +549,29 @@ pub fn apply(r: &Rig, op: &Op) { ... }
 pub fn op_strategy() -> impl Strategy<Value = Op> { ... }
 
 /// Everything a property might want to compare **before and after** an
-/// operation: totals, per-principal balances, the admin, flags, TTLs. Plain
-/// owned values — no borrows of the Env.
+/// operation. Plain owned values — no borrows of the Env. At minimum:
+///   - every total the contract keeps, and each principal's balances
+///     (in the contract *and* in the token, for every address in `users`)
+///   - the admin, every flag, every configured address (the token, etc.)
+///   - **TTLs**: the instance TTL, and the persistent/temporary TTL of each
+///     per-principal entry that exists (read via `as_contract` + `get_ttl`;
+///     `None` when the entry does not exist)
+/// A property that cannot read something from the snapshot cannot be written.
+/// Half of a catalogue died as "impossible" because the snapshot had no TTLs
+/// and no token address — put in everything cheap to read.
 #[derive(Debug, Clone)]
 pub struct Snapshot { ... }
 
 /// Reads the state into a Snapshot. Observes only; never mutates.
 pub fn snapshot(r: &Rig) -> Snapshot { ... }
 \`\`\`
+
+**Return values are part of the state.** \`apply\` must record what the last
+operation returned — the shares a deposit minted, the amount a withdraw paid,
+or the error it failed with — in a field on \`Rig\` such as
+\`pub last: RefCell<Option<Result<i128, soroban_sdk::Error>>>\`. Properties like
+"the shares returned equal the balance delta" are unwritable otherwise, and
+they are the ones that catch arithmetic defects.
 
 **Why the snapshot matters more than it looks.** The most valuable properties are
 about a *transition*, not a state: "an unauthorized call changed nothing", "the

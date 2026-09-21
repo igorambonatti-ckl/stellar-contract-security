@@ -1151,16 +1151,16 @@ async function run(p: Pipeline, runMutants: boolean) {
           p.usage.entrada += r.usage?.entrada ?? 0;
           p.usage.saida += r.usage?.saida ?? 0;
           bruto = extractCode(r.text, 'rust').trim();
-          if (bruto.split('\n').length >= 5 || /IMPOSSIVEL/i.test(bruto)) break;
+          if (bruto.split('\n').length >= 5 || /IMPOSS[IÍ]VEL|IMPOSSIBLE/i.test(bruto)) break;
           log(p, `${inv.id}: só ${bruto.split('\n').length} linha(s) extraída(s) de ${r.text.length} chars${vez === 1 ? '; gerando de novo' : ''} — resposta crua começa: ${JSON.stringify(r.text.slice(0, 160))}`);
         }
         if (!r) continue;
-        let pronto = /^\/\/\s*IMPOSSIVEL/i.test(bruto)
+        let pronto = /^\/\/\s*IMPOSS[IÍ]VEL|^\/\/\s*IMPOSSIBLE/i.test(bruto)
           ? bruto
           : alinharCamposDoRig(p, normalizarCheck(p, consertarImports(
               p, info.crateName.replace(/-/g, '_'), bruto, inv.id), inv.id), rigCode, inv.id);
 
-        const queixas = /^\/\/\s*IMPOSSIVEL/i.test(pronto) ? [] : queixasDoCheck(pronto);
+        const queixas = /^\/\/\s*IMPOSS[IÍ]VEL|^\/\/\s*IMPOSSIBLE/i.test(pronto) ? [] : queixasDoCheck(pronto);
         if (queixas.length) {
           log(p, `${inv.id}: ${queixas.length} padrão(ões) que reprovam contra o contrato correto; pedindo correção antes de compilar`);
           const fix = await complete({
@@ -1194,9 +1194,9 @@ async function run(p: Pipeline, runMutants: boolean) {
         inv.verdictReason = 'A chamada ao modelo falhou para esta invariante.';
         continue;
       }
-      if (/^\/\/\s*IMPOSSIVEL/i.test(code)) {
+      if (/^\/\/\s*IMPOSS[IÍ]VEL|^\/\/\s*IMPOSSIBLE/i.test(code)) {
         inv.verdict = 'descartada';
-        inv.verdictReason = code.replace(/^\/\/\s*IMPOSSIVEL:?\s*/i, '').trim() ||
+        inv.verdictReason = code.replace(/^\/\/\s*(?:IMPOSS[IÍ]VEL|IMPOSSIBLE):?\s*/i, '').trim() ||
           'o modelo declarou a invariante inexprimível pela API pública';
         impossiveis++;
         log(p, `${inv.id}: inexprimível — ${inv.verdictReason.slice(0, 90)}`);
@@ -1366,7 +1366,7 @@ proptest! {
           p.usage.saida += fix.usage?.saida ?? 0;
 
           const novo = extractCode(fix.text, 'rust').trim();
-          if (/^\/\/\s*IMPOSSIVEL/i.test(novo)) {
+          if (/^\/\/\s*IMPOSS[IÍ]VEL|^\/\/\s*IMPOSSIBLE/i.test(novo)) {
             log(p, `${t.inv.id}: o modelo desistiu — inexprimível contra a API real`);
             tentativas.set(t.inv.id, 3);
             return;
