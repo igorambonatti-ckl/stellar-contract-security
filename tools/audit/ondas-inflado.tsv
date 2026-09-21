@@ -1,2 +1,0 @@
-modelo	status	propostas	compilam	reparados	descartados	mantidas	detectados	quais	seg	usd
-qwen/qwen3-coder-next	concluido	18	13	10	5	8	7/7	overflow,missing_auth,zero_amount,self_transfer,no_ttl,temp_nonce,reinit	406	0.0476

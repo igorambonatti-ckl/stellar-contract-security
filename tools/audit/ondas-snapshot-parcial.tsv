@@ -1,3 +1,0 @@
-modelo	status	propostas	compilam	reparados	descartados	mantidas	detectados	quais	seg	usd
-google/gemini-3.1-flash-lite	concluido	7	7	2	0	5	2/7	self_transfer,no_ttl	201	0.0291
-google/gemini-3.1-flash-lite	concluido	7	6	2	1	5	3/7	self_transfer,no_ttl,reinit	281	0.0332

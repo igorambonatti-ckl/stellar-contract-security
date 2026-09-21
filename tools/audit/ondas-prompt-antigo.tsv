@@ -1,4 +1,0 @@
-modelo	status	propostas	compilam	reparados	descartados	mantidas	detectados	quais	seg	usd
-qwen/qwen3-coder-next	concluido	16	14	11	2	10	2/7	self_transfer,reinit	286	0.0441
-deepseek/deepseek-v4-flash	concluido	10	7	3	3	7	1/7	self_transfer	421	0.0041
-z-ai/glm-5.3-flash	falhou	-	0	-	-	-	0/7	-	451	0.0000

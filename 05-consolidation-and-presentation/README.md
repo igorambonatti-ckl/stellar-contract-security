@@ -1,9 +1,9 @@
 # Topic 5 — Consolidation & Presentation
 
-**Status:** ✅ Done · **Due:** 2026-09-30 · **Delivered:** 2026-09-17
+**Status:** ✅ Done · **Due:** 2026-09-30 · **Delivered:** 2026-09-17 · **Tool delivered:** 2026-09-21
 
-Deliverables: **[presentation deck](../docs/deck.md)** · **[end-to-end demo](../04-prototype-development/scripts/demo.sh)** ·
-this document.
+Deliverables: **[presentation deck](../docs/deck/apresentacao.pdf)** · **[the tool](../tools/audit/README.md)** ·
+**[end-to-end demo](../04-prototype-development/scripts/demo.sh)** · this document.
 
 ---
 
@@ -388,3 +388,44 @@ The [execution plan §5](../docs/execution-plan.md) checklist, run on delivery:
 - [x] Limitations section is honest and specific — no unfalsifiable claims of success (§4.1)
 - [x] Repository is self-contained: someone else can clone it and reproduce the benchmark from the
       README alone
+
+## 7. The tool — the method, running by itself
+
+The prototype established the method and measured it with a person curating the AI's
+proposals. The last phase turned it into a tool that needs no one in the loop:
+[`tools/audit`](../tools/audit/README.md), a local React app and API that audits any Soroban
+crate on disk.
+
+What it does, end to end: reads the whole crate; copies it out of the repository so nothing
+is ever written to the audited code; asks the AI for invariants twice and merges the
+catalogues; runs a second AI pass that rejects what cannot fail, cannot be observed, or is a
+scenario rather than an invariant; generates a fuzzing rig — fixture, operation alphabet,
+strategy weighted toward the dangerous values and the TTL boundaries, a snapshot of totals,
+balances, TTLs and ledger, and the result of every operation — and one assertion per
+invariant, checked after **every** operation of every random sequence; compiles with the
+compiler's own diagnostics feeding parallel repairs; validates against the contract as it is;
+and reports three groups — *to investigate* with the minimal counterexample, *verified* as a
+ready regression suite, *not verified* with the reason — plus the real cost and the diff of
+everything the AI wrote.
+
+Measured against the seven seeded bugs, with no human in the loop, three clean runs on the
+same day:
+
+| | detection |
+|---|---|
+| blind fuzzing (Topic 4 control arm) | 1/7 |
+| **the tool, one run** | **4/7** |
+| **the tool, union of three runs** | **6/7** |
+
+`overflow` and `missing_auth`, the two no earlier version detected, fall to it — each through
+a change to the *rig*, not the model: balances large enough for the arithmetic to overflow,
+and the result of an unauthorized call visible to the assertion. Cost: about US$ 0.25 and 4–10
+minutes a run with `grok-4.3`.
+
+Nearly everything that moved the number from 0–2/7 to 4/7 in a day was the layer between the
+model and the compiler, made deterministic: the largest fenced block regardless of tag, giving
+up detected structurally rather than by keyword, an assertion with unbalanced braces never
+entering the file, rig fields aligned when the model invents a name, storage reads outside
+`as_contract` flagged before compiling, truncated and empty responses retried, independent
+runs, and the guarantee that the delivered harness compiles or is empty — never red on top of
+verified properties. Each rule exists because it cost a measurement.

@@ -1,4 +1,0 @@
-modelo	status	propostas	compilam	reparados	descartados	mantidas	detectados	quais	seg	usd
-qwen/qwen3-coder-next	concluido	16	8	4	8	5	1/7	reinit	557	0.0715
-qwen/qwen3-coder-next	concluido	14	6	1	8	4	2/7	self_transfer,reinit	601	0.0811
-qwen/qwen3-coder-next	concluido	19	12	9	7	8	2/7	temp_nonce,reinit	827	0.0907

@@ -24,7 +24,7 @@ demonstrates AI-assisted fuzzing applied to a Soroban contract.
 | 2 | Security & Fuzzing Fundamentals | ✅ Done | 2026-06-30 | [Doc](02-security-and-fuzzing/README.md) |
 | 3 | Solution Architecture | ✅ Done | 2026-07-31 | [Doc](03-solution-architecture/README.md) |
 | 4 | Prototype Development | ✅ Done | 2026-08-31 | [Doc](04-prototype-development/README.md) + [benchmark](04-prototype-development/results/benchmark.md) |
-| 5 | Consolidation & Presentation | ✅ Done | 2026-09-30 | [Doc](05-consolidation-and-presentation/README.md) + [deck](docs/deck.md) |
+| 5 | Consolidation & Presentation | ✅ Done | 2026-09-30 | [Doc](05-consolidation-and-presentation/README.md) + [deck](docs/deck/apresentacao.pdf) + [tool](tools/audit/README.md) |
 
 ## What this is
 
@@ -37,6 +37,12 @@ fuzzing, plus the evidence that the combination works.
 > false positive.
 
 **[→ The method](04-prototype-development/AUDITING.md)** — how to point it at a contract.
+
+**[→ The tool](tools/audit/README.md)** — point it at any Soroban crate and it runs by itself:
+the AI proposes the invariants, a second AI pass curates them, a fuzzing rig drives random
+operation sequences, and the report comes back with findings, counterexamples, a regression
+suite and the diff of everything the AI wrote. Measured against the seven seeded bugs with no
+human in the loop: **4/7 per run, 6/7 over three runs**, at about US$ 0.25 a run.
 **[→ `soroban-fuzzkit`](04-prototype-development/fuzzkit/)** — the reusable, contract-agnostic half.
 
 ## The evidence
@@ -87,10 +93,12 @@ Supporting documents:
 stellar-studies/
 ├── 01-stellar-fundamentals/        # Topic 1 doc + increment contract
 ├── 02-security-and-fuzzing/        # Topic 2 doc
-├── 03-solution-architecture/       # Topic 3 (draft)
-├── 04-prototype-development/       # Topic 4 (draft)
-├── 05-consolidation-and-presentation/  # Topic 5 (draft)
-├── docs/                           # Diagrams, screenshots, video links
+├── 03-solution-architecture/       # Topic 3 doc
+├── 04-prototype-development/       # Topic 4: contract, seeded bugs, fuzzkit, benchmark
+├── 05-consolidation-and-presentation/  # Topic 5 doc
+├── tools/audit/                    # The tool: React + API, AI-guided fuzzing for any Soroban crate
+├── docs/deck/                      # The presentation (PDF + source) and its speaker notes
+├── docs/                           # Execution plan, prior art, report
 └── Cargo.toml                      # Rust workspace
 ```
 
