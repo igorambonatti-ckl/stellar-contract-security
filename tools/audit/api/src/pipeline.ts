@@ -8,7 +8,7 @@ import { inspectContract, cleanView, contractSource, type ContractInfo } from '.
 import { copiarCrate, descartarCopia, diffDaCopia, type Copia, type ArquivoDiff } from './copia.js';
 import { complete, extractCode, isConfigured, currentModel } from './openrouter.js';
 import {
-  systemPrompt, proposeInvariants, generateRig, generateCheck, fixOneTest, fixFailingTest,
+  systemPrompt, proposeInvariants, curateInvariants, generateRig, generateCheck, fixOneTest, fixFailingTest,
   harnessHeader,
   type CuratedInvariant,
 } from './prompts.js';
@@ -753,9 +753,9 @@ export function startPipeline(opts: {
       { id: 'inspecionar', label: 'Inspecionar o contrato', status: 'pendente' },
       { id: 'suite', label: 'Suíte existente, antes de tocar no crate', status: 'pendente' },
       { id: 'propor', label: 'IA: propõe as invariantes', status: 'pendente' },
-      ...(modo === 'curado'
-        ? [{ id: 'curadoria' as StageId, label: 'Curadoria: o que vale testar', status: 'pendente' as StageStatus }]
-        : []),
+      { id: 'curadoria' as StageId,
+        label: modo === 'curado' ? 'Curadoria: o que vale testar' : 'Curadoria: IA revisa o catálogo',
+        status: 'pendente' as StageStatus },
       { id: 'gerar', label: 'Fuzzer: rig de operações + uma asserção por invariante', status: 'pendente' },
       { id: 'compilar', label: 'Compilar, com reparo pelo erro do compilador', status: 'pendente' },
       { id: 'validar', label: 'Fuzzer: sequências sorteadas contra o contrato como ele é', status: 'pendente' },
@@ -942,6 +942,56 @@ async function run(p: Pipeline, runMutants: boolean) {
     // 7 bugs plantados; sem ela, 1 ou 2. A diferença não está em a IA propor
     // invariantes melhores — está em alguém gastar trinta segundos separando as
     // que valem das que só parecem valer.
+    if (p.modo === 'automatico') {
+      // "Automático" deixou de significar "sem curadoria". Pular o passo era o
+      // que dava 2 a 5 de 7; a curadoria humana dava 7 de 7. Uma segunda
+      // passada de IA, com o critério que a pessoa usava, é a automação do
+      // passo — não a sua remoção.
+      setStage(p, 'curadoria', { status: 'rodando', startedAt: Date.now() });
+      const rev = await complete({
+        system: systemPrompt(),
+        user: curateInvariants(info, src, p.invariants),
+        model: p.model,
+        maxTokens: 8000,
+      }).catch((e) => { log(p, `!! curadoria automática: ${e.message}`); return null; });
+
+      let vereditos: any[] = [];
+      if (rev) {
+        p.usage.entrada += rev.usage?.entrada ?? 0;
+        p.usage.saida += rev.usage?.saida ?? 0;
+        try { vereditos = JSON.parse(extractCode(rev.text, 'json').trim()); } catch { vereditos = []; }
+      }
+      const porId = new Map(vereditos.map((v) => [String(v.id), v]));
+      const antes = p.invariants.length;
+      let rejeitadas = 0, reescritas = 0;
+      for (const inv of p.invariants) {
+        const v = porId.get(inv.id);
+        if (!v) continue;
+        if (v.verdict === 'reject') {
+          inv.verdict = 'descartada';
+          inv.verdictReason = `Rejeitada na curadoria automática: ${v.reason ?? 'sem motivo'}`;
+          rejeitadas++;
+          log(p, `${inv.id}: rejeitada — ${String(v.reason ?? '').slice(0, 90)}`);
+        } else if (v.verdict === 'rewrite' && typeof v.statement === 'string' && v.statement.trim()) {
+          inv.statement = v.statement.trim();
+          reescritas++;
+          log(p, `${inv.id}: reescrita — ${String(v.reason ?? '').slice(0, 90)}`);
+        }
+      }
+      p.invariants = p.invariants.filter((i) => i.verdict !== 'descartada');
+      setStage(p, 'curadoria', {
+        status: rev ? 'ok' : 'falhou',
+        finishedAt: Date.now(),
+        detail: rev
+          ? `${p.invariants.length} de ${antes} seguem` +
+            (rejeitadas ? `, ${rejeitadas} rejeitada(s)` : '') +
+            (reescritas ? `, ${reescritas} reescrita(s)` : '')
+          : 'o crítico não respondeu; o catálogo segue sem revisão',
+        data: { vereditos, rejeitadas, reescritas },
+      });
+      guard();
+    }
+
     if (p.modo === 'curado') {
       setStage(p, 'curadoria', {
         status: 'aguardando',

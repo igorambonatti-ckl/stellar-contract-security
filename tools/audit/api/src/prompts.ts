@@ -353,6 +353,93 @@ Three shapes that cost a compile if you get them wrong:
 `;
 
 /**
+ * A curadoria, feita por uma segunda passada de IA em vez de por uma pessoa.
+ *
+ * O benchmark deste projeto mostrou que a curadoria é o passo que mais pesa —
+ * 7/7 com ela, 2 a 5/7 sem. Pular o passo era o que "automático" significava
+ * até aqui, e é por isso que o automático saturava. Este prompt faz o que a
+ * pessoa fazia, com o critério que a pessoa usou, registrado em `AUDITING.md`
+ * §2 e no ledger de `invariants.md`: rejeitar o que não pode falhar, o que só
+ * restate uma linha, o que diz "tem que reverter" sem dizer com qual erro; e
+ * demover uma cláusula barulhenta (que aborta) para a silenciosa.
+ *
+ * Não substitui o julgamento humano onde ele importa — é uma aproximação dele,
+ * medida contra o mesmo benchmark. O que a mede é a detecção, não o prompt.
+ */
+export function curateInvariants(
+  info: ContractInfo,
+  source: string,
+  invariants: any[],
+): string {
+  const lista = invariants.map((i) =>
+    `### ${i.id} — ${i.class} (confidence: ${i.confidence ?? '?'})\n${i.statement}\n\n*Observe:* ${i.observation ?? ''}\n*Assumes:* ${i.assumption ?? ''}`,
+  ).join('\n\n');
+
+  return `${contractContext(info, source)}
+
+${API_TESTE}
+
+# Proposed invariants
+
+${lista}
+
+# Task
+
+You are the **reviewer**, not the author. Decide, for each proposal, whether it
+is worth turning into a fuzzing property. Be strict: a property that cannot fail
+costs a test slot and proves nothing, and a property that fails for the wrong
+reason produces a finding nobody can act on.
+
+## Reject when
+
+- **It cannot fail.** True by construction of the contract, the SDK or the
+  protocol. Examples: a persistent entry being readable after its TTL lapsed
+  (protocol 23 auto-restores); a bare \`+\` never wrapping under
+  \`overflow-checks\`; a field of an unsigned type being non-negative.
+- **It restates a single line of code.** "\`deposit\` calls \`require_auth\`" is
+  the code, not a property of it. A property relates two or more observable
+  quantities, or a before and an after.
+- **It says "must abort" without saying which error.** \`is_err()\` passes when
+  the contract fails for an unrelated reason — it is how a seeded arithmetic
+  bug passed a liveness oracle in this project's own benchmark.
+- **It cannot be observed** through the public entry points and the test
+  \`Env\` surface above.
+- **It is a scenario, not an invariant.** "Deposit 100, then withdraw 50, then
+  check" is a test case; the fuzzer needs a predicate over reachable states or
+  over a transition.
+
+## Rewrite when
+
+- A clause is **loud** (the contract aborts) and another is **silent** (the
+  state is wrong but the call succeeds). Keep the silent clause — the loud one
+  adds nothing over liveness checking, which the fuzzer already does.
+- The statement is right but too vague to implement. Make it formal enough to
+  code, using the contract's own identifiers.
+
+## Keep when
+
+It relates two or more observable quantities, or before and after an
+operation; it can fail silently; and it is about this contract's actual
+behaviour, not about what you imagine similar contracts do.
+
+## Output
+
+Return **only** a JSON array, one element per proposal, same order:
+
+\`\`\`json
+[
+  { "id": "I1", "verdict": "keep",    "reason": "one clause" },
+  { "id": "I2", "verdict": "reject",  "reason": "cannot fail: ..." },
+  { "id": "I3", "verdict": "rewrite", "statement": "the corrected statement", "reason": "..." }
+]
+\`\`\`
+
+The reason is not decoration: it goes into the report, and a rejection whose
+reason names a real fact about the contract is itself a finding. Never reject
+for being hard to implement — that is the generator's problem, not yours.`;
+}
+
+/**
  * O rig: fixture, operações, e como sortear uma sequência delas.
  *
  * Existe porque a decomposição anterior — um teste independente por invariante,
