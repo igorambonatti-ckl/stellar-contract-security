@@ -109,6 +109,17 @@ async function chamar(
     if (truncado && tentativa === 0) {
       return chamar(key, model, opts, Math.min(maxTokens * 3, 64000), 1);
     }
+
+    // Vazio por outro motivo: `finish_reason: "error"` com um 429 do provedor
+    // dentro do corpo, ou `"tool_calls"` de um modelo que resolveu chamar uma
+    // ferramenta que não existe. Nos dois casos uma segunda chamada, alguns
+    // segundos depois, costuma vir com texto — e desistir na primeira custava
+    // a asserção inteira.
+    if (!truncado && tentativa === 0) {
+      const motivo = escolha?.finish_reason ?? json?.error?.code ?? 'vazio';
+      await new Promise((r) => setTimeout(r, motivo === 'error' ? 6000 : 1500));
+      return chamar(key, model, opts, maxTokens, 1);
+    }
     throw Object.assign(
       new Error(
         truncado
