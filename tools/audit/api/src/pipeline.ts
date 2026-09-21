@@ -1546,7 +1546,7 @@ proptest! {
       for (const nome of falhos) {
         guard();
         const t = testes.find((x) => invariantForTest(nome, [x.inv]));
-        if (!t) continue;
+        if (!t || t.inv.verdict === 'descartada') continue;   // já julgada falsa: não perguntar de novo
 
         const trecho = trechoDaFalha(saida, nome);
         const fix = await complete({
@@ -1593,12 +1593,26 @@ proptest! {
             AMBIENTE_PROPTEST(VALIDACAO_CASOS));
           falhos = failedTests(val2.output);
         } else {
-          log(p, '!! uma correção quebrou a compilação; revertendo as corrigidas para o código anterior');
+          // Reverte só quem quebrou. Reverter todas as corrigidas jogava fora
+          // duas correções boas por causa de uma — e a rodada seguinte refazia
+          // as três, com o mesmo resultado.
+          const ruins = culpados(rebuild.output);
+          const revertidas: string[] = [];
           for (const [id, code] of codigoAnterior) {
+            if (!ruins.has(id) && ruins.size > 0) continue;
             const t = testes.find((x) => x.inv.id === id);
-            if (t) t.code = code;
+            if (t) { t.code = code; revertidas.push(id); }
           }
-          await escrever(testes.filter((x) => x.inv.verdict !== 'descartada'));
+          log(p, `!! uma correção quebrou a compilação; revertendo ${revertidas.join(', ') || 'todas as corrigidas'}`);
+          const vivos = testes.filter((x) => x.inv.verdict !== 'descartada');
+          await escrever(vivos);
+          const rebuild2 = await compila();
+          if (rebuild2.code === 0) {
+            const val3 = await exec(p, info.path, 'cargo',
+              ['test', '-p', info.crateName, '--test', 'audit_generated'],
+              AMBIENTE_PROPTEST(VALIDACAO_CASOS));
+            falhos = failedTests(val3.output);
+          }
         }
       }
     }
