@@ -31,3 +31,4 @@ target/
 04-prototype-development/fuzz/coverage/
 # build artifacts of the in-build wasm compile
 04-prototype-development/contracts/soroban-vault/.audit-target/
+04-prototype-development/contracts/soroban-vault-[0-9]*/
