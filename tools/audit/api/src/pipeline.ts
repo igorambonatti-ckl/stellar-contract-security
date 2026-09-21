@@ -555,6 +555,8 @@ export interface Pipeline {
   harnessPath?: string;
   /** O rig gerado: fixture, operações e estratégia. */
   rigCode?: string;
+  /** Diretório de build exclusivo, para auditorias simultâneas não se bloquearem. */
+  targetDir?: string;
   /** Manifesto original, quando a ferramenta precisou mexer no crate-type. */
   manifestoOriginal?: { caminho: string; conteudo: string };
   rawProposal?: string;
@@ -594,7 +596,14 @@ function setStage(p: Pipeline, id: StageId, patch: Partial<Stage>) {
 /** Roda um comando, ecoando no log do pipeline. Resolve com o código de saída. */
 function exec(p: Pipeline, cwd: string, cmd: string, args: string[], env?: Record<string, string>) {
   return new Promise<{ code: number | null; output: string }>((resolve) => {
-    const child = spawn(cmd, args, { cwd, env: { ...process.env, ...env } });
+    // Um diretório de build por crate. Sem isso, duas auditorias simultâneas
+    // disputam o lock do cargo no target compartilhado do workspace e
+    // serializam — o que tornava comparar modelos uma tarefa de horas em vez
+    // de minutos, por um motivo que não tem nada a ver com os modelos.
+    const child = spawn(cmd, args, {
+      cwd,
+      env: { ...process.env, ...(p.targetDir ? { CARGO_TARGET_DIR: p.targetDir } : {}), ...env },
+    });
     let output = '';
     let buf = '';
 
@@ -710,6 +719,7 @@ async function run(p: Pipeline, runMutants: boolean) {
     setStage(p, 'inspecionar', { status: 'rodando', startedAt: Date.now() });
     const info = await inspectContract(p.path);
     p.info = info;
+    p.targetDir = join(info.path, '.audit-target');
     setStage(p, 'inspecionar', {
       status: 'ok',
       finishedAt: Date.now(),
@@ -1200,16 +1210,103 @@ proptest! {
     // contrato, então deixá-lo no arquivo transforma toda execução futura em
     // detecção falsa — foi o que quase aconteceu com a primeira medição de
     // detecção, cujos números incluíam cinco testes vermelhos de nascença.
-    const sobreviventes = testes.filter((t) => t.inv.verdict !== 'descartada');
+    let sobreviventes = testes.filter((t) => t.inv.verdict !== 'descartada');
     if (sobreviventes.length !== testes.length) {
       await escrever(sobreviventes);
       p.harnessCode = await readFile(p.harnessPath, 'utf8');
-      const rebuild = await exec(p, info.path, 'cargo',
+    }
+
+    // ── A prova de repetição ────────────────────────────────────────────────
+    //
+    // O proptest sorteia sementes novas a cada execução, então "passou" é uma
+    // afirmação sobre as sequências desta rodada, não sobre a propriedade. Uma
+    // execução aprovou doze invariantes com 256 casos e o harness ficou
+    // vermelho na rodada seguinte, no mesmo contrato — e um harness que fica
+    // vermelho amanhã é pior que inútil para quem for usá-lo: ele acusa bug
+    // onde não há e some com a confiança no resto do relatório.
+    //
+    // Rodar de novo, com sementes novas, é o teste mais direto disso. O que não
+    // repete sai, e sai dizendo por quê: a propriedade pode até valer, mas o
+    // que existe aqui é um teste instável, e instável não é evidência.
+    for (let rodada = 1; rodada <= 2 && sobreviventes.length; rodada++) {
+      guard();
+      const repeticao = await exec(p, info.path, 'cargo',
         ['test', '-p', info.crateName, '--test', 'audit_generated'],
         AMBIENTE_PROPTEST(VALIDACAO_CASOS));
-      log(p, rebuild.code === 0
-        ? `harness final: ${sobreviventes.length} testes, verde contra o contrato como ele é`
-        : '!! o harness final ainda falha — não use estes números como detecção');
+      if (repeticao.code === 0) {
+        log(p, `harness final: ${sobreviventes.length} testes, verde em ${rodada + 1} execuções independentes`);
+        break;
+      }
+
+      const instaveis = failedTests(repeticao.output);
+      const corrigidas = new Set<string>();
+      const antesDoConserto = new Map<string, string>();
+      for (const nome of instaveis) {
+        const inv = invariantForTest(nome, p.invariants);
+        if (!inv || inv.verdict === 'descartada') continue;
+        const t = sobreviventes.find((x) => x.inv === inv);
+
+        // Uma tentativa de conserto antes de descartar. A instabilidade costuma
+        // ser do harness e não da propriedade — uma soma de saldos que estoura
+        // `i128` só nas sequências que alcançam o extremo, por exemplo. Jogar a
+        // propriedade fora por causa disso é o mesmo viés de sobrevivência que
+        // já tinha esvaziado o relatório antes: o que morre primeiro é sempre o
+        // que tenta fazer algo difícil.
+        if (t && rodada === 1) {
+          const fix = await complete({
+            system: systemPrompt(),
+            user: fixFailingTest(info, inv, t.code, trechoDaFalha(repeticao.output, nome)),
+            model: p.model,
+            maxTokens: 3000,
+          }).catch(() => null);
+          if (fix) {
+            p.usage.entrada += fix.usage?.entrada ?? 0;
+            p.usage.saida += fix.usage?.saida ?? 0;
+            const novoCode = extractCode(fix.text, 'rust').trim();
+            if (!/^\/\/\s*FALSA/i.test(novoCode)) {
+              const normalizado = alinharCamposDoRig(
+                p, normalizarCheck(p, novoCode, inv.id), rigCode, inv.id);
+              if (/\bfn\s+check\s*\(/.test(normalizado)) {
+                antesDoConserto.set(inv.id, t.code);
+                corrigidas.add(inv.id);
+                t.code = normalizado;
+                log(p, `${inv.id}: instável; tentando o harness corrigido`);
+                continue;
+              }
+            }
+          }
+        }
+
+        inv.verdict = 'descartada';
+        inv.verdictReason =
+          'O teste passou numa execução e falhou na seguinte, com sementes diferentes ' +
+          'e o mesmo contrato, e não estabilizou depois de uma correção. A propriedade ' +
+          'pode até valer, mas o que foi gerado é um teste instável — e um teste ' +
+          'instável não é evidência, é um alarme que vai disparar sozinho depois.';
+        descartadas++;
+        log(p, `${inv.id}: instável entre execuções; descartado`);
+      }
+      sobreviventes = sobreviventes.filter((t) => t.inv.verdict !== 'descartada');
+      await escrever(sobreviventes);
+      // Um harness corrigido que não compila derruba o arquivo inteiro, e a
+      // culpada é conhecida: só as que acabaram de ser corrigidas. Reverter
+      // essas e manter o resto é a resposta proporcional — descartar tudo
+      // puniria doze propriedades boas pelo erro de uma.
+      if ((await compila()).code !== 0) {
+        log(p, '!! uma correção de instabilidade não compila; revertendo só as corrigidas');
+        for (const t of sobreviventes) {
+          if (!corrigidas.has(t.inv.id)) continue;
+          t.code = antesDoConserto.get(t.inv.id) ?? t.code;
+          t.inv.verdict = 'descartada';
+          t.inv.verdictReason =
+            'O teste era instável, e a correção proposta não compila. Sem um teste que ' +
+            'rode de forma repetível, a propriedade não foi verificada nem refutada.';
+          descartadas++;
+        }
+        sobreviventes = sobreviventes.filter((t) => t.inv.verdict !== 'descartada');
+        await escrever(sobreviventes);
+      }
+      p.harnessCode = await readFile(p.harnessPath, 'utf8');
     }
 
     setStage(p, 'validar', {

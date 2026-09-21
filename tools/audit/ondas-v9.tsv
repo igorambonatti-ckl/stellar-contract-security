@@ -1,0 +1,4 @@
+modelo	status	propostas	compilam	reparados	descartados	mantidas	detectados	quais	seg	usd
+qwen/qwen3-coder-next	concluido	15	12	7	3	12	-1/7	baseline-vermelha	422	0.0548
+qwen/qwen3-coder-next	concluido	18	14	7	4	5	1/7	temp_nonce	632	0.0824
+qwen/qwen3-coder-next	concluido	19	12	7	7	11	1/7	reinit	526	0.0763

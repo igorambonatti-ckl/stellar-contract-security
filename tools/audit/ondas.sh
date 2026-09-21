@@ -41,8 +41,13 @@ for m in json.load(sys.stdin)['data']:
     try: print(m['id'], float(p['prompt'])*1e6, float(p['completion'])*1e6)
     except: pass")
 
+# Numera as repetições. Rodar o mesmo modelo três vezes sobrescrevia os
+# artefatos das duas primeiras, e a execução interessante é sempre uma das que
+# se perdeu — aconteceu três vezes nesta série antes de eu consertar isto.
+N=0
 for M in "$@"; do
-  echo "════════ onda: $M ════════"
+  N=$((N+1))
+  echo "════════ onda $N: $M ════════"
   rm -f "$HARNESS"
   # O proptest grava as entradas que falharam ao lado do teste e as reexecuta
   # na rodada seguinte. O arquivo acumulava sementes de ondas anteriores, com
@@ -71,7 +76,8 @@ import os" 2>/dev/null || echo erro)
   done
   FIM=$(date +%s)
 
-  curl -s "$API/api/pipeline/$ID" > "$DETALHE/$(echo "$M" | tr '/' '_').json"
+  SLUG_J=$(echo "$M" | tr '/' '_')-$N
+  curl -s "$API/api/pipeline/$ID" > "$DETALHE/$SLUG_J.json"
 
   # ── O braço de detecção ────────────────────────────────────────────────────
   # O harness ficou no crate. Para cada bug plantado, liga a feature e vê se
@@ -84,7 +90,7 @@ import os" 2>/dev/null || echo erro)
   # primeira medição deste braço reportou 7/7 exatamente assim — com cinco
   # testes que falhavam sozinhos. Sem esta porta, o número é indistinguível de
   # uma detecção real.
-  DETECTADOS=0; QUAIS=""; SLUG=$(echo "$M" | tr '/' '_')
+  DETECTADOS=0; QUAIS=""; SLUG=$(echo "$M" | tr '/' '_')-$N
   # Um harness vazio passa no controle limpo — não há o que falhar — e sai como
   # "0/7", indistinguível de um harness que rodou e não achou nada. São coisas
   # diferentes: um mediu e não encontrou, o outro não mediu.
@@ -112,7 +118,7 @@ import os" 2>/dev/null || echo erro)
   fi
   [ -f "$HARNESS" ] && cp "$HARNESS" "$DETALHE/$SLUG.rs"
 
-  cat "$DETALHE/$(echo "$M" | tr '/' '_').json" \
+  cat "$DETALHE/$SLUG_J.json" \
     | MODELO="$M" STATUS="$S" SEG=$((FIM-INI)) DET="$DETECTADOS" QUAIS="$QUAIS" PRECOS="$precos" python3 -c "
 import json,sys,os
 d=json.load(sys.stdin)
