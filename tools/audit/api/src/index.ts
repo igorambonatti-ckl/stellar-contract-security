@@ -81,15 +81,18 @@ app.post('/api/clean-view', async (req, res, next) => {
 
 app.post('/api/pipeline', async (req, res, next) => {
   try {
-    const { path, hiddenFeatures = [], runMutants = false, model, modo } = req.body ?? {};
+    const { path, hiddenFeatures, runMutants = false, model, modo } = req.body ?? {};
     if (typeof path !== 'string' || !path.trim()) {
       return res.status(400).json({ error: 'Informe o caminho do crate.' });
     }
     // Aceita arquivo ou pasta: sobe até a raiz do crate antes de qualquer coisa.
     const raiz = await resolveCrateRoot(path.trim());
     // Falha cedo se não for um contrato, em vez de dentro do pipeline.
-    await inspectContract(raiz);
-    const p = startPipeline({ path: raiz, hiddenFeatures, runMutants, model, modo });
+    const info = await inspectContract(raiz);
+    // Sem lista explícita, esconde tudo. O default oposto — mostrar tudo — é o
+    // que vazava o gabarito em toda execução que esquecia de marcar.
+    const ocultas: string[] = Array.isArray(hiddenFeatures) ? hiddenFeatures : info.features;
+    const p = startPipeline({ path: raiz, hiddenFeatures: ocultas, runMutants, model, modo });
     res.json({ id: p.id });
   } catch (e) {
     next(e);

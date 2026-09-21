@@ -159,7 +159,12 @@ export function Pipeline() {
       });
       if (!res.ok) return;
       const info = await res.json();
+      // Tudo escondido por padrão. Um caminho atrás de `#[cfg(feature)]` é
+      // quase sempre o que não se quer que o modelo veja — bug plantado, ramo
+      // de debug — e o passo manual de marcar era o que mais falhava na demo:
+      // três execuções seguidas com o gabarito vazado, todas por esquecimento.
       setFeatures(info.features ?? []);
+      setEscondidas(info.features ?? []);
     } catch { /* silencioso: é conveniência, o pipeline inspeciona de novo */ }
   }
 
@@ -311,12 +316,12 @@ export function Pipeline() {
             <div className="flex items-start gap-2">
               <EyeOff className="w-4 h-4 text-ink-muted mt-0.5 shrink-0" />
               <div>
-                <h2 className="text-sm font-bold text-ink">Esconder do modelo</h2>
+                <h2 className="text-sm font-bold text-ink">Escondidas do modelo</h2>
                 <p className="text-xs text-ink-muted mt-1 leading-relaxed max-w-[70ch]">
-                  O fonte pode conter as respostas. Features que escondem caminhos conhecidos —
-                  bugs plantados, ramos de debug — vão para o modelo junto com o código, e aí ele
-                  escreve invariantes sobre os bugs em vez de sobre o contrato. Marque para
-                  resolver o <code className="font-mono">cfg</code> antes de enviar.
+                  Todas as features do crate ficam fora do fonte que o modelo recebe — um caminho
+                  atrás de <code className="font-mono">cfg</code> é quase sempre bug plantado ou
+                  ramo de debug, e mostrá-lo faz o modelo descrever em vez de deduzir. Desmarque
+                  uma só se quiser que o modelo a veja.
                 </p>
               </div>
             </div>
