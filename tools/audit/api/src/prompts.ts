@@ -310,6 +310,8 @@ pub struct Snapshot {
     pub frozen: Vec<bool>,
     pub instance_ttl: u32,
     pub balance_ttls: Vec<Option<u32>>, // persistent entry per users[i], None if absent
+    pub sequence: u32,
+    pub timestamp: u64,
 }
 
 pub fn snapshot(r: &Rig) -> Snapshot {
@@ -322,6 +324,8 @@ pub fn snapshot(r: &Rig) -> Snapshot {
         vault_token_balance: t.balance(&r.id),
         frozen: r.users.iter().map(|u| c.is_frozen(u)).collect(),
         instance_ttl: r.env.as_contract(&r.id, || r.env.storage().instance().get_ttl()),
+        sequence: r.env.ledger().sequence(),
+        timestamp: r.env.ledger().timestamp(),
         balance_ttls: r.users.iter().map(|u| r.env.as_contract(&r.id, || {
             let k = DataKey::Balance(u.clone());
             if r.env.storage().persistent().has(&k) { Some(r.env.storage().persistent().get_ttl(&k)) } else { None }
@@ -334,6 +338,7 @@ pub enum Op {
     Credit { who: usize, amount: i128 },
     Debit  { who: usize, amount: i128 },
     Freeze { who: usize },
+    Unauthorized { who: usize },   // a call with no authorization available
     Advance(u32),
 }
 
@@ -350,10 +355,20 @@ pub fn apply(r: &Rig, op: &Op) {
             let res = c.try_debit(&r.users[who % r.users.len()], amount);
             *r.last.borrow_mut() = Some(match res { Ok(Ok(v)) => Ok(v), Err(Ok(e)) => Err(e), _ => Err(soroban_sdk::Error::from_contract_error(0)) });
         }
-        Op::Freeze { who }         => { let _ = c.try_freeze(&r.users[who % r.users.len()]); }
-        Op::Advance(n)             => {
+        Op::Freeze { who } => {
+            let res = c.try_freeze(&r.users[who % r.users.len()]);
+            *r.last.borrow_mut() = Some(match res { Ok(Ok(_)) => Ok(0), Err(Ok(e)) => Err(e), _ => Err(soroban_sdk::Error::from_contract_error(0)) });
+        }
+        Op::Unauthorized { who } => {
+            r.env.set_auths(&[]);
+            let res = c.try_freeze(&r.users[who % r.users.len()]);
+            r.env.mock_all_auths();
+            *r.last.borrow_mut() = Some(match res { Ok(Ok(_)) => Ok(0), Err(Ok(e)) => Err(e), _ => Err(soroban_sdk::Error::from_contract_error(0)) });
+        }
+        Op::Advance(n) => {
             let s = r.env.ledger().sequence();
             r.env.ledger().set_sequence_number(s.saturating_add(*n));
+            *r.last.borrow_mut() = Some(Ok(0));
         }
     }
 }
@@ -373,6 +388,7 @@ pub fn op_strategy() -> impl Strategy<Value = Op> {
         4 => (0usize..4, amount()).prop_map(|(who, amount)| Op::Credit { who, amount }),
         4 => (0usize..4, amount()).prop_map(|(who, amount)| Op::Debit  { who, amount }),
         1 => (0usize..4).prop_map(|who| Op::Freeze { who }),
+        1 => (0usize..4).prop_map(|who| Op::Unauthorized { who }),
         // Ledger jumps land on and just past TTL cliffs, not uniformly.
         2 => prop_oneof![Just(1u32), Just(15), Just(17), Just(99), Just(101), Just(1_000)]
                  .prop_map(Op::Advance),
@@ -566,12 +582,20 @@ pub struct Snapshot { ... }
 pub fn snapshot(r: &Rig) -> Snapshot { ... }
 \`\`\`
 
-**Return values are part of the state.** \`apply\` must record what the last
-operation returned — the shares a deposit minted, the amount a withdraw paid,
-or the error it failed with — in a field on \`Rig\` such as
-\`pub last: RefCell<Option<Result<i128, soroban_sdk::Error>>>\`. Properties like
-"the shares returned equal the balance delta" are unwritable otherwise, and
-they are the ones that catch arithmetic defects.
+**Return values are part of the state — for every operation.** \`apply\` must
+record what the last operation returned in a field on \`Rig\` such as
+\`pub last: RefCell<Option<Result<i128, soroban_sdk::Error>>>\` — the shares a
+deposit minted, the amount a withdraw paid, \`Ok(0)\` for a call that returns
+nothing, or the error it failed with. **Every arm of \`apply\` writes \`last\`**,
+including transfers, admin calls, pauses and the unauthorized attempt; a rig that
+records it only for two operations left half a catalogue unwritable — "did this
+call fail with Overflow?", "was the unauthorized call refused?" all need it.
+The ledger op writes \`last = Some(Ok(0))\` too, so a property can always tell
+"the previous op succeeded" from "it was refused".
+
+**The snapshot carries the ledger.** Include \`sequence_number\` (and
+\`timestamp\`) read from \`env.ledger()\` — TTL properties compare "how many
+ledgers passed" against "how much the TTL moved", and cannot without it.
 
 **Why the snapshot matters more than it looks.** The most valuable properties are
 about a *transition*, not a state: "an unauthorized call changed nothing", "the
