@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   Play, Square, Loader2, CheckCircle2, XCircle, MinusCircle, Circle,
-  ChevronDown, ChevronRight, Trash2, FileCode2, Clock, EyeOff, UserCheck, Wand2,
+  ChevronDown, ChevronRight, Trash2, FileCode2, Clock, EyeOff, UserCheck,
   FilePlus2, FileDiff, ShieldCheck, AlertTriangle,
 } from 'lucide-react';
 import clsx from 'clsx';
@@ -75,6 +75,7 @@ function dur(s: Stage) {
  * Um preço desatualizado aqui erra o rodapé de um relatório, não uma decisão.
  */
 const PRECOS: Record<string, [number, number]> = {
+  'google/gemini-3.8-flash':      [0.75, 3.75],
   'google/gemini-3.1-flash-lite': [0.25, 1.50],
   'qwen/qwen3-coder-next':        [0.12, 0.80],
   'openai/gpt-5.4-nano':          [0.20, 1.25],
@@ -106,21 +107,16 @@ export function Pipeline() {
   const [stages, setStages] = useState<Stage[]>([]);
   const [log, setLog] = useState<string[]>([]);
   const [status, setStatus] =
-    useState<'idle'|'rodando'|'aguardando-curadoria'|'concluido'|'falhou'|'cancelado'>('idle');
-  // Curado é o padrão porque é o fluxo com evidência: no benchmark deste
-  // projeto, curar as invariantes propostas levou a detecção de 1-2 dos 7 bugs
-  // plantados para 7 de 7. O modo automático fica disponível ao lado, e o que
-  // ele mede é exatamente o tamanho dessa diferença.
-  const [modo, setModo] = useState<'curado'|'automatico'>('curado');
+    useState<'idle'|'rodando'|'concluido'|'falhou'|'cancelado'>('idle');
+  // Só o automático. A curadoria existe, mas é feita por uma segunda passada
+  // de IA dentro do pipeline — não há um passo em que uma pessoa clica.
+  const modo = 'automatico' as const;
   // Poucos modelos, escolhidos por medição neste projeto e não por catálogo.
-  // O gemini-flash-lite faz uma auditoria completa por três centavos; o
-  // sonnet-4.5 faz a mesma por um dólar e meio e compila tudo de primeira. A
+  // O gemini-3.8-flash é o default; o flash-lite faz por um terço do preço com
+  // detecção parecida no benchmark, e o sonnet-4.5 por vinte vezes mais. A
   // diferença aparece no relatório, que é onde ela deve ser decidida.
-  const [modelo, setModelo] = useState('google/gemini-3.1-flash-lite');
-  const [propostas, setPropostas] = useState<Invariant[] | null>(null);
+  const [modelo, setModelo] = useState('google/gemini-3.8-flash');
   const [vazamento, setVazamento] = useState<{ invariantes: string[]; features: string[] } | null>(null);
-  const [aceitas, setAceitas] = useState<Set<string>>(new Set());
-  const [enviando, setEnviando] = useState(false);
   const [id, setId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [aberto, setAberto] = useState<Record<string, boolean>>({});
@@ -176,7 +172,7 @@ export function Pipeline() {
    */
   async function iniciar(alvo = path, ocultar = escondidas) {
     setErro(null); setStages([]); setLog([]); setStatus('rodando'); setAberto({});
-    setPropostas(null); setAceitas(new Set()); setVazamento(null);
+    setVazamento(null);
     try {
       const res = await fetch('/api/pipeline', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -203,15 +199,6 @@ export function Pipeline() {
       src.addEventListener('log', (e) => {
         setLog((l) => [...l, JSON.parse((e as MessageEvent).data)]);
       });
-      src.addEventListener('curadoria', (e) => {
-        const d = JSON.parse((e as MessageEvent).data);
-        setPropostas(d.invariants);
-        setVazamento(d.vazamento ?? null);
-        // Tudo aceito por padrão: o trabalho é tirar o que não vale, e partir
-        // de "nada aceito" faria uma curadoria apressada virar zero invariante.
-        setAceitas(new Set(d.invariants.map((i: Invariant) => i.id)));
-        setStatus('aguardando-curadoria');
-      });
       src.addEventListener('done', (e) => {
         setStatus(JSON.parse((e as MessageEvent).data).status);
         src.close();
@@ -233,11 +220,11 @@ export function Pipeline() {
         <span className="section-label">Auditoria de contrato Soroban</span>
         <h1 className="text-3xl font-bold text-ink">Fuzzing guiado por IA</h1>
         <p className="text-ink-muted max-w-[72ch] leading-relaxed">
-          A IA lê o contrato e propõe as invariantes. Você separa as que valem das que só parecem
-          valer. O resto é máquina: um rig de fuzzing com sequências sorteadas, uma asserção por
-          invariante, e cada propriedade testada{' '}
-          <strong className="text-ink">contra o contrato como ele é</strong> — o que falha ali é
-          falso positivo e sai sozinho.
+          A IA lê o contrato e propõe as invariantes; uma segunda passada de IA separa as que
+          valem das que só parecem valer. O resto é fuzzing: um rig com sequências sorteadas,
+          uma asserção por invariante, e cada propriedade testada{' '}
+          <strong className="text-ink">contra o contrato como ele é</strong>. O que falha vem com
+          o contra-exemplo mínimo; o que passa vira suíte de regressão.
         </p>
       </header>
 
@@ -271,7 +258,8 @@ export function Pipeline() {
           <span className="text-ink-muted">Modelo:</span>
           <select className="text-sm border border-line rounded-md px-2 py-1 bg-surface text-ink"
             value={modelo} onChange={(e) => setModelo(e.target.value)}
-            disabled={status === 'rodando' || status === 'aguardando-curadoria'}>
+            disabled={status === 'rodando'}>
+            <option value="google/gemini-3.8-flash">gemini-3.8-flash · ~US$ 0,08</option>
             <option value="google/gemini-3.1-flash-lite">gemini-3.1-flash-lite · ~US$ 0,03</option>
             <option value="qwen/qwen3-coder-next">qwen3-coder-next · ~US$ 0,08</option>
             <option value="openai/gpt-5.4-nano">gpt-5.4-nano · ~US$ 0,07</option>
@@ -279,20 +267,6 @@ export function Pipeline() {
             <option value="anthropic/claude-sonnet-4.5">claude-sonnet-4.5 · ~US$ 1,70</option>
           </select>
 
-          <span className="text-ink-muted ml-3">Modo:</span>
-          {([
-            ['curado', 'Curado', UserCheck, 'Para depois de propor e espera seu veredito'],
-            ['automatico', 'Automático', Wand2, 'Vai direto ao fim, sem curadoria — mede quanto ela vale'],
-          ] as const).map(([v, rotulo, Icone, dica]) => (
-            <button key={v} title={dica} onClick={() => setModo(v)}
-              disabled={status === 'rodando' || status === 'aguardando-curadoria'}
-              className={clsx('flex items-center gap-1.5 px-3 py-1 rounded-full border transition-colors',
-                modo === v
-                  ? 'border-brand-400 bg-brand-50 text-brand-700'
-                  : 'border-line text-ink-muted hover:border-brand-200')}>
-              <Icone className="w-3.5 h-3.5" /> {rotulo}
-            </button>
-          ))}
         </div>
 
         {recentes.length > 0 && status !== 'rodando' && (
@@ -545,92 +519,6 @@ export function Pipeline() {
           </div>
         );
       })()}
-
-      {propostas && status === 'aguardando-curadoria' && (
-        <section className="card p-5 border-brand-300 flex flex-col gap-4 overflow-hidden">
-          <header className="flex items-start justify-between gap-4 flex-wrap">
-            <div className="flex flex-col gap-1">
-              <span className="section-label flex items-center gap-1.5">
-                <UserCheck className="w-3.5 h-3.5" /> Curadoria
-              </span>
-              <h2 className="text-lg font-semibold text-ink">
-                {propostas.length} invariantes propostas
-              </h2>
-              <p className="text-sm text-ink-muted max-w-[62ch] leading-relaxed">
-                Tire as que não valem a pena testar: as que restatem uma linha do código, as que
-                não podem falhar, e as que você sabe que não valem para este contrato. O que
-                sobrar vira um teste de fuzzing com sequências sorteadas.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <button className="btn-outline text-sm"
-                onClick={() => setAceitas(new Set(propostas.map((i) => i.id)))}>
-                Todas
-              </button>
-              <button className="btn-outline text-sm" onClick={() => setAceitas(new Set())}>
-                Nenhuma
-              </button>
-              <button className="btn-primary" disabled={enviando || aceitas.size === 0}
-                onClick={async () => {
-                  setEnviando(true);
-                  try {
-                    const res = await fetch(`/api/pipeline/${id}/curadoria`, {
-                      method: 'POST', headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ aceitas: [...aceitas] }),
-                    });
-                    if (!res.ok) throw new Error((await res.json()).error);
-                    setStatus('rodando'); setPropostas(null);
-                  } catch (e) {
-                    setErro((e as Error).message);
-                  } finally {
-                    setEnviando(false);
-                  }
-                }}>
-                {enviando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                Testar {aceitas.size}
-              </button>
-            </div>
-          </header>
-
-          <ul className="flex flex-col gap-2">
-            {propostas.map((inv) => {
-              const on = aceitas.has(inv.id);
-              return (
-                <li key={inv.id}>
-                  <label className={clsx(
-                    'flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors',
-                    on ? 'border-brand-200 bg-brand-50/40' : 'border-line opacity-55 hover:opacity-80')}>
-                    <input type="checkbox" checked={on} className="mt-0.5 shrink-0 accent-brand-500 w-4 h-4"
-                      onChange={() => setAceitas((prev) => {
-                        const p = new Set(prev);
-                        if (p.has(inv.id)) p.delete(inv.id); else p.add(inv.id);
-                        return p;
-                      })} />
-                    <div className="flex flex-col gap-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-mono text-xs text-ink-muted">{inv.id}</span>
-                        <span className="chip">{inv.class}</span>
-                        {inv.confidence && (
-                          <span className={clsx('chip',
-                            inv.confidence === 'low' && 'text-danger border-red-200')}>
-                            confiança {inv.confidence}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-ink leading-relaxed break-words">{inv.statement}</p>
-                      {inv.assumption && (
-                        <p className="text-xs text-ink-muted leading-relaxed break-words">
-                          <strong>Assume:</strong> {inv.assumption}
-                        </p>
-                      )}
-                    </div>
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
 
       {log.length > 0 && (
         <section className="rounded-xl border border-line overflow-hidden">
