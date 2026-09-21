@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { spawn } from 'node:child_process';
 import type { Response } from 'express';
 
@@ -27,6 +28,9 @@ import {
  * caro — uma propriedade instável entregue ao usuário como verificada.
  */
 const VALIDACAO_CASOS = 256;
+
+/** Modelo da curadoria automática: leitura, não escrita. */
+const MODELO_CRITICO = process.env.OPENROUTER_MODEL_CRITICO || 'google/gemini-3.1-flash-lite';
 
 /**
  * Ambiente do proptest para uma execução **independente** da anterior.
@@ -800,7 +804,11 @@ async function run(p: Pipeline, runMutants: boolean) {
     // Reinspeciona a cópia: é sobre ela que tudo daqui para a frente fala.
     const info = await inspectContract(copia.dir);
     p.info = info;
-    p.targetDir = join(info.path, '.audit-target');
+    // Um diretório de build por *nome de crate*, fora da cópia. Dentro dela,
+    // cada auditoria recompilava o soroban-sdk do zero — 57 s na suíte e mais
+    // alguns em cada cargo seguinte. Fora, a segunda auditoria do mesmo
+    // contrato começa com as dependências prontas.
+    p.targetDir = join(tmpdir(), 'auditoria-soroban', '.target', info.crateName);
     setStage(p, 'inspecionar', {
       status: 'ok',
       finishedAt: Date.now(),
@@ -959,7 +967,11 @@ async function run(p: Pipeline, runMutants: boolean) {
       const rev = await complete({
         system: systemPrompt(),
         user: curateInvariants(info, src, p.invariants),
-        model: p.model,
+        // Revisar um catálogo é tarefa de leitura, não de escrita de Rust. O
+        // 3.8-flash levava 152 s pensando sobre vinte propostas; o flash-lite
+        // faz em ~30 s, e o que mede a qualidade do crítico é a detecção, não
+        // o tamanho do modelo.
+        model: MODELO_CRITICO,
         maxTokens: 8000,
       }).catch((e) => { log(p, `!! curadoria automática: ${e.message}`); return null; });
 
@@ -1066,7 +1078,9 @@ async function run(p: Pipeline, runMutants: boolean) {
     // continua sendo a do catálogo: os resultados voltam indexados, não na
     // ordem em que chegaram.
     const gerados: (string | null)[] = new Array(p.invariants.length).fill(null);
-    const CONC = 4;
+    // Oito, não quatro: cada chamada é independente e leva 20 a 40 s; com
+    // dezoito asserções, quatro por vez eram cinco levas.
+    const CONC = 8;
     let proximo = 0;
 
     // O rig vem antes de tudo e é compilado sozinho: se ele não compilar,

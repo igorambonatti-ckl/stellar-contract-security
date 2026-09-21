@@ -84,14 +84,14 @@ print((rel[0].get('data') or {}).get('copia') or '') if rel else print('')")
   if [ ! -f "$HARNESS" ] || ! grep -q "fn .*_sequencia" "$HARNESS"; then
     echo "[$N $M] harness sem nenhum teste — nada a medir"
     QUAIS="sem-testes"; DETECTADOS=-1
-  elif ! (cd "$DIR" && CARGO_TARGET_DIR="$DIR/.audit-target" PROPTEST_CASES=64 \
+  elif ! (cd "$DIR" && CARGO_TARGET_DIR="${TMPDIR:-/tmp}/auditoria-soroban/.target/$CRATE" PROPTEST_CASES=64 \
           PROPTEST_FAILURE_PERSISTENCE=off cargo test -p "$CRATE" --test audit_generated \
           > "$DET/$SLUG.limpo.out" 2>&1); then
     echo "[$N $M] ✗✗ vermelho contra o contrato LIMPO — não medível"
     QUAIS="baseline-vermelha"; DETECTADOS=-1
   else
     for B in "${BUGS[@]}"; do
-      if ! (cd "$DIR" && CARGO_TARGET_DIR="$DIR/.audit-target" PROPTEST_CASES=64 \
+      if ! (cd "$DIR" && CARGO_TARGET_DIR="${TMPDIR:-/tmp}/auditoria-soroban/.target/$CRATE" PROPTEST_CASES=64 \
             PROPTEST_FAILURE_PERSISTENCE=off cargo test -p "$CRATE" --features "$B" \
             --test audit_generated > "$DET/$SLUG.$B.out" 2>&1); then
         DETECTADOS=$((DETECTADOS+1)); QUAIS="$QUAIS${QUAIS:+,}${B#bug_}"
