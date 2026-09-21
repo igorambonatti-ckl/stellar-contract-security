@@ -272,6 +272,32 @@ function queixasDoCheck(code: string): string[] {
 }
 
 /**
+ * Chaves e parênteses fecham? Contagem simples, ignorando strings e comentários.
+ *
+ * Uma asserção desbalanceada não quebra só ela: o rustc reporta "unclosed
+ * delimiter" no **fim do arquivo**, fora de qualquer mod, e a atribuição por
+ * linha não tem a quem culpar — o arquivo inteiro morre e onze asserções boas
+ * saem como "nenhum teste compila". Numa execução, uma única asserção com
+ * prosa no meio derrubou as outras onze.
+ */
+function balanceado(code: string): boolean {
+  let chave = 0, par = 0, col = 0;
+  let str = false, esc = false, com = false;
+  for (let i = 0; i < code.length; i++) {
+    const c = code[i], n = code[i + 1];
+    if (com) { if (c === '\n') com = false; continue; }
+    if (str) { if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') str = false; continue; }
+    if (c === '/' && n === '/') { com = true; continue; }
+    if (c === '"') { str = true; continue; }
+    if (c === '{') chave++; else if (c === '}') chave--;
+    else if (c === '(') par++; else if (c === ')') par--;
+    else if (c === '[') col++; else if (c === ']') col--;
+    if (chave < 0 || par < 0 || col < 0) return false;
+  }
+  return chave === 0 && par === 0 && col === 0;
+}
+
+/**
  * Garante que o trecho define `check`, que é o que o driver chama.
  *
  * O erro mais comum das últimas medições não era sobre o contrato nem sobre o
@@ -1163,6 +1189,15 @@ async function run(p: Pipeline, runMutants: boolean) {
         log(p, `${inv.id}: inexprimível — ${inv.verdictReason.slice(0, 90)}`);
         continue;
       }
+      if (!balanceado(code)) {
+        inv.verdict = 'descartada';
+        inv.verdictReason =
+          'O trecho gerado tem chaves ou parênteses que não fecham — resposta cortada ou ' +
+          'prosa no meio do código. Não entra no arquivo: uma asserção desbalanceada ' +
+          'derruba todas as outras junto.';
+        log(p, `${inv.id}: chaves não fecham; descartada antes de escrever`);
+        continue;
+      }
       testes.push({ inv, code });
     }
 
@@ -1279,6 +1314,9 @@ proptest! {
     for (let rodada = 1; rodada <= 3 && build.code !== 0 && testes.length; rodada++) {
       guard();
       let ruins = culpados(build.output);
+      // "unclosed delimiter" aponta para o fim do arquivo, fora de todo mod.
+      // Quem desbalanceou é quem não fecha as chaves.
+      for (const t of testes) if (!balanceado(t.code)) ruins.add(t.inv.id);
       if (ruins.size === 0) {
         // Erro fora de qualquer mod — no rig ou no cabeçalho. Não há asserção
         // a culpar, e o log já tem o diagnóstico.
@@ -1310,6 +1348,10 @@ proptest! {
           p, normalizarCheck(p, novo, t.inv.id), rigCode, t.inv.id);
         if (!/\bfn\s+check\s*\(/.test(normalizado)) {
           log(p, `${t.inv.id}: a correção perdeu \`fn check\`; mantenho a anterior`);
+          return;
+        }
+        if (!balanceado(normalizado)) {
+          log(p, `${t.inv.id}: a correção veio com chaves que não fecham; mantenho a anterior`);
           return;
         }
         t.code = normalizado;
