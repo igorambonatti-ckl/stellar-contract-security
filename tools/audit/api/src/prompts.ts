@@ -111,7 +111,10 @@ that cannot fail and therefore cannot find anything.
 
 What is still falsifiable is the TTL **number**: a restored entry comes back at
 \`min_persistent_entry_ttl - 1\`, which is distinguishable from one that was
-properly extended. Assert the number, not the readability. And the host **caps
+properly extended. Assert the number, not the readability. **\`get_ttl\` excludes
+the current ledger**: right after \`extend_ttl(_, X)\` it reads \`X - 1\`, and one
+ledger later \`X - 2\`. A property that expects exactly \`X\` is off by one and
+fails against a correct contract. And the host **caps
 every extension at \`max_entry_ttl\`** — an \`extend_ttl(_, 1_036_800)\` under a
 ceiling of 1_000_000 leaves the TTL at 999_999, correctly.
 `;

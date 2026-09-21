@@ -1524,6 +1524,10 @@ proptest! {
     guard();
 
     let falhos = failedTests(val.output);
+    // A saída mais recente de validação. O contra-exemplo de uma propriedade
+    // que só falhou na revalidação era recortado da primeira saída, onde ela
+    // não tinha falhado, e o recorte caía no bloco do teste vizinho.
+    let ultimaSaida = val.output;
 
     // Uma rodada de reparo para quem falhou contra o contrato correto.
     //
@@ -1592,6 +1596,7 @@ proptest! {
             ['test', '-p', info.crateName, '--test', 'audit_generated'],
             AMBIENTE_PROPTEST(VALIDACAO_CASOS));
           falhos = failedTests(val2.output);
+          ultimaSaida = val2.output;
         } else {
           // Reverte só quem quebrou. Reverter todas as corrigidas jogava fora
           // duas correções boas por causa de uma — e a rodada seguinte refazia
@@ -1612,6 +1617,7 @@ proptest! {
               ['test', '-p', info.crateName, '--test', 'audit_generated'],
               AMBIENTE_PROPTEST(VALIDACAO_CASOS));
             falhos = failedTests(val3.output);
+            ultimaSaida = val3.output;
           }
         }
       }
@@ -1629,7 +1635,7 @@ proptest! {
           'rodada de correção do harness. Ou o contrato tem um defeito aqui, ou a ' +
           'invariante não vale para ele — o contra-exemplo é o que decide, e quem ' +
           'decide é quem audita.';
-        inv.contraExemplo = trechoDaFalha(val.output, t);
+        inv.contraExemplo = trechoDaFalha(ultimaSaida, t);
       }
     }
     for (const i of p.invariants) {
