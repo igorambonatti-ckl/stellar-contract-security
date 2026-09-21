@@ -912,9 +912,12 @@ them.** The snapshot taken before the operation holds every total and balance
 the formula reads; the operation holds the amount; \`last\` holds what the call
 returned. Recompute the contract's own formula from \`antes\` and \`op\` with
 \`checked_mul\` / \`checked_add\`, and compare with \`last\`: if your checked
-computation overflows, the call must have failed with the overflow error; if
-it did not, the returned value must equal yours. A wrapping bug returns a
-number that is not yours. "Requires predicting internal operands" is the
+computation overflows, the call must have been **refused — with any error**,
+because the contract may hit a different guard first (insufficient balance,
+paused) and that is not a defect; asserting the specific overflow error there
+made a correct contract fail one run in four. Only when the call succeeded do
+you compare values: the returned number must equal yours. A wrapping bug
+returns a number that is not yours, *and succeeds*. "Requires predicting internal operands" is the
 reason one such property was given up — the operands were all in the
 snapshot.`;
   }
