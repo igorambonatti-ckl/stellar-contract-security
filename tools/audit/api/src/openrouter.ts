@@ -152,11 +152,11 @@ export function extractCode(text: string, lang = 'rust'): string {
   // O maior bloco, não o primeiro. Um modelo que narra em volta do código
   // costuma abrir um bloco pequeno dentro da explicação e o de verdade depois;
   // pegar o primeiro entregava a explicação ao compilador.
-  const blocos = [...text.matchAll(new RegExp('```' + lang + '\\s*\\n([\\s\\S]*?)```', 'g'))]
-    .map((m) => m[1]);
-  if (blocos.length === 0) {
-    for (const m of text.matchAll(/```\w*\s*\n([\s\S]*?)```/g)) blocos.push(m[1]);
-  }
+  // Todos os blocos cercados, com tag ou sem, e fica o maior. Só olhar os
+  // com a tag da linguagem deixava passar o caso em que o modelo mostra a
+  // assinatura num bloco pequeno com tag e o código de verdade num bloco sem
+  // tag — o resultado era uma asserção de uma linha, e dez em catorze.
+  const blocos = [...text.matchAll(/```[\w-]*[ \t]*\r?\n([\s\S]*?)```/g)].map((m) => m[1]);
   let out = blocos.length ? blocos.reduce((a, b) => (b.length > a.length ? b : a)) : text;
 
   // Sem cerca nenhuma, a resposta é prosa e código misturados. A prosa sem

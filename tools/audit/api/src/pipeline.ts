@@ -1145,6 +1145,13 @@ async function run(p: Pipeline, runMutants: boolean) {
         p.usage.entrada += r.usage?.entrada ?? 0;
         p.usage.saida += r.usage?.saida ?? 0;
         const bruto = extractCode(r.text, 'rust').trim();
+        // Uma asserção de menos de cinco linhas é sintoma de parser, não de
+        // modelo. Guardar o começo da resposta crua é o que permite ver o
+        // formato que o parser não entendeu — sem isso, o diagnóstico foi
+        // "o grok desiste fácil" por uma execução inteira.
+        if (bruto.split('\n').length < 5 && !/IMPOSSIVEL/i.test(bruto)) {
+          log(p, `${inv.id}: só ${bruto.split('\n').length} linha(s) extraída(s) de ${r.text.length} chars — resposta crua começa: ${JSON.stringify(r.text.slice(0, 160))}`);
+        }
         let pronto = /^\/\/\s*IMPOSSIVEL/i.test(bruto)
           ? bruto
           : alinharCamposDoRig(p, normalizarCheck(p, consertarImports(
