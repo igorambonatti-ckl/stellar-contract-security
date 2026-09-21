@@ -523,9 +523,10 @@ export function Pipeline() {
           <div className="flex flex-col gap-8">
             <Grupo tom="achado" titulo="A investigar" itens={achados}
               explicacao="A propriedade falhou contra o contrato e continuou falhando depois de uma
-                tentativa de correção do harness. Ou o contrato tem um defeito aqui, ou a invariante
-                não vale para ele. O contra-exemplo é a sequência mínima que quebra — a ferramenta
-                não decide qual dos dois é, quem audita decide." />
+                tentativa de correção. São três possibilidades, e a ferramenta não distingue: o
+                contrato tem um defeito; a invariante não vale para ele; ou o harness gerado está
+                errado — um panic em storage.rs ou unwrap.rs dentro do SDK é quase sempre este
+                último. O contra-exemplo é a sequência mínima que quebra. Quem audita decide." />
 
             <Grupo tom="ok" titulo="Verificadas" itens={verificadas}
               explicacao="Valem para toda sequência de operações sorteada, contra o contrato como ele

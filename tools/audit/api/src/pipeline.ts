@@ -238,6 +238,36 @@ function alinharCamposDoRig(p: Pipeline, code: string, rig: string, id: string):
 }
 
 /**
+ * O que um check pode ter de errado sem o compilador reclamar.
+ *
+ * Os dois padrões abaixo produziram, num contrato oficial da Stellar e
+ * sabidamente correto, cinco "achados" que eram todos bug do harness:
+ * `env.storage()` fora de `as_contract` (panic em `storage.rs`) e `.unwrap()`
+ * sobre uma entrada que legitimamente não existe naquele estado (panic em
+ * `unwrap.rs`). A rodada de reparo com o erro de execução não os consertou —
+ * o modelo respondeu "corrigido" cinco vezes.
+ *
+ * Os dois são visíveis no texto. Apontá-los antes de rodar, com a instrução
+ * exata, é mais barato e mais confiável que reparar depois.
+ */
+function queixasDoCheck(code: string): string[] {
+  const q: string[] = [];
+  const soltos = [...code.matchAll(/\.storage\s*\(\s*\)/g)]
+    .filter((m) => !/as_contract/.test(code.slice(Math.max(0, m.index - 300), m.index)));
+  if (soltos.length) {
+    q.push(`${soltos.length} \`env.storage()\` access(es) outside \`env.as_contract(&id, || ...)\` — ` +
+      'this panics inside the SDK against the correct contract. Wrap every one.');
+  }
+  const unwraps = [...code.matchAll(/\.get\s*(?:::<[^>]*>)?\s*\([^)]*\)\s*\.unwrap\s*\(\)/g)];
+  if (unwraps.length) {
+    q.push(`${unwraps.length} \`.get(..).unwrap()\` on storage — the entry legitimately may not exist ` +
+      'in every reachable state (before the first write, after it was consumed). Match on `None` ' +
+      'and return early: that is a precondition of the property, not a defect.');
+  }
+  return q;
+}
+
+/**
  * Garante que o trecho define `check`, que é o que o driver chama.
  *
  * O erro mais comum das últimas medições não era sobre o contrato nem sobre o
@@ -1014,10 +1044,33 @@ async function run(p: Pipeline, runMutants: boolean) {
         p.usage.entrada += r.usage?.entrada ?? 0;
         p.usage.saida += r.usage?.saida ?? 0;
         const bruto = extractCode(r.text, 'rust').trim();
-        gerados[i] = /^\/\/\s*IMPOSSIVEL/i.test(bruto)
+        let pronto = /^\/\/\s*IMPOSSIVEL/i.test(bruto)
           ? bruto
           : alinharCamposDoRig(p, normalizarCheck(p, consertarImports(
               p, info.crateName.replace(/-/g, '_'), bruto, inv.id), inv.id), rigCode, inv.id);
+
+        const queixas = /^\/\/\s*IMPOSSIVEL/i.test(pronto) ? [] : queixasDoCheck(pronto);
+        if (queixas.length) {
+          log(p, `${inv.id}: ${queixas.length} padrão(ões) que reprovam contra o contrato correto; pedindo correção antes de compilar`);
+          const fix = await complete({
+            system: systemPrompt(),
+            user: `This \`check\` compiles but would fail against the *correct* contract:\n\n\`\`\`rust\n${pronto}\n\`\`\`\n\n` +
+              queixas.map((x, k) => `${k + 1}. ${x}`).join('\n\n') +
+              '\n\nReturn the complete corrected snippet in one ```rust block, keeping `pub fn check(r: &rig::Rig, antes: &rig::Snapshot, op: &rig::Op)`. Change nothing else.',
+            model: p.model,
+            maxTokens: 3000,
+          }).catch(() => null);
+          if (fix) {
+            p.usage.entrada += fix.usage?.entrada ?? 0;
+            p.usage.saida += fix.usage?.saida ?? 0;
+            const corrigido = alinharCamposDoRig(p, normalizarCheck(p, consertarImports(
+              p, info.crateName.replace(/-/g, '_'), extractCode(fix.text, 'rust').trim(), inv.id), inv.id), rigCode, inv.id);
+            if (/\bfn\s+check\s*\(/.test(corrigido) && queixasDoCheck(corrigido).length < queixas.length) {
+              pronto = corrigido;
+            }
+          }
+        }
+        gerados[i] = pronto;
         log(p, `${inv.id}: ${gerados[i]!.split('\n').length} linhas`);
       }
     }));
