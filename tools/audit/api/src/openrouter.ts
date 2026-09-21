@@ -129,9 +129,23 @@ async function chamar(
  * function guessing.
  */
 export function extractCode(text: string, lang = 'rust'): string {
-  const fenced = new RegExp('```' + lang + '\\s*\\n([\\s\\S]*?)```').exec(text);
-  if (fenced) return fenced[1];
-  const any = /```\w*\s*\n([\s\S]*?)```/.exec(text);
-  if (any) return any[1];
-  return text;
+  // O maior bloco, não o primeiro. Um modelo que narra em volta do código
+  // costuma abrir um bloco pequeno dentro da explicação e o de verdade depois;
+  // pegar o primeiro entregava a explicação ao compilador.
+  const blocos = [...text.matchAll(new RegExp('```' + lang + '\\s*\\n([\\s\\S]*?)```', 'g'))]
+    .map((m) => m[1]);
+  if (blocos.length === 0) {
+    for (const m of text.matchAll(/```\w*\s*\n([\s\S]*?)```/g)) blocos.push(m[1]);
+  }
+  let out = blocos.length ? blocos.reduce((a, b) => (b.length > a.length ? b : a)) : text;
+
+  // Código Rust não contém crase. Uma linha com crase é prosa com código
+  // inline ("In `apply`, the generator...") ou uma cerca de markdown que
+  // sobrou — e as duas dão `unknown start of token` no compilador. Isto vale
+  // para o JSON também: uma crase dentro de uma string JSON é raríssima, e a
+  // prosa em volta é comum.
+  if (lang === 'rust') {
+    out = out.split('\n').filter((l) => !l.includes('`')).join('\n');
+  }
+  return out;
 }

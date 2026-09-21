@@ -210,6 +210,11 @@ Return **only** a JSON array, no prose around it. Each element:
 }
 \`\`\`
 
+Aim for **12 to 20 proposals**. A reviewer will cut what does not hold up, so
+breadth is the goal here: cover every entry point, every storage tier the
+contract touches, every place two quantities must agree. Six proposals leave
+nothing to cut and nothing to fuzz.
+
 Rank most valuable first. **Never speculate.** If an invariant might not hold on
 the correct contract, still include it, mark confidence \`low\`, and say exactly
 what you are unsure about in \`assumption\`.`;
@@ -390,23 +395,26 @@ is worth turning into a fuzzing property. Be strict: a property that cannot fail
 costs a test slot and proves nothing, and a property that fails for the wrong
 reason produces a finding nobody can act on.
 
-## Reject when
+## Reject only when one of these holds — and say which
 
-- **It cannot fail.** True by construction of the contract, the SDK or the
-  protocol. Examples: a persistent entry being readable after its TTL lapsed
-  (protocol 23 auto-restores); a bare \`+\` never wrapping under
+- **It cannot fail.** True by construction of the SDK or the protocol, not of
+  the contract's logic. Examples: a persistent entry being readable after its
+  TTL lapsed (protocol 23 auto-restores); a bare \`+\` never wrapping under
   \`overflow-checks\`; a field of an unsigned type being non-negative.
-- **It restates a single line of code.** "\`deposit\` calls \`require_auth\`" is
-  the code, not a property of it. A property relates two or more observable
-  quantities, or a before and an after.
-- **It says "must abort" without saying which error.** \`is_err()\` passes when
-  the contract fails for an unrelated reason — it is how a seeded arithmetic
-  bug passed a liveness oracle in this project's own benchmark.
 - **It cannot be observed** through the public entry points and the test
-  \`Env\` surface above.
+  \`Env\` surface above, even with the storage traits.
 - **It is a scenario, not an invariant.** "Deposit 100, then withdraw 50, then
   check" is a test case; the fuzzer needs a predicate over reachable states or
   over a transition.
+
+**Do not reject for restating the code.** "\`set_admin\` requires the admin's
+authorization" reads like a restatement — and it is exactly the property that
+catches a missing \`require_auth\`, because the fuzzer runs it with no
+authorization available. A property about access control or about a guard is
+worth keeping even when it mirrors a line: the line can be missing.
+
+**Do not reject for saying "must abort" — rewrite it** to name the error, as a
+\`rewrite\` verdict. The fuzzer can check which error came back.
 
 ## Rewrite when
 

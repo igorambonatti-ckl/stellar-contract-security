@@ -70,6 +70,15 @@ rodar() {
   FIM=$(date +%s)
   curl -s "$API/api/pipeline/$ID" > "$DET/$SLUG.json"
 
+  # A ferramenta trabalha numa cópia autônoma em /tmp — o harness está lá, não
+  # em $DIR. Procurar em $DIR reportou "sem nenhum teste" em quatro execuções
+  # que tinham propriedades verificadas, e a detecção ficou cega sem avisar.
+  local COPIA; COPIA=$(python3 -c "
+import json,sys
+d=json.load(open('$DET/$SLUG.json'))
+rel=[s for s in d['stages'] if s['id']=='relatorio']
+print((rel[0].get('data') or {}).get('copia') or '') if rel else print('')")
+  [ -n "$COPIA" ] && [ -d "$COPIA" ] && DIR="$COPIA"
   local HARNESS="$DIR/tests/audit_generated.rs"
   local DETECTADOS=0 QUAIS=""
   if [ ! -f "$HARNESS" ] || ! grep -q "fn .*_sequencia" "$HARNESS"; then
@@ -113,8 +122,9 @@ print('\t'.join(str(x) for x in [
   rel.get('mantidas','-'), os.environ['DET']+'/7', os.environ['QUAIS'] or '-',
   os.environ['SEG'], f'{usd:.4f}']))" >> "$OUT"
 
-  # A cópia some; os artefatos ficam em ondas-detalhe/.
-  rm -rf "$DIR"
+  # As cópias somem; os artefatos ficam em ondas-detalhe/.
+  rm -rf "$CONTRACTS/$CRATE"
+  [ -n "$COPIA" ] && rm -rf "$(dirname "$COPIA")"
   echo "[$N $M] fim"
 }
 
