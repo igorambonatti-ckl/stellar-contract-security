@@ -2,7 +2,7 @@
 
 | Arquivo | O que é |
 |---|---|
-| [`apresentacao.pdf`](apresentacao.pdf) | **O deck**, 20 slides 16:9, em português. Pronto para apresentar. |
+| [`apresentacao.pdf`](apresentacao.pdf) | **O deck**, 13 slides 16:9, em português. Pronto para apresentar. |
 | [`slides.html`](slides.html) | A fonte. Editar e re-renderizar com o comando abaixo. |
 
 Marca e tokens vêm do design system do ChainGuard (`apps/web/tailwind.config.js`):
@@ -23,76 +23,68 @@ margem. Alternativa: abrir `slides.html` no navegador e imprimir para PDF.
 
 ## A história em cinco frases
 
-1. Fuzzing encontra o que **quebra**. O que este projeto persegue é o que fica
-   **errado sem quebrar** — saldo que não fecha, TTL que não estende, admin que
-   trocou sem autorização. Para isso o fuzzer precisa de oráculos, e escrever
-   oráculos é a parte cara e humana.
-2. A tese: **a IA propõe os oráculos, o fuzzer verifica**. Sete bugs plantados
-   em um cofre Soroban, cada um violando exatamente uma invariante.
-3. Fuzzing cego: **1 de 7**. IA propõe, humano cura, fuzzer verifica: **7 de 7**.
-   Mutation score de 34% para 98% — instrumento independente, que não sabe dos bugs.
-4. A ferramenta faz isso apontando para qualquer crate, sem passo humano: a IA
-   propõe, uma segunda IA cura com o critério do método, o fuzzer monta o rig e
-   roda sequências sorteadas. **~3 minutos, centavos**, numa cópia — o
-   repositório auditado nunca é tocado.
-5. E respondeu uma pergunta que não estava no plano: **sem o humano, satura em
-   2 a 5 de 7**. A curadoria vale cinco dos sete bugs — é onde não se automatiza.
+1. Os bugs mais caros de um contrato **não quebram nada**: o saldo para de fechar, o
+   admin troca sem permissão, e o contrato segue respondendo. O teste comum não vê,
+   porque testa o que o desenvolvedor imaginou.
+2. **Fuzzing** sorteia milhares de sequências de operações que ninguém escreveu. É
+   ótimo em explorar — e cego para o que não quebra. Para ver um saldo errado ele
+   precisa de **regras**, e escrever regras é trabalho de auditor sênior.
+3. A ideia: **a IA escreve as regras, o fuzzer verifica.** Cada um no que faz melhor.
+4. Medimos com um cofre de sete bugs plantados. Fuzzing sem regras: **1 de 7**. Com as
+   regras da IA, sem ninguém no meio: **4 de 7 por execução, 6 de 7 em três** —
+   por US$ 0,25 cada.
+5. A ferramenta roda numa cópia do contrato, entrega o que falhou com a sequência
+   exata, o que passou como testes de regressão, e o diff de tudo que a IA escreveu.
+   Está pronta para rodar a cada pull request.
 
 ## Números para ter na ponta da língua
 
 | | |
 |---|---|
-| bugs plantados | 7, cada um atrás de uma feature, cada um viola uma invariante |
-| fuzzing cego | 1/7 |
-| IA + curadoria + fuzzer | **7/7** — 13 de 16 invariantes aceitas (81%) |
-| IA + fuzzer, sem humano | 2–5/7 por execução; união de 4 execuções 5/7 |
-| mutation score | 34% → 98% |
-| cobertura | 85,8% → 96,2% |
-| custo de uma auditoria | **US$ 0,03** (gemini-3.1-flash-lite, padrão) · US$ 0,60 (gemini-3.8-flash — o raciocínio é cobrado como saída) · US$ 1,70 (claude-sonnet-4.5) |
-| tempo | ~40 s até a curadoria, ~2 min depois dela (flash-lite); ~10 min com o 3.8-flash |
-| erros de medição encontrados e registrados | 6 no benchmark, mais o gabarito vazado e o proptest vazando entre execuções na ferramenta |
+| bugs plantados | 7, cada um atrás de uma chave, cada um viola uma regra |
+| fuzzing sem regras | 1/7 |
+| IA + fuzzer, sem humano | **4/7** por execução · **6/7** na união de 3 execuções |
+| custo de uma auditoria | **US$ 0,25** (grok-4.3, padrão) |
+| tempo | 4 a 10 minutos, sozinha |
+| uma auditoria típica | ~30 regras propostas, 20+ viram teste, 15+ verificadas |
+| onde roda | qualquer crate Soroban; já monta e compila nos exemplos oficiais da Stellar |
 
-## Roteiro, 20 minutos
+Se perguntarem como a IA não "leu a resposta": as sete chaves ficam fora do código que
+o modelo recebe, o contrato limpo tem que passar antes de qualquer número, e uma regra
+que cite um bug pelo nome invalida a rodada — a ferramenta avisa em vermelho.
+
+## Roteiro, 15 minutos
 
 | Slides | Tempo | Conteúdo |
 |---|---|---|
-| 1–4 | 4 min | Tese, problema, desenho do experimento |
-| 5–7 | 5 min | O resultado, e a medição limpa do que a IA acrescenta ao fuzzer |
-| 8–11 | 6 min | O que a IA acertou, o que errou, e a surpresa |
-| 12–13 | 2 min | O que é específico de Stellar, incluindo o achado negativo |
-| 14 | 1 min | Confiabilidade |
-| 15–17 | 4 min | **A ferramenta**: o fluxo, quanto vale a curadoria, os limites medidos |
-| 18–20 | 2 min | Limitações, o que fica, encerramento |
+| 1–2 | 2 min | O problema: bugs que não quebram nada |
+| 3–4 | 3 min | O que é fuzzing, onde é cego, e a ideia |
+| 5–6 | 3 min | Como medimos, e o resultado |
+| 7–9 | 4 min | Por dentro, a ferramenta, um exemplo real |
+| 10–13 | 3 min | O que muda na prática, próximos passos, o que fica, encerramento |
 
-Se estiver acabando o tempo, os slides 12 e 13 são os primeiros a cortar — são os
-mais técnicos e os menos dependentes do resto do arco. O slide 17 (limites da
-ferramenta) é o segundo corte; o 16 (quanto vale a curadoria) não se corta, é o
-achado.
+Se estiver acabando o tempo, o slide 11 (próximos passos) é o primeiro a cortar. O 6
+(resultado) e o 9 (o exemplo) não se cortam.
 
 ## Demonstração ao vivo
 
-**A ferramenta, em ~3 minutos.** Com a API e a web de pé (`cd tools/audit && npm run dev`),
+**A ferramenta, em ~5 minutos.** Com a API e a web de pé (`cd tools/audit && npm run dev`),
 abrir `localhost:5173` e:
 
-1. **Escolher contrato** → `~/Desktop/soroban-vault-demo/src/lib.rs` (cópia autônoma do vault, com os 7 bugs atrás de features).
-2. As sete `bug_*` já aparecem **escondidas do modelo** por padrão. Vale desmarcar uma de propósito numa segunda rodada para mostrar o aviso vermelho de gabarito vazado — é a resposta pronta para "como você sabe que a IA não leu os bugs?".
-3. **Auditar.** Não há passo humano: a IA propõe, uma segunda passada de IA cura com o critério do método (`AUDITING.md` §2), o fuzzer monta o rig e roda.
-4. ~40 s: catálogo proposto e curado, com a razão de cada rejeição no log — uma rejeição que nomeia um fato do contrato ("não pode falhar: protocol 23 restaura entradas persistentes") é ela mesma um achado.
-5. ~2 min depois: **A investigar / Verificadas / Não verificadas**, o custo real, e **O que a auditoria escreveu** — o diff, com o caminho da cópia em `/tmp`.
+1. **Escolher contrato** → `~/Desktop/soroban-vault-demo/src/lib.rs` (cópia autônoma do cofre, com os 7 bugs atrás de chaves).
+2. As sete chaves `bug_*` já aparecem **escondidas do modelo** por padrão.
+3. Modelo **grok-4.3** (padrão). **Auditar.** Não há passo humano.
+4. ~30 s: regras propostas e revisadas, com a razão de cada rejeição no log.
+5. ~4 a 8 min depois: **A investigar / Verificadas / Não verificadas**, o custo real, e **O que a auditoria escreveu** — o diff, com o caminho da cópia em `/tmp`.
 
 Para mostrar o fuzzer pegando um bug ao vivo: desmarcar só `bug_self_transfer` em
-**Escondidas do modelo** — o bug entra no fonte compilado e a propriedade de conservação
+**Escondidas do modelo** — o bug entra no contrato compilado e a regra de conservação
 aparece em **A investigar** com a sequência mínima que a quebra.
 
-O que também funciona bem em tela, na ordem:
+O que também funciona bem em tela:
 
 ```bash
-# 1. o fuzzer trabalhando — cov:, ft: e corp: subindo em tempo real
+# o fuzzer trabalhando — cov:, ft: e corp: subindo em tempo real
 cargo +nightly fuzz run --fuzz-dir 04-prototype-development/fuzz \
   --sanitizer none vault_ai -- -max_total_time=60
-
-# 2. o arco inteiro em ~2 min: bug plantado -> controle perde -> IA pega -> fix
-./04-prototype-development/scripts/demo.sh
 ```
-
-O relatório visual do resultado está em [`../report/index.html`](../report/index.html).

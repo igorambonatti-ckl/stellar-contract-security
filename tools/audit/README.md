@@ -1,7 +1,10 @@
-# Ferramenta de auditoria Soroban
+# Ferramenta de auditoria Soroban — fuzzing guiado por IA
 
 React + API, rodando local. Aponte para **qualquer crate Soroban** no disco,
-clique em Auditar, e o pipeline roda sozinho até o relatório.
+clique em Auditar, e o pipeline vai sozinho até o relatório: a IA propõe as
+invariantes, uma segunda passada de IA cura o catálogo, o fuzzer monta um rig
+de operações e roda sequências sorteadas, e o que falha vem com o
+contra-exemplo mínimo.
 
 ```bash
 cd tools/audit
@@ -13,115 +16,103 @@ npm run dev
 
 Web em `localhost:5173`, API em `localhost:5174`. O Vite faz proxy de `/api`.
 
+## O que ela faz, em ordem
+
+| etapa | o que acontece |
+|---|---|
+| **Inspecionar** | acha o `#[contract]`, lê `src/` inteiro (não só o arquivo do contrato), conta entry points inclusive os de `impl Trait for`, lista features |
+| **Copiar** | copia o crate para `/tmp`, resolvendo `workspace = true` e trazendo os perfis do workspace — **o repositório auditado nunca é tocado** |
+| **Suíte + proposta** | em paralelo: a suíte existente roda (baseline) enquanto a IA propõe 12 a 20 invariantes, duas vezes, fundidas |
+| **Curadoria por IA** | uma segunda passada rejeita o que não pode falhar, o que não se observa, o que é cenário; reescreve o vago |
+| **Rig** | fixture, `enum Op` sobre os entry points, `apply` que guarda o retorno de **toda** operação, `Snapshot` com totais, saldos, TTLs, ledger e endereços, estratégia pesada nos extremos e nas bordas de TTL |
+| **Asserções** | uma `check(&Rig, &Snapshot, &Op)` por invariante, chamada **depois de cada operação** da sequência — vê estado *e* transição |
+| **Compilar** | uma compilação por passada; o compilador diz a linha, o mapa diz de quem é; reparos em paralelo, três tentativas por asserção |
+| **Validar** | 256 sequências contra o contrato como ele é; o que falha ganha duas rodadas de reparo; prova de repetição; **o harness entregue compila ou fica vazio** |
+| **Relatório** | **A investigar** (com contra-exemplo) · **Verificadas** (suíte de regressão pronta) · **Não verificadas** (com o motivo) · custo real · diff do que a IA escreveu |
+
+Tudo isto acontece na cópia. O diff entre o original e a cópia é parte do
+entregável: uma ferramenta que gera código e mostra só o placar pede uma
+confiança que não merece.
+
 ## Escolher o contrato
 
-**Escolher contrato** abre o diálogo **nativo do sistema** — Finder no macOS,
-zenity no Linux, OpenFileDialog no Windows. Escolha o `src/lib.rs` do contrato,
-que é como se pensa nele.
+**Escolher contrato** abre o diálogo nativo do sistema. Escolha o `src/lib.rs`
+do contrato; a ferramenta sobe até a raiz do crate. Apontar a pasta também
+funciona.
 
-A ferramenta então **sobe a árvore até a raiz do crate**, porque é disso que o
-`cargo` precisa: o `Cargo.toml` com dependências e features, e a árvore `src/`.
-Não existe compilar um `.rs` solto. Apontar a pasta do crate também funciona —
-os dois caminhos chegam no mesmo lugar.
+As **features** do crate aparecem e ficam **escondidas do modelo por padrão** —
+um caminho atrás de `#[cfg(feature)]` é quase sempre bug plantado ou ramo de
+debug, e mostrá-lo faz o modelo descrever em vez de deduzir. Se uma invariante
+citar uma feature pelo nome, a ferramenta avisa em vermelho: aquela execução não
+mede nada.
 
-A subida procura um `Cargo.toml` com seção `[package]`. O `Cargo.toml` da raiz
-de um workspace só tem `[workspace]`, e parar nele daria o diretório errado:
+## Modelos
 
-```
-$ escolher .../soroban-vault/src/lib.rs   -> crate soroban-vault, 11 entry points
-$ escolher .../stellar-studies/Cargo.toml -> "Nenhum crate encontrado"
-```
+| modelo | custo por auditoria | tempo | observação |
+|---|---|---|---|
+| **grok-4.3** (padrão) | US$ 0,25–0,56 | 4–10 min | não raciocina antes de responder; escreve uma asserção em ~4 s |
+| gemini-3.1-flash-lite | US$ 0,03 | ~3 min | propõe menos (6–8), detecta parecido no benchmark |
+| gemini-3.8-flash | US$ 0,60 | ~10 min | o raciocínio é cobrado como saída |
+| claude-sonnet-4.5 | US$ 1,70 | ~8 min | compila tudo de primeira |
 
-Isto existe porque o seletor de arquivo do browser não resolve o problema: por
-segurança ele entrega `File` com nome relativo e nunca o caminho no disco, que é
-exatamente o que a API precisa. Como a API roda local, na sua sessão, ela pode
-pedir o diálogo ao sistema operacional.
+Preços e tempos **medidos**, não de catálogo. O seletor na tela mostra os dois.
 
-Contratos já auditados viram atalhos abaixo do campo; clicar num deles roda
-direto. Colar o caminho à mão continua funcionando, arquivo ou pasta.
+## O benchmark
 
-Uma varredura automática do disco foi tentada antes e descartada: além de lenta,
-ela confundia a raiz de um workspace com um crate — pelo mesmo motivo acima — e
-parava antes de achar os contratos de verdade.
+`04-prototype-development/contracts/soroban-vault` tem sete bugs plantados,
+cada um atrás de uma feature, cada um violando exatamente uma invariante. Os
+scripts medem quantos o harness gerado pega, **sem nunca ter visto o bug**:
 
-## O pipeline
-
-| # | Etapa | O que faz |
-|---|---|---|
-| 1 | **Inspecionar** | Lê o `Cargo.toml`, acha o arquivo com `#[contract]`, extrai entry points por brace-matching dos blocos `#[contractimpl]`, detecta tiers de storage e `extend_ttl` |
-| 2 | **Propor** | A IA lê o contrato e devolve invariantes em JSON, com a suposição que cada uma assume |
-| 3 | **Gerar** | A IA escreve o harness a partir das invariantes, em `tests/audit_generated.rs` |
-| 4 | **Compilar** | `cargo test --no-run`. Se não compila, o pipeline segue — a suíte existente ainda diz algo |
-| 5 | **Validar** | Roda o harness **contra o contrato como ele é** |
-| 6 | **Suíte** | Roda a suíte que já existia |
-| 7 | **Relatório** | Propostas, mantidas, descartadas, yield |
-
-## A etapa 5 é o produto
-
-Uma invariante que falha contra o contrato **correto** é falso positivo. Ou a
-propriedade não vale, ou o harness a implementou errado — nos dois casos
-reportá-la seria acusar bug onde não há evidência.
-
-Então a validação descarta essas sozinha, casando o nome do teste que falhou com
-o ID da invariante que ele cita. **A curadoria é feita por execução, não por
-alguém clicando.**
-
-Isso importa porque não é hipotético: no benchmark deste repositório, 3 de 16
-propostas do modelo estavam erradas — incluindo a que ele enunciou com mais
-confiança que todas as outras. Sem esta etapa, as três entrariam no relatório
-como achados.
-
-O relatório distingue as duas coisas:
-
-- **descartada** — a invariante falhou contra o contrato correto
-- **falha órfã** — um teste falhou sem citar invariante nenhuma, então é sobre o
-  harness e não sobre o contrato
-
-## Sem chave
-
-A ferramenta sobe e funciona: inspeção e execução de cargo não dependem de IA.
-A etapa 2 falha com a instrução exata em vez de degradar em silêncio, e a barra
-mostra `IA desligada`. Uma lista de invariantes vazia reportada como resultado
-seria a classe de resposta errada e quieta que este projeto passou o tempo
-perseguindo.
-
-## Esconder features do modelo
-
-`POST /api/pipeline` aceita `hiddenFeatures`. O fonte pode conter as respostas —
-bugs plantados, ramos de debug — e a API resolve os `cfg` antes de enviar.
-
-**É uma transformação textual, não um compilador.** O fluxo de referência
-verifica o resultado substituindo-o pelo fonte real e re-rodando a suíte.
-
-## Endpoints
-
-```
-GET  /api/health                  chave presente? qual modelo?
-POST /api/pipeline                { path, hiddenFeatures?, runMutants? } -> { id }
-GET  /api/pipeline/:id/stream     SSE: snapshot, stage, log, done
-GET  /api/pipeline/:id            estado completo
-POST /api/pipeline/:id/cancel
-POST /api/pipeline/:id/cleanup    apaga o harness gerado do crate
-
-POST /api/inspect                 as etapas soltas, para uso manual
-POST /api/clean-view
-POST /api/ai/invariants | /ai/inputs | /ai/harness
-POST /api/run/test | /run/mutants
-GET  /api/runs/:id/stream
+```bash
+./ondas-par.sh x-ai/grok-4.3                  # uma auditoria completa + detecção
+./ondas-par.sh x-ai/grok-4.3 x-ai/grok-4.3    # duas em paralelo, cópias independentes
+./generalidade.sh google/gemini-3.1-flash-lite <lib.rs de terceiro>...
 ```
 
-O SSE faz replay: abrir a página no meio da execução mostra tudo que já passou.
+Controles que rodam antes de qualquer número: o contrato limpo tem que ficar
+verde (senão "não medível"); um harness vazio não conta como 0/7; e uma
+invariante que cita um bug pelo nome invalida a execução.
 
-## Limites, explícitos
+Resultado com o grok, três execuções limpas no mesmo dia:
 
-- **Não roda `cargo-fuzz`.** Precisaria gerar o crate de fuzz e o alvo. O
-  pipeline guiado por cobertura está em `04-prototype-development/scripts/`.
-- **Escreve dentro do crate que você apontou**, em `tests/audit_generated.rs`.
-  O botão de limpeza apaga.
-- **A validação casa teste com invariante por nome.** Se o harness gerado não
-  citar o ID da invariante no nome do teste, a falha vira órfã em vez de
-  descartar a propriedade certa. O prompt pede o ID no nome; modelos às vezes
-  não obedecem.
-- **Um harness que não compila não invalida o pipeline** — ele segue para a
-  suíte existente e reporta. Esperado: no benchmark deste projeto, 16 de 17
-  erros de compilação vieram de uma única suposição errada sobre o SDK.
+| | detecção |
+|---|---|
+| fuzzing cego (referência do projeto) | 1/7 |
+| **automático, por execução** | **4/7** |
+| **automático, união de 3 execuções** | **6/7** |
+| IA + curadoria humana + fuzzer (referência) | 7/7 |
+
+`overflow` e `missing_auth` — os dois que nenhuma versão anterior detectava —
+caem hoje, cada um pela mudança que o diagnóstico apontou: saldos grandes o
+bastante para a aritmética estourar, e o retorno da operação sem autorização
+disponível ao check. O que falta é `temp_nonce`, que depende de o catálogo
+propor a invariante certa.
+
+## Contrato de terceiro
+
+Roda nos exemplos oficiais da Stellar (`timelock`, `token`, `atomic_swap`,
+`liquidity_pool`): o rig compila, as asserções compilam, e o que reprova contra
+o contrato correto aparece em **A investigar** com a terceira possibilidade
+nomeada — o harness pode estar errado. Não há resposta conhecida nesses; um
+contrato correto de terceiro deve dar zero achados, e cada achado ali é ou falso
+positivo nosso ou bug num exemplo oficial.
+
+## O que é determinístico de propósito
+
+Quase tudo que foi consertado hoje era a camada entre o modelo e o compilador,
+não o modelo. Cada item abaixo existe porque custou uma execução:
+
+- **prosa não chega ao compilador** — maior bloco cercado, com tag ou sem; sem cerca, do primeiro `use` à última chave
+- **desistência é a ausência de `fn check`**, não uma palavra em algum idioma
+- **asserção com chaves que não fecham nunca entra no arquivo** — uma só derrubava as outras onze
+- **campo do rig que não existe é alinhado** quando há um único candidato (`r.vault_id` → `r.id`); ambiguidade é do compilador
+- **`.storage()` fora de `as_contract` e `.get().unwrap()`** são apontados antes de compilar
+- **resposta cortada pelo teto, vazia por 429 ou por `tool_calls`** é retentada
+- **execuções independentes**: `failure_persistence: None` no driver — a variável de ambiente que parecia fazer isso não existe
+- **o harness entregue compila ou fica vazio** — nunca vermelho por cima de propriedades aprovadas
+
+## Limites honestos
+
+- O rig é o ponto frágil em contrato de terceiro: se `setup()` não deixa o contrato usável, toda operação bate em "não inicializado" e o resultado é um teste verde que não exercitou nada.
+- Uma propriedade que falha no contrato correto pode ser o contrato, a invariante ou o harness. A ferramenta não decide; quem audita decide, com o contra-exemplo na mão.
+- A curadoria humana ainda vale mais que a automática: 7/7 contra 4/7 por execução. A diferença é a medida do que uma pessoa acrescenta, e é o achado mais útil que a ferramenta produziu.
