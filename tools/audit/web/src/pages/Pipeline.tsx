@@ -128,19 +128,30 @@ export function Pipeline() {
 
   useEffect(() => () => es.current?.close(), []);
 
-  // Retoma uma execução que sobreviveu a um reload.
+  // Retoma uma execução que sobreviveu a um reload. Primeiro pelo id guardado;
+  // sem ele, pergunta à API se há alguma rodando — cobre a execução iniciada
+  // antes de o id passar a ser guardado, e qualquer outra aba.
   useEffect(() => {
-    let pid: string | null = null;
-    try { pid = localStorage.getItem(ATUAL); } catch { /* sem storage */ }
-    if (!pid) return;
-    fetch(`/api/pipeline/${pid}`).then(async (r) => {
-      if (!r.ok) { localStorage.removeItem(ATUAL); return; }
-      const p = await r.json();
-      if (p.status !== 'rodando') { localStorage.removeItem(ATUAL); return; }
+    (async () => {
+      let pid: string | null = null;
+      try { pid = localStorage.getItem(ATUAL); } catch { /* sem storage */ }
+
+      let p: any = null;
+      if (pid) {
+        const r = await fetch(`/api/pipeline/${pid}`).catch(() => null);
+        if (r?.ok) p = await r.json();
+      }
+      if (!p || p.status !== 'rodando') {
+        const r = await fetch('/api/pipeline').catch(() => null);
+        const lista: any[] = r?.ok ? await r.json() : [];
+        p = lista.find((x) => x.status === 'rodando') ?? null;
+      }
+      if (!p) { try { localStorage.removeItem(ATUAL); } catch { /* */ } return; }
+
       setPath(p.path ?? ''); setStatus('rodando');
-      if (p.modelo || p.model) setModelo(p.model ?? p.modelo);
-      conectar(pid!);
-    }).catch(() => { /* API fora do ar: a tela fica em idle */ });
+      if (p.model) setModelo(p.model);
+      conectar(p.id);
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => { if (logAberto) fimLog.current?.scrollIntoView({ block: 'end' }); }, [log, logAberto]);
