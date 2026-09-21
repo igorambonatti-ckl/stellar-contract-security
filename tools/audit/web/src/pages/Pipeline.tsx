@@ -85,6 +85,8 @@ const PRECOS: Record<string, [number, number]> = {
 
 /** Caminhos já auditados, para não ter que escolher de novo. */
 const RECENTES = 'auditoria:recentes';
+/** A execução em curso, para sobreviver a um reload. */
+const ATUAL = 'auditoria:atual';
 
 function lerRecentes(): string[] {
   try { return JSON.parse(localStorage.getItem(RECENTES) ?? '[]'); } catch { return []; }
@@ -125,6 +127,22 @@ export function Pipeline() {
   const es = useRef<EventSource | null>(null);
 
   useEffect(() => () => es.current?.close(), []);
+
+  // Retoma uma execução que sobreviveu a um reload.
+  useEffect(() => {
+    let pid: string | null = null;
+    try { pid = localStorage.getItem(ATUAL); } catch { /* sem storage */ }
+    if (!pid) return;
+    fetch(`/api/pipeline/${pid}`).then(async (r) => {
+      if (!r.ok) { localStorage.removeItem(ATUAL); return; }
+      const p = await r.json();
+      if (p.status !== 'rodando') { localStorage.removeItem(ATUAL); return; }
+      setPath(p.path ?? ''); setStatus('rodando');
+      if (p.modelo || p.model) setModelo(p.model ?? p.modelo);
+      conectar(pid!);
+    }).catch(() => { /* API fora do ar: a tela fica em idle */ });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => { if (logAberto) fimLog.current?.scrollIntoView({ block: 'end' }); }, [log, logAberto]);
 
   async function escolherContrato() {
@@ -180,10 +198,27 @@ export function Pipeline() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
-      setId(json.id);
       setRecentes(guardarRecente(alvo.trim()));
+      conectar(json.id);
+    } catch (e) {
+      setErro((e as Error).message); setStatus('idle');
+    }
+  }
 
-      const src = new EventSource(`/api/pipeline/${json.id}/stream`);
+  /**
+   * Liga a tela a uma execução, nova ou já em curso.
+   *
+   * O id fica no localStorage porque F5 apagava o estado do React: a execução
+   * seguia na API, mas a tela não sabia dela e o botão Parar não tinha o que
+   * parar. A API reenvia o snapshot ao conectar, então reconectar reconstrói
+   * etapas e log de onde estavam.
+   */
+  function conectar(pid: string) {
+      setId(pid);
+      try { localStorage.setItem(ATUAL, pid); } catch { /* sem storage */ }
+      es.current?.close();
+
+      const src = new EventSource(`/api/pipeline/${pid}/stream`);
       es.current = src;
       src.addEventListener('snapshot', (e) => {
         const d = JSON.parse((e as MessageEvent).data);
@@ -201,12 +236,10 @@ export function Pipeline() {
       });
       src.addEventListener('done', (e) => {
         setStatus(JSON.parse((e as MessageEvent).data).status);
+        try { localStorage.removeItem(ATUAL); } catch { /* sem storage */ }
         src.close();
       });
       src.onerror = () => src.close();
-    } catch (e) {
-      setErro((e as Error).message); setStatus('idle');
-    }
   }
 
   const relatorio = stages.find((s) => s.id === 'relatorio' && s.status === 'ok')?.data;
